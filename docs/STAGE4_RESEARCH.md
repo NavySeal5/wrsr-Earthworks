@@ -28,9 +28,15 @@ The official Construction Office reference lists 30 tonnes of internal fuel stor
 
 The inspector currently has no verified vehicle-fuel field. It should continue to report that fuel is unavailable rather than show an inferred value. The user's inability to locate the fuel reading remains the only recorded in-game evidence for this item.
 
+## Native terrain-edit boundary
+
+The verified `C3D_TERRAIN` exports (`EditRaiseLower`, `EditLevel`, `EditToHeight`, and related calls) mutate terrain immediately. Their signatures accept terrain-edit parameters and return no queued-project or worker-dispatch handle. The current prototype safely applies bounded calls at the game-thread boundary and checks height readbacks. This supports a technical distinction: Earthworks must provide its own project scheduling and progress model, then issue bounded terrain edits; calling a native terrain-edit helper alone will not make assigned facility workers or machines perform the work.
+
+This does not prove that the native UI has no other construction workflow for terraforming. It means no such autonomous job interface has been identified in the verified bindings so far. The native cost-query export (`EditRaiseLowerAngleLimitGetCost`) also does not itself show where costs are charged or how fuel is accounted.
+
 ## What remains unproven
 
-- A numeric productivity formula for workers, bulldozers and excavators.
+- A numeric productivity formula for workers, bulldozers and excavators, or a validated source for project duration estimates.
 - Whether Earthworks should require workers in addition to machines, or how either should affect progress.
 - A reliable test for a machine being free from native jobs and other uses.
 - A safe exclusive reservation mechanism and how it interacts with native orders.
@@ -39,7 +45,7 @@ The inspector currently has no verified vehicle-fuel field. It should continue t
 
 ## Next technical step
 
-Before Stage 7 office assignment or Stage 8 terrain execution, continue read-only tracing of the pinned executable's native terraforming and construction work paths. Identify whether their parsed vehicle skills, resource use and dispatch state can be observed or reused through version-checked interfaces. If a safe availability/reservation path cannot be established, prepare a small user-run diagnostic iteration for review rather than implementing a guessed rule. Do not launch the game or run in-game tests on the user's behalf.
+Before Stage 7 office assignment or Stage 8 terrain execution, continue read-only tracing of the pinned executable's native terraforming and construction work paths. Identify whether parsed vehicle skills, resource use and dispatch state can be observed or reused through version-checked interfaces. If no native job interface exists, estimate a minimal Earthworks-owned progress model for the user's review without implementing a rate. If a safe availability/reservation path cannot be established, prepare a small user-run diagnostic iteration rather than implementing a guessed rule. Do not launch the game or run in-game tests on the user's behalf.
 
 ## References
 
@@ -47,3 +53,4 @@ Before Stage 7 office assignment or Stage 8 terrain execution, continue read-onl
 - [Official Construction Office reference](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Construction_office)
 - [Community vehicle scripting guide — vehicle skill tokens](https://steamcommunity.com/sharedfiles/filedetails/?id=1861143159)
 - Local native layout findings: `external/RepublicMP/docs/findings.md`, `external/RepublicMP/determinism/state_hash.h`, and the Stage 4 section in `docs/NATIVE_BINDINGS.md`.
+- Native terrain-edit signatures and checked use: `docs/NATIVE_BINDINGS.md`, plus `tools/downloads/terrain-raise.asm`, `terrain-level.asm` and `terrain-toheight.asm`.
