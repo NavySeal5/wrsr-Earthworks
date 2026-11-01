@@ -14,7 +14,7 @@ Latest workflow correction: the user said "Dont do the tests yourself, just prov
 | 1 — RML in-game diagnostic | Accepted | Original diagnostic evidence below; subsequent prototype launch/world/reload checklist passed | Covered by user's accepted prototype review |
 | 2 — Read-only diagnostics | In progress | Frame snapshots, lifecycle gating, cursor/camera projection and terrain sampling implemented for the accepted preview; broader save-lifecycle/time-speed investigation remains | Preview subset accepted; full Stage 2 checklist not claimed complete |
 | 3 — Controlled terrain edit | Accepted | Bounded native raise/lower, readbacks and historical saved-file comparisons; 0.3.1 diagnostic UI fixes | User reports raise/lower works, both deltas zero and normal native road/building placement |
-| 4 — Workforce/machinery feasibility | In progress | 0.5.0 custom Workshop facility, session registration, and assignment-function filter compiled | Stage 4a accepted. Stage 4b partial user report: workers observed arriving and counted by Earthworks; vanilla panel does not show their occupation. Other checks not yet itemized |
+| 4 — Workforce/machinery feasibility | In progress | 0.5.0 custom Workshop facility, session registration, and assignment-function filter compiled | Stage 4b checklist accepted by user; vanilla panel does not show worker occupation, though workers were seen arriving and Earthworks reports them. Stage 4's wider productivity, eligibility and fuel questions remain open |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Planned | Not implemented | Pending |
 | 7 — Office/assignments | Planned | Representation and rules open | Pending |
@@ -142,11 +142,12 @@ Original diagnostic review was superseded by the user's batch instruction throug
 - User's gameplay test has not yet been run. Instructions: [STAGE4B_TESTING.md](STAGE4B_TESTING.md). Test status remains pending, including station slot behavior, direct assignment, area assignment, automatic add-construction workflow, and unchanged ordinary-office behavior.
 - Limitations: no autonomous terrain work, project queue, multiple/persistent stations, release building art or balance. The automatic add-construction routine at EXE+0x1561C0 is outside the direct hook; its behavior must be observed in game before ordinary-job exclusion can be considered complete.
 
-**Stage 4b user report — worker display discrepancy**
+**Stage 4b user report and acceptance — worker display discrepancy**
 
 - User reports: "Can confirm nearly everything, the building doesnt show worker occupation in its vanilla UI, but i see workers running to it, and the earthworks ui shows workers there".
 - Recorded observation: workers were seen travelling to the dedicated facility and the Earthworks inspector reported workers there. The vanilla building panel did not display worker occupation. This supports that workers are assigned/present, while the conflicting UI display remains unexplained; it does not by itself establish native slot limits or productivity.
-- Stage 4b remains in progress. The user's phrase "nearly everything" does not specify which machine-slot, ordinary-job exclusion, regular-office, and reload checks were completed, so no results are inferred for those checks.
+- The user subsequently confirmed "no checks outstanding". Stage 4b's checklist is therefore accepted as complete. Individual route outcomes were not itemized in the conversation, so this record does not claim specific counts or outcomes beyond the worker observation above.
+- The vanilla worker-display discrepancy remains documented for possible follow-up. It did not leave a Stage 4b check outstanding according to the user.
 
 **Template for each stage/test iteration**
 
