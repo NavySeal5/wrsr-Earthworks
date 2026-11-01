@@ -7,7 +7,7 @@ Updated 2 November 2026. This note records source inspection only. No game sessi
 - The user accepted the 0.5.2 vehicle filter with: “working great now”. The registered Earthworks facility accepts bulldozers, excavators, dumpers and buses, while the excluded vehicle classes tested by the user were refused. The exact test cases were not itemized.
 - The user's Stage 4a comparison passed except that they could not find vehicle fuel information. The regular construction-office prototype remains selected; the rail-office alternative is deferred.
 - The inspector's vehicle links and parked-list membership are observations, not a native “idle and available to Earthworks” signal. The pinned RepublicMP source describes native depot dispatch as multiple contextual checks. No general reservation API or fuel-field binding is currently verified.
-- The user wants 10 workers to let one machine reach the speed of player-performed manual terraforming. Partial staffing scales machine throughput proportionally; zero workers stops machines. Workers may contribute without machines. With no machines, worker progress should mirror vanilla manual terrain work from nearby buildings or worker passenger stations. The station the user recalled is the Labour Hall (also described as the worker pickup hall). This direction is accepted; native rate calibration, multi-machine worker allocation, and whether labor output is additive while machines operate remain open.
+- The user wants 10 workers to let one machine reach the speed of player-performed manual terraforming. Partial staffing scales machine throughput proportionally; zero workers stops machines. Workers may contribute without machines. With no machines, worker progress should mirror vanilla manual terrain work from nearby buildings or worker passenger stations. When machines operate, workers only enable/operate them and do not add a separate labor-only output. The station the user recalled is the Labour Hall (also described as the worker pickup hall). Native rate calibration and multi-machine worker allocation remain open.
 
 ## Vehicle script evidence
 
@@ -40,7 +40,7 @@ This does not prove that the native UI has no other construction workflow for te
 ## What remains unproven
 
 - A numeric productivity formula for workers, bulldozers and excavators, or a validated source for project duration estimates.
-- The native labor-only rate to mirror and whether labor output continues in addition to machine output while machines operate.
+- The native labor-only rate to mirror.
 - How to allocate workers among multiple active machines while retaining the accepted 10-worker/manual-rate and proportional-scaling rule.
 - A reliable test for a machine being free from native jobs and other uses.
 - A safe exclusive reservation mechanism and how it interacts with native orders.

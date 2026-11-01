@@ -35,7 +35,7 @@ Stop if the tool refuses a run or changes construction/funding mode behavior; re
 - Vehicle type and distance from the patch.
 - Before/after height for each patch, or approximate visual change.
 - Whether the terrain action was allowed in each case and any on-screen messages.
-- Whether you want worker output to continue in addition to machine output while machines are active. D31 sets the staffing rules but leaves additive output open.
+- Any refusal message or unexpected change in the native terrain tool's behavior.
 
 Keep the results in this test save; no project records or native terrain data are modified by the plugin. Only the normal native terrain tool changes these three patches.
 
