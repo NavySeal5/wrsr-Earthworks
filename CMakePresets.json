@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "windows-x64",
+      "displayName": "Windows x64 development",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "windows-x64", "configurePreset": "windows-x64" }
+  ]
+}

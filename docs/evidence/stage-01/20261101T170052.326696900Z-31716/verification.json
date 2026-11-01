@@ -1,0 +1,16 @@
+{
+  "session_id": "20261101T170052.326696900Z-31716",
+  "game_process_id": 27596,
+  "verified_utc": "2026-11-01T17:12:05.6920015Z",
+  "plugin_sha256": "1ee4382a6d79705e3632fae86abb8b9189bc893528785d8edd3790ebebcb0497",
+  "runtime_version": "1.0.1",
+  "game_version": "1.1.1.9",
+  "bootstrap_verified": true,
+  "diagnostic_active": true,
+  "plugin_hooks": 0,
+  "hook_failures": 0,
+  "audit_issues": 0,
+  "clean_exit_recorded": true,
+  "world_checks": "Must be recorded from the actual in-game observations in STAGE_REVIEWS.md.",
+  "user_acceptance": "Pending; this script does not accept a stage."
+}

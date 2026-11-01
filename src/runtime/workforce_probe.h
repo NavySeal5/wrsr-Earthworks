@@ -1,0 +1,40 @@
+#pragma once
+#include "../core/planning.h"
+#include <array>
+#include <cstdint>
+
+namespace ew {
+constexpr unsigned WorkforceCandidates=5, WorkforceRows=48;
+struct BuildingReading {
+    unsigned slot=0,id=0;
+    int category=-1,subtype=-1;
+    Point position{};
+    float distance=0;
+};
+struct VehicleReading {
+    unsigned id=0,category=0;
+    bool parked=false,home=false,assigned=false,positionValid=false;
+    float distance=0;
+    char type[65]{};
+};
+struct WorkforceView {
+    bool selected=false,buildingValid=false,occupantsValid=false,parkedValid=false,vehiclesValid=false;
+    unsigned candidateCount=0,samples=0,occupantSlots=0,occupants=0,parkedSlots=0;
+    unsigned homeCount=0,assignedCount=0,parkedCount=0,matchedCount=0,rowCount=0,unreadableVehicles=0;
+    bool earthworksOfficeRegistered=false;
+    unsigned earthworksOfficeId=0,blockedConstructionAssignments=0;
+    BuildingReading building{};
+    std::array<BuildingReading,WorkforceCandidates> candidates{};
+    std::array<VehicleReading,WorkforceRows> vehicles{};
+    char status[200]="Read-only diagnostic. Click Find buildings, then click near a building.";
+};
+void ResetWorkforce();
+void FindWorkforceBuildings(Point point);
+void SelectWorkforceBuilding(unsigned candidate);
+bool RegisterEarthworksBuilding();
+void ClearEarthworksBuilding();
+bool IsEarthworksBuilding(void* building);
+void TickWorkforce();
+void LogWorkforce();
+WorkforceView ReadWorkforce();
+}

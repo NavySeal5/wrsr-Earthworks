@@ -1,0 +1,14 @@
+/build/
+/out/
+/dist/
+/tools/downloads/
+/tools/runtime/
+/tools/releases/
+/tools/fixtures/
+/external/
+/.vs/
+/CMakeUserPresets.json
+/docs/setup-state.local.json
+*.user
+*.log
+*.dmp

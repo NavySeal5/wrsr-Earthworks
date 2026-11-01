@@ -1,0 +1,29 @@
+{
+  "tesmioloader": {
+    "repository": "https://github.com/MaxLegend/TesmioLoader.git",
+    "tag": "tesmioloader0.3.6",
+    "commit": "7d6bb8943ca5f6af817d8e7e6cf5be2c7faa818a",
+    "api_version": 4,
+    "sdk_headers": {
+      "tesmio_api.h": "5daaf51ec1f6a5f279868bb039f01719931dfba0be69312a75863073ceac04a6",
+      "tesmio_plugin.h": "f31fa216c8cdf3a3cfe1122857dc9d2794f756adb8ae248a51905ca395de3c6a"
+    }
+  },
+  "rml": {
+    "repository": "https://github.com/Ultimate-Universe/WRSR-RepublicModLoader.git",
+    "commit": "57e567e5cccaa3c38aee7e9d599d2443d2460b10",
+    "version": "1.0.1",
+    "api_version": 1,
+    "workshop_item_id": "3787969749",
+    "runtime_files": {
+      "RepublicModLoader.exe": "58137e0268daa8b957bad69b6507c352717a661119c1ded4b32cc720583d007e",
+      "rml_runtime.dll": "761ca3aee81c77034059258310e5eb4e3df14f94d21d030a96b9665879fd19d0",
+      "rml/assets/brand_logo.png": "9b6a9cd351e83710aa67a90dafb1cff73d7a7bf5872b4252bf896b21527171af"
+    }
+  },
+  "republicmp": {
+    "repository": "https://github.com/E3418/RepublicMP.git",
+    "commit": "630775724abd5e3346eb59f9c66e2873128d74a4",
+    "usage": "Native binding reference (GPL-3.0-only) and bundled Dear ImGui (MIT)"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "gamePath": "",
+  "autoOrder": false,
+  "allowProbableSymbols": false,
+  "closeAfterLaunch": false,
+  "autoHideOnLaunch": false,
+  "launchProfile": "deep-test",
+  "verboseDiagnostics": true,
+  "autoCrashArchives": true,
+  "selectedPlaylist": "Earthworks Development",
+  "plugins": {
+    "earthworks.planning": { "enabled": true, "force": false, "priority": 100 }
+  },
+  "playlists": [
+    {
+      "name": "Earthworks Development",
+      "plugins": [
+        { "id": "earthworks.planning", "force": false, "priority": 100, "order": 0 }
+      ],
+      "workshop": [],
+      "development": []
+    }
+  ],
+  "defaultPlugins": {},
+  "workshopItems": {},
+  "defaultWorkshopItems": {},
+  "developmentItems": {},
+  "defaultDevelopmentItems": {},
+  "defaultAutoOrder": true,
+  "hideDisabledPlugins": true,
+  "hideDisabledWorkshop": true,
+  "hideDisabledDevelopment": true
+}

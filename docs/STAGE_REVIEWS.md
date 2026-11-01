@@ -14,7 +14,7 @@ Latest workflow correction: the user said "Dont do the tests yourself, just prov
 | 1 — RML in-game diagnostic | Accepted | Original diagnostic evidence below; subsequent prototype launch/world/reload checklist passed | Covered by user's accepted prototype review |
 | 2 — Read-only diagnostics | In progress | Frame snapshots, lifecycle gating, cursor/camera projection and terrain sampling implemented for the accepted preview; broader save-lifecycle/time-speed investigation remains | Preview subset accepted; full Stage 2 checklist not claimed complete |
 | 3 — Controlled terrain edit | Accepted | Bounded native raise/lower, readbacks and historical saved-file comparisons; 0.3.1 diagnostic UI fixes | User reports raise/lower works, both deltas zero and normal native road/building placement |
-| 4 — Workforce/machinery feasibility | In progress | 0.4.0 read-only inspector and synthetic checks; pinned RepublicMP source scan found no reliable fuel reading | User confirms Stage 4a checks except vehicle fuel, which was not found. Eligibility/productivity/reservation remain unproven |
+| 4 — Workforce/machinery feasibility | In progress | 0.5.0 custom Workshop facility, session registration, and assignment-function filter compiled | Stage 4a accepted. Stage 4b in-game test pending; ordinary assignment-hook coverage and native slots require user verification |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Planned | Not implemented | Pending |
 | 7 — Office/assignments | Planned | Representation and rules open | Pending |
@@ -123,14 +123,24 @@ Original diagnostic review was superseded by the user's batch instruction throug
 - User authorized continuing implementation after accepting the Stage 4a comparison, except fuel was not found.
 - Pinned RepublicMP route_tools.cpp documents native depot dispatch as a sequence of checks: a vehicle compatibility predicate at EXE+0x68B2B0, depot/type compatibility calls, current owner/home relation, route/home status, and other category-specific state. This demonstrates that home/owner/parked readings alone do not identify a universally available machine.
 - The referenced +0x68B2B0 predicate is a pure type/capability check in this executable, but it is only one filter used by a native depot workflow. It does not establish Earthworks eligibility. Native dispatch also changes vehicle routing/assignment state; no generic read-only reservation API was identified in the pinned source.
-- Stage 4b implementation is gated on D24 below: choose how an Earthworks project treats vehicles the native game might also use. No native vehicle fields have been changed and no dispatch predicate has been called by the mod.
+- This source review did not establish a general reservation mechanism or resolve machine eligibility. The user's later D25/D26 decisions selected a dedicated facility and blocking ordinary construction jobs. No native vehicle fields are changed and no dispatch predicate is called by the mod.
 
 **Dedicated building decision — D25**
 
 - User: "Earthworks should not use vehicles in construction offices, there should be its own building with worker slots + machine slots".
-- Decision recorded: dedicated building and separate worker/machine slots; do not borrow a fleet from ordinary construction offices.
-- Remaining implementation question: a building cloned from the native construction-office type may also participate in ordinary construction dispatch. The user has not yet said whether that is allowed or whether the building and its fleet must be exclusive to Earthworks. No capacities, costs, radius, model or fuel behavior are chosen.
-- User resolved dispatch behavior: "Block normal jobs (Recommended)". Record as D26. Exclusion is not complete until the custom building can be identified reliably and all native assignment paths are covered.
+- Decision recorded: a dedicated building with its own worker and machine slots; do not borrow vehicles from ordinary construction offices.
+- Temporary prototype capacity: 5 worker places and 2 vehicle stations, selected by the user for this test item only. This is not a release balance decision.
+- User resolved dispatch behavior: "Block normal jobs (Recommended)". Record as D26. This build offers session-only registration of one exact building identity, then blocks that identity in the native assignment function at EXE+0x161C90.
+- Coverage is pending user confirmation. The pinned RepublicMP call map shows construction-office window, pick-tool and area-office direct assignments reaching this function. The office window's automatic “add construction” operation uses EXE+0x1561C0 and is not directly intercepted. The test instructions ask the user to verify this route before treating the exclusion as complete.
+
+**Stage 4b implementation packet — 0.5.0-dedicated-facility, 1 November 2026**
+
+- Build: CMake/MSVC x64 build completed successfully; x64 and the three Tesmio entry points were verified by the build script. No tests or game launch were performed by the agent.
+- Plugin DLL SHA-256: `1f56bcb07c9b92b8517290690fa8da1ad1ed34b792de052a7ea1415af8bb5bcf`.
+- Building content: generated locally as Workshop item `9100000012`, using native `construction_office3` assets/configuration as a temporary shell. It has 5 worker places and two vehicle-station placements. The item is marked generated and is not part of the Git commit; the checked-in staging script recreates it from installed game assets.
+- Runtime feature: inspector can register or clear one building per loaded session; the assignment hook checks exact instance address plus world vector slot and building ID before blocking. World load clears registration. Assignments to other offices forward to the original function.
+- User's gameplay test has not yet been run. Instructions: [STAGE4B_TESTING.md](STAGE4B_TESTING.md). Test status remains pending, including station slot behavior, direct assignment, area assignment, automatic add-construction workflow, and unchanged ordinary-office behavior.
+- Limitations: no autonomous terrain work, project queue, multiple/persistent stations, release building art or balance. The automatic add-construction routine at EXE+0x1561C0 is outside the direct hook; its behavior must be observed in game before ordinary-job exclusion can be considered complete.
 
 **Template for each stage/test iteration**
 

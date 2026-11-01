@@ -1,0 +1,19 @@
+{
+  "steam_app_id": 784150,
+  "steam_build_id": "23935965",
+  "observed_utc": "2026-11-01T16:34:10.2360967Z",
+  "binaries": [
+    {
+      "name": "SOVIET64.exe",
+      "size": 10308608,
+      "sha256": "296644a9f207d609031fc2ae73fed2dcb34619a1d55a35d1c7b51965ce6841b8",
+      "pe_timestamp": "0x6A3EB6AD"
+    },
+    {
+      "name": "C3DDLL64.dll",
+      "size": 1984000,
+      "sha256": "65fcb6845c3cb7c25a22121f25904a855ea88657e31a3b50a15adac26e231516",
+      "pe_timestamp": "0x6A3E75BC"
+    }
+  ]
+}

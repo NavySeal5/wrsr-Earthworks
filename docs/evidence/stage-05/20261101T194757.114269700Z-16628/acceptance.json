@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-01",
+  "version": "0.2.0-prototype",
+  "sha256": "8da0b348cb5ce0653a21811ee8cf66c2681a7f8b7fb9b999d131fe5bc9087e34",
+  "sessionId": "20261101T194757.114269700Z-16628",
+  "userAcceptance": "All checks passed, Whats next on the plan",
+  "acceptanceBasis": "User reported all supplied in-game checks passed; corroborating RML report/log inspected",
+  "bootstrapStatus": 0,
+  "trackedHooks": 16,
+  "hookFailures": 0,
+  "gamePid": 34428,
+  "recordedExitCode": "0x0",
+  "nextStage": "Controlled terrain-edit proof; exact temporary operation not yet agreed"
+}
