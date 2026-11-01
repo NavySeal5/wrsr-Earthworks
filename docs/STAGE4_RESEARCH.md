@@ -40,7 +40,8 @@ This does not prove that the native UI has no other construction workflow for te
 ## What remains unproven
 
 - A numeric productivity formula for workers, bulldozers and excavators, or a validated source for project duration estimates.
-- Whether Earthworks should require workers in addition to machines, or how either should affect progress.
+- The native labor-only rate to mirror and whether labor output continues in addition to machine output while machines operate.
+- How to allocate workers among multiple active machines while retaining the accepted 10-worker/manual-rate and proportional-scaling rule.
 - A reliable test for a machine being free from native jobs and other uses.
 - A safe exclusive reservation mechanism and how it interacts with native orders.
 - The relationship between a dedicated building's parked machine, stored fuel and remote project work.
@@ -49,6 +50,8 @@ This does not prove that the native UI has no other construction workflow for te
 ## Next technical step
 
 Before Stage 7 office assignment or Stage 8 terrain execution, continue read-only tracing of the pinned executable's native terraforming and construction work paths. Identify whether parsed vehicle skills, resource use and dispatch state can be observed or reused through version-checked interfaces. If no native job interface exists, estimate a minimal Earthworks-owned progress model for the user's review without implementing a rate. If a safe availability/reservation path cannot be established, prepare a small user-run diagnostic iteration rather than implementing a guessed rule. Do not launch the game or run in-game tests on the user's behalf.
+
+For a user-run native rate comparison, see [Stage 4 productivity instructions](STAGE4E_PRODUCTIVITY_TESTING.md). These instructions do not require a new DLL build.
 
 ## References
 
