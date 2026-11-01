@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 1 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured) and Stage 4b dedicated-facility checklist. Stage 4's wider productivity and machine-eligibility questions remain under review. See the stage review log for evidence and progression.
+Updated 1 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured) and Stage 4b dedicated-facility checklist. The user fixed the Earthworks building's accepted vehicles to bulldozers, excavators, dumpers and buses only; enforcement and modded vehicle classification remain under investigation along with productivity. See the stage review log for evidence and progression.
 
 **1. What we are building**
 
@@ -127,7 +127,7 @@ If only brushes are usable, prove their influence and convergence before promisi
 
 Implementation: observe actual staffing, effective productivity where available, vehicle ownership/skills and availability in existing native test buildings. Separate read-only feasibility probes from a final office design. Investigate equipment exclusivity and any native/manual terraforming interaction in a dedicated fixture.
 
-Current iteration: 0.5.0-dedicated-facility adds a local Workshop building cloned from the native construction-office shell, with temporary 5-worker / 2-vehicle-station settings. The user chose to block normal jobs. The Earthworks plugin lets the player register one selected building per loaded session and skips the native construction-office assignment routine for that exact building instance; registration clears on reload. The user reports no Stage 4b checks outstanding. The vanilla panel did not show worker occupation, though the user saw workers arrive and the inspector counted them. The user chose to keep the regular construction-office type and defer the rail-office alternative as overkill. Stage 4 still needs evidence for productivity, machine eligibility, skills and equipment reservation.
+Current iteration: 0.5.0-dedicated-facility adds a local Workshop building cloned from the native construction-office shell, with temporary 5-worker / 2-vehicle-station settings. The user chose to block normal jobs. The Earthworks plugin lets the player register one selected building per loaded session and skips the native construction-office assignment routine for that exact building instance; registration clears on reload. The user reports no Stage 4b checks outstanding. The vanilla panel did not show worker occupation, though the user saw workers arrive and the inspector counted them. The user chose to keep the regular construction-office type and defer the rail-office alternative as overkill. The user then fixed the permitted vehicle classes to bulldozers, excavators, dumpers and buses only. Stage 4 must establish enforcement and modded vehicle classification, plus productivity and equipment reservation, before execution is designed.
 
 In-game checklist:
 
