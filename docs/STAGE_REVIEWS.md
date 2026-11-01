@@ -8,7 +8,13 @@ The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a co
 
 Latest workflow correction: the user said "Dont do the tests yourself, just provide me with test instructions". All further in-game testing is user-run. Do not resume agent computer-use/game tests. Stage 3's existing agent observations remain historical evidence. Version 0.4.0-worker-probe is compiled; the launch script stages it after the game and project-local RML are closed. The Stage 4 in-game checklist is in STAGE4_TESTING.md. No in-game check of 0.4.0 has been performed by the agent.
 
-Stage 4's accepted productivity direction is recorded as D31: 10 workers enable one machine to reach manual-terrain speed; partial staffing scales proportionally; machines stop with zero workers; workers can perform labor-only terrain work using the vanilla worker-based baseline; workers do not add separate labor output while operating machines. The exact native rate, machine availability/reservation, multi-machine allocation and fuel are still unresolved. The user identified the relevant native worker source as the Labour Hall/worker pickup hall. A user-run comparison is prepared in [STAGE4E_PRODUCTIVITY_TESTING.md](STAGE4E_PRODUCTIVITY_TESTING.md); it has not been run.
+Stage 4's accepted productivity direction is recorded as D31: 10 workers enable one machine to reach manual-terrain speed; partial staffing scales proportionally; machines stop with zero workers; workers can perform labor-only terrain work using the vanilla worker-based baseline; workers do not add separate labor output while operating machines. The exact native rate, machine availability/reservation, multi-machine allocation and fuel are still unresolved. The user identified the relevant native worker source as the Labour Hall/worker pickup hall. A user-run comparison is prepared in [STAGE4E_PRODUCTIVITY_TESTING.md](STAGE4E_PRODUCTIVITY_TESTING.md); the user has run one machine-assisted sample, but the worker-count comparison remains incomplete.
+
+**Stage 4e user observation — native terrain productivity**
+
+- User reports one YAG DA-0.25 excavator present during 10 seconds of native terrain raising with the default brush. One sampled point changed from 11.66 m to about 16.35 m (about +4.69 m).
+- User could not isolate 10 workers; the operation appeared to draw workers from across the city. The measurement is not attributable to a known worker count and does not establish area/volume throughput or autonomous Earthworks productivity.
+- Worker-only calibration remains open. A proposed isolated low-population comparison is appended to [the Stage 4e instructions](STAGE4E_PRODUCTIVITY_TESTING.md).
 
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|

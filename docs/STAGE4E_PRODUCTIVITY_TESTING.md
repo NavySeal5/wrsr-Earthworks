@@ -43,3 +43,12 @@ Keep the results in this test save; no project records or native terrain data ar
 
 - [Official Report for the Community #102](https://www.sovietrepublic.net/post/report-for-the-community-102)
 - The installed Labour Hall definition is `media_soviet/dlc3/buildings/labour_pickup_hall/building.ini`.
+
+## User observation — 2 November 2026
+
+- One YAG DA-0.25 excavator was present. The user used the native terrain tool to raise terrain for 10 seconds using the default brush.
+- A sampled point rose from 11.66 m to about 16.35 m (approximately +4.69 m).
+- The user could not isolate a 10-worker group; the native operation appeared to use workers across the city.
+- This is a useful native-tool observation, but it does not establish autonomous facility productivity, area/volume per time, or the agreed 10-worker comparison. Worker-only productivity remains unmeasured.
+
+For a cleaner worker-only comparison, use a separate low-population disposable republic with roughly 10 total workers near a single Labour Hall and no other workers or earthmoving vehicles within 2 km of the patch. Compare the native worker-only run with one excavator plus the same worker group. If the native tool still draws a wider workforce, record that as the behavior and leave the worker-only rate uncalibrated.
