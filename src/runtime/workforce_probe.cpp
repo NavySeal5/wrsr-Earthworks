@@ -168,6 +168,15 @@ bool IsEarthworksBuilding(void* building)
     host->log("earthworks  blocked normal construction assignment to registered Earthworks building id=%u",earthworksOffice.id);
     return true;
 }
+bool IsRegisteredEarthworksBuilding(void* building)
+{
+    if(!building || !earthworksOffice.address || reinterpret_cast<Address>(building)!=earthworksOffice.address)return false;
+    Address live=0;
+    if(!Resolve(earthworksOffice,&live) || live!=reinterpret_cast<Address>(building)) {
+        earthworksOffice={};view.earthworksOfficeRegistered=false;view.earthworksOfficeId=0;return false;
+    }
+    return true;
+}
 void TickWorkforce()
 {
     if(!view.selected)return;

@@ -19,6 +19,7 @@ Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/worl
 | Device creation | C3DDLL64 IAT D3D11CreateDeviceAndSwapChain | Observe actual swap-chain creation after the original returns |
 | Present | IDXGISwapChain vtable slot 8 | Render overlay using copied snapshots |
 | Construction assignment filter | Inline EXE+0x161C90, `void(world, office, construction, amount, first, second)` | Block assignment only when `office` is the session-registered Earthworks building; otherwise call the original |
+| Vehicle station slot filter | Inline EXE+0x3E3F40, `bool(world, building, vehicleType, slotHint, int* slot)` | If `building` is the session-registered Earthworks station, reject names outside the initial bulldozer/excavator/dumper/bus patterns; otherwise call the original. Installation requires the exact pinned 17-byte instruction-aligned prologue |
 
 In the accepted 0.2.0 preview, terrain/camera reads have SEH guards and no terrain-write path exists. In 0.3.0 the ordinary planning controls remain read-only, with the additional fixture-restricted native experiment described below. Planning math uses copied samples; all terrain calls occur in the native frame callback. Commands carry a world-generation token; a new load drops stale work and undo history. Drafts remain session-only pending the Stage 6 persistence decision. Rendering also gates snapshots on the two fixed-address readiness scalars because Late stops running in menus; it does not follow terrain/camera pointers.
 
@@ -54,11 +55,17 @@ Provenance: local RepublicMP commit `630775724abd5e3346eb59f9c66e2873128d74a4`, 
 | Occupants | Building pointer vector +0xBC0 | Non-null entries and slots; workers at workplace is a hypothesis to compare, residents at homes use this same list |
 | Parked vehicles | Building pointer vector +0xC70 | Native membership, not verified idle/usable status |
 | World vehicles | World pointer vector +0x12810 | Capped at 65536 slots; faults mark an incomplete scan |
-| Vehicle identity/type | ID +0x04; type pointer +0x1708, bounded internal name +0x200, raw category +0x294 | No eligibility/skill classification inferred |
+| Vehicle identity/type | ID +0x04; type pointer +0x1708, bounded internal name +0x200, raw category +0x294 | Stage 4d prototype matches internal names plus native road/service category. This is not a native skill-field read and may miss unusually named mod vehicles |
 | Vehicle links | Home +0x4F0, owner/assignment +0x4F8 | Pointer equality with selected live building, independent overlapping flags |
 | Vehicle position | +0xDE0 vector3 | Horizontal distance from building origin, not operating range or proof of availability |
 
 No new hooks or native calls are added for this inspector. Main-thread sampling occurs at most twice a wall-clock second while selected, including when the panel is closed; an explicit snapshot request can sample immediately. Every followed field uses an SEH-guarded read. Vector bounds and alignment are checked, parked membership is copied/sorted, native pointers never reach the renderer, and published UI data contains only copied values. Reload clears selection/candidates. Each later sample resolves the selected slot/address/ID before following the building. Lost or unreadable identities require reselection; replacement buildings are not automatically followed.
+
+## Stage 4d vehicle allowlist prototype
+
+On supported executable 1.1.1.9/build 23935965, the slot selector at EXE+0x3E3F40 is used by the pinned purchase replay as the native test for a vehicle type's depot slot. The plugin now detours it and checks the exact session-registered building identity. For that one building, vehicle types are allowed by case-insensitive internal-name substrings plus the raw category at type+0x294: bulldozer/buldozer and excavator/exvacator require category 2 (road service); dumper/dump_truck/dumptruck/gravel_ and bus/bust require category 1 (road). Every unreadable, non-matching or other-category vehicle type is rejected. Other buildings are forwarded unchanged.
+
+This is a conservative first classifier, not proof that every modded vehicle name follows these patterns. `gravel_` is included for the installed base-game dump-truck family. The community vehicle guide documents construction skill tokens and dumper-deck animation as separate script properties, but the current native binding does not inspect those parsed properties. User in-game validation is required to verify native UI, purchase and vehicle-transfer behavior. [Vehicle modding guide](https://steamcommunity.com/sharedfiles/filedetails/?id=1861143159).
 
 Pick candidates are the five nearest readable building origins within 150 m of the click. This radius is a developer selection aid, not an approved operating range. Up to 48 linked vehicle rows are copied, with total/truncation and incomplete-read information displayed. Vehicles not linked by H/A/P are omitted; no proximity-based ownership is inferred.
 

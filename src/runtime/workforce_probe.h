@@ -34,6 +34,7 @@ void SelectWorkforceBuilding(unsigned candidate);
 bool RegisterEarthworksBuilding();
 void ClearEarthworksBuilding();
 bool IsEarthworksBuilding(void* building);
+bool IsRegisteredEarthworksBuilding(void* building);
 void TickWorkforce();
 void LogWorkforce();
 WorkforceView ReadWorkforce();

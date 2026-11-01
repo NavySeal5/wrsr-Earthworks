@@ -3,6 +3,7 @@
 // RepublicMP (E3418), commit 630775724abd5e3346eb59f9c66e2873128d74a4.
 #include <windows.h>
 #include "runtime.h"
+#include "vehicle_filter.h"
 #include <algorithm>
 #include <cstring>
 #include <deque>
@@ -24,10 +25,13 @@ LoadFn originalLoad = nullptr;
 HeightFn heightQuery = nullptr;
 using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
-constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90;
+using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
+VehicleSlotFn originalVehicleSlot = nullptr;
+constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40;
 const unsigned char lateBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xE0,0xDB,0xFF,0xFF};
 const unsigned char loadBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x00,0x38,0xFF,0xFF};
 const unsigned char constructionAssignBytes[] = {0x48,0x8B,0xC4,0xF3,0x0F,0x11,0x58,0x20,0x4C,0x89,0x40,0x18,0x48,0x89,0x50,0x10,0x53,0x56};
+const unsigned char vehicleSlotBytes[] = {0x44,0x89,0x4C,0x24,0x20,0x53,0x56,0x41,0x54,0x41,0x55,0x41,0x56,0x48,0x83,0xEC,0x50};
 bool ReadNative(Snapshot* out)
 {
     __try {
@@ -174,7 +178,7 @@ void Process(const Command& command)
             SelectWorkforceBuilding(static_cast<unsigned>(command.value));
         break;
     case Action::RegisterBuilding:
-        if(RegisterEarthworksBuilding())Message("Earthworks station registered for this session. Ordinary construction assignments to it will be blocked.");
+        if(RegisterEarthworksBuilding())Message("Station registered: named bulldozers, excavators, dumpers and buses only. Ordinary construction assignments are blocked.");
         else Message("Select a readable building before registering it.");
         break;
     case Action::ClearRegistration:ClearEarthworksBuilding();Message("Earthworks station registration cleared.");break;
@@ -228,6 +232,22 @@ void HookedConstructionAssign(void* world,void* office,void* construction,float 
 {
     if(IsEarthworksBuilding(office))return;
     originalConstructionAssign(world,office,construction,amount,first,second);
+}
+unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t slotHint,int* slot)
+{
+    static char lastRejected[65]{};
+    if(IsRegisteredEarthworksBuilding(building)) {
+        char rejected[65]{};
+        if(!AllowEarthworksVehicleType(type,rejected,sizeof(rejected))) {
+            if(slot)*slot=-1;
+            if(std::strcmp(lastRejected,rejected)!=0) {
+                strcpy_s(lastRejected,rejected);
+                host->log("earthworks  rejected vehicle type for dedicated station: %s",rejected);
+            }
+            return 0;
+        }
+    }
+    return originalVehicleSlot(world,building,type,slotHint,slot);
 }
 using BoolFn = bool (*)(void*);
 using KeyFn = bool (*)(void*,int);
@@ -297,10 +317,12 @@ bool InstallRuntime()
     heightQuery = reinterpret_cast<HeightFn>(GetProcAddress(static_cast<HMODULE>(host->engineModule),
         "?CollisionTerrainHeightOverPoint@C3D_TERRAIN@@QEAAMVC3DVECTOR3@@@Z"));
     if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
+        || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
         || !host->findIatSlot || !host->patchIat || !host->installInlineHook
         || std::memcmp(host->exeBase+LateRva,lateBytes,sizeof(lateBytes)) != 0
         || std::memcmp(host->exeBase+LoadRva,loadBytes,sizeof(loadBytes)) != 0
-        || std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0) {
+        || std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0
+        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0) {
         host->log("earthworks  native preflight failed; planning disabled"); return false;
     }
     for (const auto& item:imports) if (!host->findIatSlot(host->exeModule,"C3DDLL64.dll",item.symbol)) {
@@ -310,7 +332,8 @@ bool InstallRuntime()
     if (!host->installInlineHook(host->exeBase+LateRva,reinterpret_cast<void*>(HookedLate),reinterpret_cast<void**>(&originalLate),lateBytes,sizeof(lateBytes),"Earthworks read-only frame")) return false;
     if (!host->installInlineHook(host->exeBase+LoadRva,reinterpret_cast<void*>(HookedLoad),reinterpret_cast<void**>(&originalLoad),loadBytes,sizeof(loadBytes),"Earthworks world boundary")) return false;
     if (!host->installInlineHook(host->exeBase+ConstructionAssignRva,reinterpret_cast<void*>(HookedConstructionAssign),reinterpret_cast<void**>(&originalConstructionAssign),constructionAssignBytes,sizeof(constructionAssignBytes),"Earthworks office assignment filter")) return false;
-    host->log("earthworks  bindings installed: 13 input imports, frame, world-load, and Earthworks office assignment filter");
+    if (!host->installInlineHook(host->exeBase+VehicleSlotRva,reinterpret_cast<void*>(HookedVehicleSlot),reinterpret_cast<void**>(&originalVehicleSlot),vehicleSlotBytes,sizeof(vehicleSlotBytes),"Earthworks vehicle slot filter")) return false;
+    host->log("earthworks  bindings installed: 13 input imports, frame, world-load, office assignment, and Earthworks vehicle slot filters");
     BindTerrainProbe();
     return true;
 }
