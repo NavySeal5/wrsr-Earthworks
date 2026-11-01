@@ -1,14 +1,14 @@
 # Stage 4d — vehicle allowlist test
 
-Build: **0.5.1-vehicle-allowlist**. This is a test iteration for the temporary Earthworks Development Facility in Workshop item `9100000012` (5 worker places, 2 vehicle stations). It keeps the native construction-office shell and filters vehicles only while this exact facility is registered in the current loaded world.
+Build: **0.5.2-vehicle-allowlist-fix**. This is a focused correction to the temporary Earthworks Development Facility in Workshop item `9100000012` (5 worker places, 2 vehicle stations). It keeps the native construction-office shell and filters vehicles only while this exact facility is registered in the current loaded world.
 
-The first classifier uses internal type names and native categories. It recognizes `bulldozer`/`buldozer` and `excavator`/`exvacator` in road-service category 2; `dumper`, `dump_truck`, `dumptruck`, `gravel_`, and `bus`/`bust` in road category 1. Unreadable or unmatched types are rejected. Mod vehicles with other names may be rejected even if they have the corresponding skill.
+The classifier uses internal type names and native categories 1 (road) or 2 (road service). It recognizes `bulldozer`/`buldozer`, `excavator`/`exvacator`, `dumper`, `dump_truck`, `dumptruck`, any name containing `gravel`, and `bus`/`bust`. Unreadable, unmatched, and non-road types are rejected. The previous build incorrectly required bulldozers and excavators to have category 2; the user's log showed native/DLC earthmovers use category 1. ZiS-585 has internal name `DLC3_zis150_gravel`, so the dumper check now matches `gravel` anywhere in the name.
 
 ## Start
 
 1. Close the game and project-local RML. Start Steam.
 2. Run `earthworks-mod\launch-prototype.cmd` from the game folder.
-3. Confirm profile **Earthworks Development**, plugin **Earthworks Planning - Dedicated Facility Prototype**, version **0.5.1-vehicle-allowlist**. Launch from RML.
+3. Confirm profile **Earthworks Development**, plugin **Earthworks Planning - Dedicated Facility Prototype**, version **0.5.2-vehicle-allowlist-fix**. Launch from RML.
 4. Load the disposable `Earthworks_Test_S01` world. Make sure the local Earthworks Development Facility item is available and placed. Do not register an ordinary construction office as the Earthworks station.
 5. Open Earthworks, use **Find buildings**, select the test facility, then register it. The message should say named bulldozers, excavators, dumpers and buses only.
 
@@ -16,10 +16,10 @@ The first classifier uses internal type names and native categories. It recogniz
 
 The test building has two vehicle stations, so sell a vehicle before trying more types if both stations are occupied. Avoid buying a new test vehicle with autopurchase if you are unsure whether the selected building is the facility.
 
-1. From the registered facility's native vehicle-purchase UI, try one base-game example from each class:
-   - bulldozer: Stalinec bulldozer
+1. From the registered facility's native vehicle-purchase UI, try one available example from each class:
+   - bulldozer: DLC3 Stalinec S60 or the base-game Stalinec bulldozer
    - excavator: EO-302B excavator
-   - dumper: IFA W50 gravel/dump truck
+   - dumper: IFA W50 gravel/dump truck (available in 1970); ZiS-585 only if testing before 1964, because its installed script availability ends in 1963
    - bus: Ikarus 66 bus
 2. Record whether each appears, can be selected, and is successfully purchased into the facility. The expected result is that the native purchase path allows each type.
 3. Try one unrelated road cargo truck and one unrelated road-service vehicle (for example, a fire engine). The expected result is that the facility refuses them. If a forbidden vehicle remains selectable but purchase is refused, record that distinction.

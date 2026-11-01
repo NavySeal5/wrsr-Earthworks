@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning - Dedicated Facility Prototype",
-  "version": "0.5.1-vehicle-allowlist",
+  "version": "0.5.2-vehicle-allowlist-fix",
   "description": "Planning preview, session-only Earthworks facility registration, ordinary construction assignment blocking, and vehicle-name filtering for the registered facility. Includes isolated S03 terrain-test controls.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

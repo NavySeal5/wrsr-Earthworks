@@ -182,7 +182,7 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({390,240},{700,std::max(300.0f,display.y-180)});
     bool open=true;
     ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.5.1");
+    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.5.2");
     ImGui::TextWrapped("Plan a flat rectangle. Planning controls only change the preview. No autonomous project is started.");
     ImGui::Separator();
     ImGui::BeginChild("Planning status",{0,ImGui::GetTextLineHeight()*3+4},ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
@@ -247,7 +247,7 @@ void DrawInterface(const Snapshot& s)
                 w.earthworksOfficeRegistered && w.earthworksOfficeId==w.building.id?"YES":"no",w.blockedConstructionAssignments);
             if(ImGui::Button("Register selected building as Earthworks station"))Send(Action::RegisterBuilding);
             ImGui::SameLine();if(ImGui::Button("Clear station registration"))Send(Action::ClearRegistration);
-            ImGui::TextWrapped("Register only Earthworks Development Facility (test), not an ordinary construction office. This session filter accepts vehicle type names containing bulldozer/buldozer, excavator/exvacator, dumper/dump truck, gravel_, or bus/bust. Other types are rejected. Unusually named mod vehicles may need later classification support; reselect after reload.");
+            ImGui::TextWrapped("Register only Earthworks Development Facility (test), not an ordinary construction office. This session filter accepts road/road-service vehicle type names containing bulldozer/buldozer, excavator/exvacator, dumper/dump truck, gravel, or bus/bust. Other types are rejected. Unusually named mod vehicles may need later classification support; reselect after reload.");
         }
         if(ImGui::Button("Log inspector snapshot"))Send(Action::LogInspector);
         ImGui::TextWrapped("Readings refresh about twice per second, including while this panel is closed. Close Earthworks to use native building controls, then reopen to compare.");

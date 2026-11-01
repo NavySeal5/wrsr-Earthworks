@@ -63,10 +63,11 @@ bool AllowEarthworksVehicleType(void* vehicleType, char* rejectedType, unsigned 
     const bool readable = ReadableTypeName(static_cast<const unsigned char*>(vehicleType), name, sizeof(name), &category);
     bool allowed = false;
     if (readable) {
-        const bool bulldozer = (ContainsWord(name, "bulldozer") || ContainsWord(name, "buldozer")) && category == 2;
-        const bool excavator = (ContainsWord(name, "excavator") || ContainsWord(name, "exvacator")) && category == 2;
-        const bool dumper = category == 1 && (ContainsWord(name, "dumper") || ContainsWord(name, "dump_truck")
-            || ContainsWord(name, "dumptruck") || Contains(name, "gravel_"));
+        const bool roadVehicle = category == 1 || category == 2;
+        const bool bulldozer = roadVehicle && (ContainsWord(name, "bulldozer") || ContainsWord(name, "buldozer"));
+        const bool excavator = roadVehicle && (ContainsWord(name, "excavator") || ContainsWord(name, "exvacator"));
+        const bool dumper = roadVehicle && (ContainsWord(name, "dumper") || ContainsWord(name, "dump_truck")
+            || ContainsWord(name, "dumptruck") || Contains(name, "gravel"));
         const bool bus = category == 1 && (ContainsWord(name, "bus") || ContainsWord(name, "bust"));
         allowed = bulldozer || excavator || dumper || bus;
     }
