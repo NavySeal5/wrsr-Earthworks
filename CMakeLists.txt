@@ -27,7 +27,7 @@ add_library(earthworks_imgui STATIC
 target_include_directories(earthworks_imgui SYSTEM PUBLIC "${IMGUI_DIR}" "${IMGUI_DIR}/backends")
 target_compile_definitions(earthworks_imgui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 set_property(TARGET earthworks_imgui PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-add_library(EarthworksPlanning SHARED src/plugin/plugin.cpp src/core/planning.cpp src/runtime/runtime.cpp src/runtime/terrain_probe.cpp src/runtime/workforce_probe.cpp src/runtime/vehicle_filter.cpp src/ui/overlay.cpp)
+add_library(EarthworksPlanning SHARED src/plugin/plugin.cpp src/core/planning.cpp src/core/productivity.cpp src/runtime/runtime.cpp src/runtime/terrain_probe.cpp src/runtime/workforce_probe.cpp src/runtime/vehicle_filter.cpp src/ui/overlay.cpp)
 target_link_libraries(EarthworksPlanning PRIVATE earthworks_imgui d3d11 dxgi d3dcompiler dwmapi)
 target_include_directories(EarthworksPlanning SYSTEM PRIVATE "${TESMIO_SDK_DIR}/src")
 target_compile_features(EarthworksPlanning PRIVATE cxx_std_17)
