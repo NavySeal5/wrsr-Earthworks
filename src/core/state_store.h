@@ -1,0 +1,34 @@
+#pragma once
+#include "planning.h"
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+namespace ew {
+
+constexpr uint32_t StateSchemaVersion = 1;
+constexpr size_t MaxSavedProjects = 128;
+
+enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5 };
+
+struct SavedProject {
+    uint64_t id = 0;
+    ProjectStatus status = ProjectStatus::Draft;
+    Plan plan{};
+};
+
+struct DurableState {
+    uint32_t schema = StateSchemaVersion;
+    std::array<uint8_t, 32> terrainFingerprint{};
+    Plan draft{};
+    std::vector<SavedProject> projects;
+};
+
+// Versioned, bounded binary representation for a companion file. It contains
+// values only: no game pointers, native handles, or vehicle reservations.
+bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes);
+bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state);
+bool FingerprintMatches(const DurableState& state, const std::array<uint8_t, 32>& current) noexcept;
+
+} // namespace ew

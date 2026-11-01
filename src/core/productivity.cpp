@@ -11,7 +11,8 @@ double WorkerOnlyRate(int workers) noexcept
 
 double MachineRate(int assignedWorkers, double groundworksRating) noexcept
 {
-    if (assignedWorkers <= 0 || !std::isfinite(groundworksRating) || groundworksRating <= 0.0) return 0.0;
+    if (assignedWorkers <= 0) return 0.0;
+    if (!std::isfinite(groundworksRating) || groundworksRating <= 0.0) groundworksRating = ReferenceGroundworksRating;
     const double staffing = std::min(static_cast<double>(assignedWorkers) / WorkersPerFullyStaffedMachine, 1.0);
     return staffing * groundworksRating / ReferenceGroundworksRating;
 }

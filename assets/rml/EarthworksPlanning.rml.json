@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "earthworks.planning",
-  "name": "Earthworks Planning - Dedicated Facility Prototype",
-  "version": "0.5.2-vehicle-allowlist-fix",
-  "description": "Planning preview, session-only Earthworks facility registration, ordinary construction assignment blocking, and vehicle-name filtering for the registered facility. Includes isolated S03 terrain-test controls.",
+  "name": "Earthworks Planning - Durable Plans Prototype",
+  "version": "0.6.0-durable-plans",
+  "description": "Planning preview with save-bound draft and queued-project metadata. Terrain execution remains disabled.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },
   "supportedGameVersions": ["1.1.1.9"],

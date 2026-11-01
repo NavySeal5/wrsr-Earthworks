@@ -182,8 +182,8 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({390,240},{700,std::max(300.0f,display.y-180)});
     bool open=true;
     ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.5.2");
-    ImGui::TextWrapped("Plan a flat rectangle. Planning controls only change the preview. No autonomous project is started.");
+    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.6.0");
+    ImGui::TextWrapped("Plan a flat rectangle, save drafts, and queue one project. This stage does not execute terrain work.");
     ImGui::Separator();
     ImGui::BeginChild("Planning status",{0,ImGui::GetTextLineHeight()*3+4},ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
     ImGui::TextWrapped("%s",s.message);
@@ -203,7 +203,11 @@ void DrawInterface(const Snapshot& s)
         ImGui::TextColored({1,0.62f,0.26f,1},"Cut estimate: %.0f m3",s.volumes.cut);
         ImGui::TextColored({0.24f,0.87f,0.65f,1},"Fill estimate: %.0f m3",s.volumes.fill);
         ImGui::TextWrapped("Sharp footprint edges. The overlay is visible through terrain. Volumes use a sampled grid and are estimates.");
+        ImGui::BeginDisabled(s.projectQueued);
+        if(ImGui::Button("Confirm and queue project"))Send(Action::ConfirmProject);
+        ImGui::EndDisabled();
     }
+    if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. No terrain work runs in Stage 6.",s.projectId);
     ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
     ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
     ImGui::SameLine(); if (ImGui::Button("Clear preview")) Send(Action::Clear);
@@ -282,7 +286,7 @@ void DrawInterface(const Snapshot& s)
     }
     ImGui::Separator();
     ImGui::TextWrapped("Right-drag and wheel: camera. Close this panel to restore normal left clicks. Preview remains visible.");
-    ImGui::TextDisabled("Session draft: cleared when a world loads.");
+    ImGui::TextDisabled("Drafts and queued projects are stored with a matching native save. Preview controls never change terrain.");
     if (ImGui::CollapsingHeader("Terrain readings")) {
         ImGui::Text("Cursor: X %.1f  Z %.1f  Height %.2f m",s.cursor.x,s.cursor.z,s.cursor.y);
         ImGui::Text("Day %d, year %d, day progress %.3f",s.day,s.year,s.time);

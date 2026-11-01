@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 1 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured) and Stage 4b dedicated-facility checklist. The user fixed the Earthworks building's accepted vehicles to bulldozers, excavators, dumpers and buses only; enforcement and modded vehicle classification remain under investigation along with productivity. See the stage review log for evidence and progression.
+Updated 2 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured) and Stage 4b dedicated-facility checklist. The user fixed the Earthworks building's accepted vehicles to bulldozers, excavators, dumpers and buses only. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Stage 6 currently has a compiled, staged save/load prototype awaiting user testing. See the stage review log for evidence and progression.
 
 **1. What we are building**
 
@@ -164,9 +164,9 @@ Acceptance evidence: user-approved interaction and a credible preview, with unch
 
 **11. Stage 6 — persist plans before executing them**
 
-Implementation: create versioned draft/queued-project records and match their metadata to the correct native save snapshot. This stage may confirm a plan as queued, but cannot execute terrain work. Establish whether companion data belongs in a save folder/container and when a native snapshot is actually captured.
+Implementation: create versioned draft/queued-project records and match their metadata to the correct native save snapshot. The 0.6.0-durable-plans prototype writes an atomic `earthworks.dat` companion in the native save folder after the observed native save trigger completes. It records a checksum and SHA-256 of that slot's `heightmap.dds`; load restores only a valid matching companion. This stage can confirm one plan as queued, but cannot execute terrain work. The code remains subject to the user's Save/Save As/autosave/reload check.
 
-Ask whether unfinished drafts should be retained and how the player should recover missing/mismatched plan data. Technical handling always refuses unsafe automatic writes; the recovery interaction is a user decision.
+The user chose to retain drafts and confirmed projects (D33). Missing companion data produces an empty plan state; corrupt or mismatched data is refused with a status message. The native save and terrain are never rewritten during recovery. Recovery beyond this warning remains open for user review. A terrain fingerprint binds metadata to a save snapshot but does not replace execution-time checks that compare each project's sampled ground to the current terrain.
 
 In-game checklist:
 

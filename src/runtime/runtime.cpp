@@ -3,11 +3,13 @@
 // RepublicMP (E3418), commit 630775724abd5e3346eb59f9c66e2873128d74a4.
 #include <windows.h>
 #include "runtime.h"
+#include "save_store.h"
 #include "vehicle_filter.h"
 #include <algorithm>
 #include <cstring>
 #include <deque>
 #include <mutex>
+#include <utility>
 
 namespace ew {
 const TsmHost* host = nullptr;
@@ -17,6 +19,9 @@ std::mutex dataMutex;
 Snapshot published, current;
 std::deque<Command> commands;
 History history;
+DurableState durableState;
+bool savePending = false;
+bool loadMessagePending = false;
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
@@ -77,6 +82,7 @@ bool AvailabilitySignal()
 void Message(const char* text) { strcpy_s(current.message, text); }
 void Changed()
 {
+    durableState.draft = current.plan;
     current.volumes = Estimate(current.plan);
     ++current.revision;
     host->log("earthworks  draft-only revision=%llu world=%llu complete=%d target=%.3f area=%.2f cut=%.2f fill=%.2f",
@@ -87,12 +93,23 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
+    durableState = DurableState{}; savePending = false; loadMessagePending = false;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false;
     ProbeWorldBoundary();
     ResetWorkforce();
     std::lock_guard<std::mutex> lock(dataMutex);
     commands.clear(); published = current;
     host->log("earthworks  world boundary; discarded session preview, generation=%llu", generation);
+}
+void RefreshProjectStatus()
+{
+    current.projectQueued=false;
+    current.projectId=0;
+    for (const auto& project : durableState.projects) {
+        if (project.status==ProjectStatus::Queued) {
+            current.projectQueued=true; current.projectId=project.id; break;
+        }
+    }
 }
 bool SamplePlan(Plan* plan)
 {
@@ -167,6 +184,20 @@ void Process(const Command& command)
         current.plan = history.Redo(current.plan);
         current.mode = current.plan.complete ? PickMode::None : PickMode::Corners;
         Changed(); Message("Redid the draft edit."); break;
+    case Action::ConfirmProject: {
+        if(!current.plan.complete) { Message("Select a complete area before confirming a project."); break; }
+        if(!durableState.projects.empty()) { Message("Stage 6 supports one queued project. Complete or remove it in a later stage before adding another."); break; }
+        SavedProject project;
+        project.id=1;
+        project.status=ProjectStatus::Queued;
+        project.plan=current.plan;
+        durableState.projects.push_back(project);
+        RefreshProjectStatus();
+        ++current.revision;
+        host->log("earthworks  project confirmed and queued id=%llu; terrain execution is not enabled in Stage 6",project.id);
+        Message("Project queued. Stage 6 stores it with the native save; terrain execution is not enabled yet.");
+        break;
+    }
     case Action::CaptureTest: ProcessProbe(ProbeAction::Capture); break;
     case Action::RaiseTest: ProcessProbe(ProbeAction::Raise); break;
     case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
@@ -192,7 +223,8 @@ void Tick()
     if (!ReadNative(&current)) { current.ready = false; current.cursorValid = false; current.cameraValid = false; }
     if (wasReady && !current.ready) ResetWorld();
     if (!wasReady && current.ready) {
-        Message("Click Earthworks, then click two opposite corners.");
+        if(loadMessagePending) loadMessagePending=false;
+        else Message("Click Earthworks, then click two opposite corners.");
         host->log("earthworks  world ready generation=%llu date=%d/%d cursor=(%.2f,%.2f,%.2f)",
             current.generation,current.day,current.year,current.cursor.x,current.cursor.y,current.cursor.z);
     }
@@ -220,13 +252,44 @@ void Tick()
 void HookedLate(__int64 world)
 {
     ClearInputLatches();
+    void* worldObject=reinterpret_cast<void*>(world);
+    if (SaveIsActive(worldObject)) savePending=true;
     originalLate(world);
+    if (SaveIsActive(worldObject)) savePending=true;
+    else if (savePending) {
+        durableState.draft=current.plan;
+        if (SaveDurableState(host,worldObject,durableState)) host->log("earthworks  durable state saved with matching terrain fingerprint");
+        else host->log("earthworks  durable state was not saved; native save is intact");
+        savePending=false;
+    }
     try { Tick(); } catch (...) { host->log("earthworks  preview tick failed; disabling input capture"); panelOpen = false; }
 }
 void HookedLoad()
 {
     ResetWorld();
     originalLoad();
+    DurableState loaded;
+    const auto loadResult=LoadDurableState(host,host->exeBase+0x9D4F10,&loaded);
+    if (loadResult==StateLoadResult::Loaded) {
+        durableState=std::move(loaded);
+        current.plan=durableState.draft;
+        current.volumes=Estimate(current.plan);
+        RefreshProjectStatus();
+        ++current.revision;
+        Message("Restored saved Earthworks drafts and projects.");
+        loadMessagePending=true;
+        host->log("earthworks  companion state restored after terrain fingerprint matched");
+    } else if(loadResult==StateLoadResult::TerrainMismatch || loadResult==StateLoadResult::Corrupt) {
+        Message(loadResult==StateLoadResult::TerrainMismatch
+            ? "Saved Earthworks data belongs to different terrain. No plans were restored; terrain was not changed."
+            : "Saved Earthworks data is damaged. No plans were restored; terrain was not changed.");
+        loadMessagePending=true;
+        host->log("earthworks  companion refused (%s); loaded save remains unchanged",loadResult==StateLoadResult::TerrainMismatch?"terrain mismatch":"corrupt data");
+    } else {
+        host->log(loadResult==StateLoadResult::Missing
+            ? "earthworks  no companion state in this save"
+            : "earthworks  companion state unavailable; loaded save remains unchanged");
+    }
 }
 void HookedConstructionAssign(void* world,void* office,void* construction,float amount,bool first,bool second)
 {

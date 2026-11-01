@@ -7,12 +7,14 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, RegisterBuilding, ClearRegistration, ClearInspector, LogInspector };
+enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, ConfirmProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, RegisterBuilding, ClearRegistration, ClearInspector, LogInspector };
 enum class PickMode { Corners, Sample, None, InspectBuilding };
 struct Command { Action action; float value = 0; uint64_t generation = 0; };
 struct Snapshot {
     bool ready = false, cursorValid = false, cameraValid = false, canUndo = false, canRedo = false;
+    bool projectQueued = false;
     uint64_t generation = 0, revision = 0;
+    uint64_t projectId = 0;
     int day = 0, year = 0;
     float time = 0;
     Point cursor{};
