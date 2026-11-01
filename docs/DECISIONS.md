@@ -21,6 +21,7 @@ Updated 1 November 2026. This register separates the user's confirmed intent fro
 | D25 | Earthworks uses its own building with its own worker and machinery slots; do not draw machines from ordinary construction offices | User: "Earthworks should not use vehicles in construction offices, there should be its own building with worker slots + machine slots" |
 | D26 | The Earthworks building must be blocked from ordinary construction jobs | User selected "Block normal jobs (Recommended)" for the dedicated building's dispatch behavior |
 | D27 | Stage 4b test building has 5 worker places and 2 machine stations | User selected these temporary prototype values; not a release balance decision |
+| D28 | Compare a separate rail-office type to investigate native worker occupation display | User: "Compare rail-office type". This is a comparison specimen only; the accepted Earthworks facility type is unchanged |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 

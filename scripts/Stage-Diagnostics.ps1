@@ -42,9 +42,12 @@ Copy-Item -LiteralPath (Join-Path $root 'assets\rml\EarthworksPlanning.rml.json'
 $buildingStage = Join-Path $PSScriptRoot 'Stage-EarthworksBuilding.ps1'
 & $buildingStage
 if (-not $?) { throw 'Dedicated Earthworks building content staging failed.' }
+$railComparisonStage = Join-Path $PSScriptRoot 'Stage-RailOfficeComparison.ps1'
+& $railComparisonStage
+if (-not $?) { throw 'Rail-office comparison content staging failed.' }
 $config = Get-Content -LiteralPath (Join-Path $root 'assets\rml\diagnostic-config.json') -Raw | ConvertFrom-Json
 $config.gamePath = Join-Path $game 'SOVIET64.exe'
 [IO.File]::WriteAllText((Join-Path $runtime 'rml\config.json'), ($config | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
 Write-Host "RML development runtime ready: $runtime"
-Write-Host 'Earthworks Development selects the RML plugin; the local Earthworks workshop_wip building is also staged for the game to load.'
+Write-Host 'Earthworks Development selects the RML plugin; the dedicated Earthworks item and separate rail-office comparison are staged locally.'
 Write-Host 'The diagnostic preset is refreshed by staging. Your subscribed RML configuration is untouched. The game has not been launched.'
