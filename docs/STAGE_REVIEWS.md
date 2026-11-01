@@ -14,7 +14,7 @@ Latest workflow correction: the user said "Dont do the tests yourself, just prov
 | 1 — RML in-game diagnostic | Accepted | Original diagnostic evidence below; subsequent prototype launch/world/reload checklist passed | Covered by user's accepted prototype review |
 | 2 — Read-only diagnostics | In progress | Frame snapshots, lifecycle gating, cursor/camera projection and terrain sampling implemented for the accepted preview; broader save-lifecycle/time-speed investigation remains | Preview subset accepted; full Stage 2 checklist not claimed complete |
 | 3 — Controlled terrain edit | Accepted | Bounded native raise/lower, readbacks and historical saved-file comparisons; 0.3.1 diagnostic UI fixes | User reports raise/lower works, both deltas zero and normal native road/building placement |
-| 4 — Workforce/machinery feasibility | In progress | 0.5.2 vehicle-allowlist correction compiled for focused user retest; regular construction-office prototype retained | The user confirmed 0.5.1 blocked non-allowlisted types after registration, but rejected allowed excavators and the ZiS-585 dumper. 0.5.2 corrects those false negatives; retest pending. Productivity, availability/reservation and fuel remain open |
+| 4 — Workforce/machinery feasibility | In progress | 0.5.2 vehicle allowlist accepted by user; regular construction-office prototype retained | User: "working great now" after the 0.5.2 correction. The agreed vehicle classes are accepted for the facility. Productivity, availability/reservation and fuel remain open |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Planned | Not implemented | Pending |
 | 7 — Office/assignments | Planned | Representation and rules open | Pending |
@@ -178,6 +178,7 @@ Original diagnostic review was superseded by the user's batch instruction throug
 - Build 0.5.2 permits named earthmovers on road/road-service categories 1 or 2, and matches `gravel` anywhere within a road type name. Non-road categories and nonmatching names remain rejected. The user's next run is a focused retest, not stage acceptance.
 - 0.5.2 Release x64 build succeeded and exported all three Tesmio entry points. No tests were run and the game was not launched by the agent. DLL SHA-256: `3db5d182e054a2d7b97e4160ff84d0f9a4bfc0b05ae62f9cbb5715658bad7627`.
 - The installed ZiS-585 script lists availability as 1947–1963. In the user's new 1970 republic it may be unavailable due to the game's year rules even though the corrected allowlist recognizes its `DLC3_zis150_gravel` name. Use the IFA W50 gravel/dump truck for the focused 1970 test, or use a pre-1964 fixture to verify the ZiS-585 specifically.
+- User acceptance: after the focused correction, the user reported "working great now". Stage 4d's vehicle allowlist is accepted. The exact checklist cases were not itemized, so this records acceptance of the observed filter behavior without claiming specific transfer-route or ordinary-office checks beyond what the user described.
 
 **Template for each stage/test iteration**
 

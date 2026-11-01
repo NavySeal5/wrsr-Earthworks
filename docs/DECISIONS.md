@@ -23,7 +23,7 @@ Updated 1 November 2026. This register separates the user's confirmed intent fro
 | D27 | Stage 4b test building has 5 worker places and 2 machine stations | User selected these temporary prototype values; not a release balance decision |
 | D28 | Compare a separate rail-office type to investigate native worker occupation display | Initially requested by the user, then superseded by D29 before testing |
 | D29 | Keep the regular construction-office prototype for now; defer the rail-office alternative as overkill | User: "lets just stick with the construcction office prototype for now, the RCO seems overkill" |
-| D30 | The Earthworks building must accept only bulldozers, excavators, dumpers, and buses; exclude every other vehicle class | User: "The building should only accept Bulldozers, excavators, dumpers, and busses". The 0.5.1 test rejected some allowed classes; 0.5.2 corrects the road-category and gravel-name false negatives and awaits retest |
+| D30 | The Earthworks building must accept only bulldozers, excavators, dumpers, and buses; exclude every other vehicle class | User: "The building should only accept Bulldozers, excavators, dumpers, and busses". After 0.5.1 false negatives were corrected in 0.5.2, the user accepted the result: "working great now". Specific transfer and ordinary-office checks were not itemized |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
