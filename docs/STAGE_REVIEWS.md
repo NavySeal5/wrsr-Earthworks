@@ -303,4 +303,5 @@ A single user statement can accept the current result and authorize progression.
 - User selected concurrent projects using available machines, with the option for one project to use multiple machines. The player can reorder priority; facility assignments remain manual under D38.
 - Allocate facility workers to higher-priority eligible projects first. Skip paused or review-blocked projects so lower-priority eligible work may proceed.
 - Reject confirmation of a project whose footprint overlaps any queued, running or paused project. Completed and cancelled projects do not reserve their old footprint.
+- Each queued project requires explicit Start. A paused project may be reassigned to a different Earthworks facility without losing progress; any existing terrain-review requirement remains in force (D47/D48).
 - D46 records these rules. Implementation is authorized; no Stage 9 code or in-game tests have been completed yet.
