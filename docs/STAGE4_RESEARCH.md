@@ -59,7 +59,7 @@ This does not prove that the native UI has no other construction workflow for te
 
 ## Next technical step
 
-The Stage 8 readiness probe reports raw vehicle job-state and route-stop readings for bulldozers and excavators, and build 0.8.1 adds a guarded read-only trace at the native terrain writer. These observations can reveal changes and identify the caller, but they do not establish exclusive availability. The 0.8.1 build is staged; the user should run the disposable-save overlap check in [STAGE8_READINESS_TESTING.md](STAGE8_READINESS_TESTING.md) and report the caller RVA and machine readings. A clean result still requires a source-backed reservation design before terrain-writing implementation. No general in-game test authorization is inferred from the earlier one-off computer check.
+The Stage 8 readiness probe reports raw vehicle job-state and route-stop readings for bulldozers and excavators, and build 0.8.1 adds a guarded read-only trace at `C3D_TERRAIN::EditRaiseLower`. In the agent-assisted partial check, short native Raise terrain inputs produced no calls at that hook, while a brown surface swath appeared visually; no height readback was taken. The computer drag control could not sustain a 10-second hold. The manual tool may use a different terrain-write path, which requires further source tracing. The machine readings stayed unchanged, but that does not establish exclusive availability. See the partial results in [STAGE8_READINESS_TESTING.md](STAGE8_READINESS_TESTING.md). A source-backed reservation design remains required before terrain-writing implementation.
 
 For a user-run native rate comparison, see [Stage 4 productivity instructions](STAGE4E_PRODUCTIVITY_TESTING.md). These instructions do not require a new DLL build.
 
