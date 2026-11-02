@@ -33,3 +33,8 @@ Do not run this check in a valuable save or with an active Earthworks operation.
 - The agent enabled **Build from resources** and made one brief raise-terrain stroke on empty ground near the facility. The inspector still showed both machines parked (2/2 matches), both raw job states at `-1`, and both route lists at 0. No machine movement or visible fuel reading was observed.
 - Limitation: computer-use drag released too quickly to provide a sustained 10-second terrain-tool hold. The resources-mode stroke therefore does not establish native vehicle dispatch or fuel use. This is a partial observation only; Stage 8 readiness remains pending. Do not infer machine exclusivity from unchanged diagnostics.
 - No Earthworks project was started, no save was made, and no vehicles were purchased or removed. The fresh test save now has a small terrain alteration beside the facility; discard this test save or restore the patch manually to return to a pristine starting point.
+
+## Static native-call follow-up
+
+- On installed game build 23935965, `C3DDLL64.dll` exports `C3D_TERRAIN::EditRaiseLower` at RVA `0xF8E50`. MSVC `dumpbin` disassembly shows this method calculates the affected heightmap region and applies per-cell terrain edits. It accepts a terrain object, position and brush/height parameters; it does not accept a construction office or vehicle.
+- Therefore the low-level terrain writer alone cannot establish who pays for, enables or performs manual terrain work. Vehicle selection, eligibility and any work-rate/resource accounting must happen in a caller or separate game subsystem. Do not use the Stage 3 direct-call experiment as proof of machine reservation or as the production executor without the missing caller-side safety checks.
