@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
-project(EarthworksPlanning VERSION 0.10.0 LANGUAGES CXX)
+project(EarthworksPlanning VERSION 0.11.0 LANGUAGES CXX)
 option(EARTHWORKS_TRACE_FAULT "Enable temporary native fault tracing during investigation" OFF)
+option(EARTHWORKS_DEVELOPER_UI "Include technical inspector and terrain-probe UI" OFF)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Use the Microsoft x64 C++ toolchain on Windows.")
@@ -35,6 +36,9 @@ target_compile_definitions(EarthworksPlanning PRIVATE
     WIN32_LEAN_AND_MEAN NOMINMAX
     EARTHWORKS_GAME_PE_TIMESTAMP=0x6A3EB6ADu
 )
+if(EARTHWORKS_DEVELOPER_UI)
+    target_compile_definitions(EarthworksPlanning PRIVATE EARTHWORKS_DEVELOPER_UI=1)
+endif()
 if(EARTHWORKS_TRACE_FAULT)
     target_compile_definitions(EarthworksPlanning PRIVATE EARTHWORKS_TRACE_FAULT)
 endif()

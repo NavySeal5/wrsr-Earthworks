@@ -68,7 +68,8 @@ The diagnostic profile currently enables zero Workshop items. Its first test wor
 | 7 | Office and project assignment | Agreed operation reports capacity and reserves equipment correctly | Building model, staffing, range, costs and assignment rules |
 | 8 | One autonomous project | Staffed/equipped operation changes terrain gradually and resumes correctly | Throughput model, work appearance, pause/cancel and conflicts |
 | 9 | Multiple projects and offices | Agreed scheduling and conflict rules remain understandable and correct | Queue policy, sharing, priorities and overlap behaviour |
-| 10 | Earthworks building and player UI | Facility presentation and the mod workflow are clear and usable in game | Building appearance/information and interface layout |
+| 10a | Player-facing UI | Plan and Projects tabs present the workflow clearly; technical diagnostics are absent | Tab layout, project/facility selection flow, message clarity |
+| 10b | Purpose-built Earthworks facility | Dedicated two-bay earthmoving facility and decorative tank are identifiable in game | Exact shape/details and native building-panel presentation |
 | 11 | Balanced candidate package | Agreed workflow works in intended gameplay settings and a clean install | Rates, limits, release scope and intended gameplay settings |
 
 Every row is a separate in-game review boundary. A stage may be split further if its checklist becomes too broad. Splitting never removes an existing acceptance gate. Public publishing is a separate user decision.
@@ -231,33 +232,41 @@ In-game checklist:
 
 Acceptance evidence: the user can see and predict which projects run, worker/machine capacity is counted once, priority and blockage rules match D46, and overlaps are explained before enqueueing. Fuel/material costs, native vehicle reservation and expanded terrain-protection hooks remain later integration/balance work.
 
-**15. Stage 10 — Earthworks building and player-facing UI**
+**15. Stage 10a — player-facing UI**
 
-The user requested a dedicated stage before balancing to improve the Earthworks building, its interface and the mod's general UI. This stage reviews the existing planning, queue, assignment and progress workflow for player-facing clarity; it does not change accepted gameplay rules.
+The user requested a dedicated stage before balancing to improve the Earthworks building, its interface and the mod's general UI. Stage 10 is split so the interface can be accepted before the building asset is introduced.
 
-Scope to review before implementation:
+The user chose a **Plan** tab and a **Projects** tab. Keep planning and project execution controls in the player-facing interface while removing technical inspector and terrain-probe controls from the player build. The debug controls remain available only in a developer build. Do not change accepted gameplay rules.
 
-- Develop a purpose-built Earthworks facility with its own visual identity, while preserving its dedicated worker/machine slots, accepted vehicle classes and exclusion from ordinary construction jobs. Correct the current test item's inherited 16 parking points to the two machine stations chosen for the Stage 9 test; defer final release capacities to Stage 11.
-- Make the building's purpose, staffing/equipment role and in-game building-panel information understandable at placement and during use.
-- Restructure the Earthworks panel so planning, project queue/actions, facility assignment and project progress are easy to find; keep long explanations from overwhelming the primary workflow.
-- Separate player-facing controls and status from developer diagnostics. Preserve useful diagnostics in a deliberate advanced/collapsible area or developer build if that is the chosen direction.
-- Review readability at the user's normal resolution, window scaling, panel size/scrolling, button labels, status/error messages and interaction with native game controls.
-- Prepare an in-game review build and user-run checklist; a successful compile alone cannot establish visual or interaction acceptance.
-
-The high-level direction is resolved in D50 and D52: purpose-built facility, player-first workflow, and technical inspector/terrain probes in a developer-only build, absent from the player UI. Building footprint, exterior design and panel layout still need a concrete proposal. Building slots, vehicle restrictions and native building type should not change without a separate decision and feasibility review. Any new gameplay behavior discovered during UI work returns to the decision gate instead of being silently added.
+Proposed layout: **Plan** contains area selection, height, cut/fill preview, estimate and queue confirmation. **Projects** contains the prioritized queue, selected-project status/progress and controls, plus facility selection/assignment. Keep the panel open for terrain clicks as the current selection workflow requires; keep actions usable without requiring the player to close the panel unnecessarily.
 
 In-game checklist:
 
-1. Find and place the Earthworks facility in the expected build menu; confirm its name, icon/preview and purpose are recognizable.
-2. Inspect its native building panel and confirm worker and machine capacity, accepted vehicles and ordinary-job restriction are communicated correctly.
-3. Use the Earthworks interface from area planning through assignment and project control; confirm the next action and selected project/facility are apparent.
-4. Review queued, waiting, running, paused, review-required, completed and cancelled states where available, including messages and progress.
-5. Check long text, scrolling/resizing, screen edges, UI scale and native input after opening/closing the panel.
-6. Confirm ordinary play/building controls and existing save/reload behavior remain usable.
+1. Open the player build and confirm the inspector, raw terrain readings and terrain probes are absent.
+2. Use Plan to select two corners, set/sample a target, review cut/fill and confirm a project.
+3. Use Projects to select/reorder a project, find and assign a facility, and operate queue controls.
+4. Review queued, waiting, running, paused, review-required, completed and cancelled states where available.
+5. Check scrolling/resizing, screen edges, UI scale and native inputs while keeping the panel open for map clicks.
+6. Confirm normal game controls work after closing the panel and existing save/reload behavior is unaffected.
 
-Acceptance evidence: the user confirms the facility presentation and player workflow are clear at their normal settings. The stage may be split if the building asset and interface require separate review iterations. Balance and candidate packaging remain deferred to Stage 11.
+Acceptance evidence: the user confirms the workflow is clear and key actions/statuses fit their normal settings; diagnostics do not appear in the player build. A build pass does not substitute for the user's in-game review.
 
-**16. Stage 11 — balance and candidate package**
+**16. Stage 10b — purpose-built Earthworks facility**
+
+The user selected the open two-bay canopy plus dispatch office concept and requested a visible fuel tank. The tank is decorative only in this stage; fuel use and refuelling remain future gameplay work. Correct the current test item's inherited 16 parking points to exactly two, matching the user's selected Stage 9 fixture; final release capacities remain for Stage 11. Preserve the user-approved 20-worker temporary test setting, eligible vehicle classes, automatic facility recognition, and exclusion from ordinary construction work.
+
+Implementation proposal: author a compact bespoke low-poly model, prepare its mesh/material through the game's ModelViewer pipeline, generate the dedicated building item and preview icon, and retain construction-office workplace/vehicle behavior underneath. The building should communicate worker dispatch and two equipment bays without suggesting implemented fuel storage services.
+
+In-game checklist:
+
+1. Find/place the building and check its name, thumbnail, footprint, orientation, connections and two vehicle bays.
+2. Confirm the visible fuel tank reads as part of the facility but does not create or promise a refuelling interface.
+3. Confirm worker arrivals, accepted vehicle classes, two-vehicle capacity and that ordinary construction jobs remain blocked.
+4. Check the native building panel, construction appearance and save/reload in the existing fixture.
+
+Acceptance evidence: the user confirms the building's appearance and native behavior in game. Any mismatch in footprint, station count, staff display or vehicle behavior is corrected before Stage 10b acceptance.
+
+**17. Stage 11 — balance and candidate package**
 
 After Stage 10 is accepted, review rates, office capacity/radius, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
 
@@ -274,7 +283,7 @@ In-game checklist:
 
 Acceptance evidence: the user approves the candidate's behaviour, UX and balance; observed limits and unresolved issues are recorded. Decide distribution and additional features afterwards.
 
-**17. Engineering constraints retained across stages**
+**18. Engineering constraints retained across stages**
 
 Keep native game bindings isolated from gameplay calculations and the host adapter. Every binding needs its supported binary identity, signature/calling convention, evidence and failure behaviour recorded. Code that only works on a known binary must decline unsupported builds rather than guess.
 

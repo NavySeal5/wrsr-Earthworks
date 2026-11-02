@@ -282,7 +282,7 @@ void Process(const Command& command)
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
             FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;
-            Message("Choose the Earthworks facility in the inspector, then assign it to the queued project.");break;
+            Message("Select your Earthworks facility in the Projects tab, then assign it to the selected project.");break;
         }
         Point p = current.cursor;
         if (!ReadHeight(p.x,p.z,&p.y)) { Message("Cannot sample terrain here. Try another point."); break; }
@@ -453,7 +453,7 @@ void Process(const Command& command)
     case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
     case Action::RecheckTest: ProcessProbe(ProbeAction::Recheck); break;
     case Action::InspectBuilding:
-        current.mode=PickMode::InspectBuilding;Message("Click near the facility on the map, then choose its Earthworks facility result in the inspector.");break;
+        current.mode=PickMode::InspectBuilding;Message("Click near your Earthworks facility on the map. Select it in the Projects tab.");break;
     case Action::ChooseBuilding:
         if(std::isfinite(command.value) && command.value>=0 && command.value<WorkforceCandidates)
             SelectWorkforceBuilding(static_cast<unsigned>(command.value));

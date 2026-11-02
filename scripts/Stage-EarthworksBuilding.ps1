@@ -84,14 +84,14 @@ $config=@"
 `$VISIBILITY 0
 `$OBJECT_BUILDING $object
 `$ITEM_NAME "$name"
-`$ITEM_DESC "Temporary Earthworks station prototype. 20 worker slots and the native two-station construction-office shell. Stage 9 test content only."
+`$ITEM_DESC "Temporary Earthworks test prototype. 20 worker places and 16 parking points inherited from the construction-office template. Not a final facility capacity."
 `$END
 "@
 [IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'),$config,[Text.UTF8Encoding]::new($false))
-[IO.File]::WriteAllText((Join-Path $item $marker),'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Temporary Stage 9 20 worker, 2 machine prototype; do not publish.',[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $item $marker),'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Temporary Stage 9 fixture: 20 worker places and 16 inherited parking points; do not publish.',[Text.UTF8Encoding]::new($false))
 
 if(-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null; New-Item -ItemType Directory -Path $target | Out-Null }
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 Write-Host "Staged dedicated Earthworks content item $id at $target"
-Write-Host 'Temporary Stage 9 settings: 20 worker places, native construction_office3 shell with two vehicle-station placements.'
+Write-Host 'Temporary Stage 9 settings: 20 worker places; the construction_office3 template has 16 vehicle-parking points, not two.'
 Write-Host 'The plugin recognizes this facility by its unique internal asset name. Ordinary construction offices remain unaffected.'

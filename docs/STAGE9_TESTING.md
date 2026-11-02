@@ -4,7 +4,7 @@ Build: **0.10.0-stage9-multiproject**. These are user-run gameplay checks; the a
 
 ## Setup
 
-1. Use a disposable copy of `Earthworks_Test_S01` or a fresh test republic. Keep projects away from roads, buildings, utilities and other infrastructure. The local test facility now has **20 worker places and 2 machine stations** so both machines can be staffed; this is Stage 9 test capacity only.
+1. Use a disposable copy of `Earthworks_Test_S01` or a fresh test republic. Keep projects away from roads, buildings, utilities and other infrastructure. D49 selected **20 worker places and 2 machine stations** for this test fixture. A later asset audit found the generated construction-office template actually retained **16 vehicle-parking points**; Stage 9 scheduler behavior was reviewed, but a two-slot maximum was not established. Stage 10b will correct the facility item.
 2. Close the game and project-local RML. From the mod folder run `launch-prototype.cmd`, confirm **Earthworks Planning - Multi-project Prototype** version **0.10.0-stage9-multiproject**, then launch the game from RML.
 3. Open Earthworks and confirm the panel lists projects and shows the Stage 9 header. The launch script does not load a save for you.
 

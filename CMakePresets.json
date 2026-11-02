@@ -9,11 +9,22 @@
       "binaryDir": "${sourceDir}/build/windows-x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TRY_COMPILE_CONFIGURATION": "Release"
+      }
+    },
+    {
+      "name": "windows-x64-developer-ui",
+      "displayName": "Windows x64 developer UI",
+      "inherits": "windows-x64",
+      "binaryDir": "${sourceDir}/build/windows-x64-developer-ui",
+      "cacheVariables": {
+        "EARTHWORKS_DEVELOPER_UI": "ON"
       }
     }
   ],
   "buildPresets": [
-    { "name": "windows-x64", "configurePreset": "windows-x64" }
+    { "name": "windows-x64", "configurePreset": "windows-x64" },
+    { "name": "windows-x64-developer-ui", "configurePreset": "windows-x64-developer-ui" }
   ]
 }
