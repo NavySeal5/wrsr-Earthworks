@@ -3,18 +3,22 @@
 #include "tesmio_api.h"
 #include "terrain_probe.h"
 #include "native_terrain_probe.h"
+#include "../core/state_store.h"
 #include "workforce_probe.h"
 #include <atomic>
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, ConfirmProject, AssignProject, ClearProjectAssignment, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector };
+enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, ConfirmProject, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector };
 enum class PickMode { Corners, Sample, None, InspectBuilding };
 struct Command { Action action; float value = 0; uint64_t generation = 0; };
 struct Snapshot {
     bool ready = false, cursorValid = false, cameraValid = false, canUndo = false, canRedo = false;
     bool projectQueued = false;
     bool assignedFacilityFound = false;
+    ProjectStatus projectStatus = ProjectStatus::Draft;
+    bool projectNeedsReview = false;
+    float projectProgress = 0;
     uint64_t generation = 0, revision = 0;
     uint64_t projectId = 0;
     unsigned projectFacilityId = 0;
@@ -39,5 +43,6 @@ bool InstallRuntime();
 void ClearInputLatches();
 Snapshot ReadSnapshot();
 void Enqueue(Command command);
+void NotifyNativeTerrainEdit(float x, float z, float brushRadius) noexcept;
 void StartOverlay();
 }

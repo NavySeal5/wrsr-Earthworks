@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <intrin.h>
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include "native_terrain_probe.h"
 #include "runtime.h"
@@ -31,6 +32,7 @@ std::atomic<bool> bound{false};
 void HookAngleLimit(void* terrain, const float* position, float a, float b, float c, float d, bool flag, float limit)
 {
     const auto returnAddress = reinterpret_cast<uintptr_t>(_ReturnAddress());
+    float brushX=0,brushZ=0;bool brushPositionValid=false;
     if (host && returnAddress >= reinterpret_cast<uintptr_t>(host->exeBase)
         && returnAddress < reinterpret_cast<uintptr_t>(host->exeBase) + host->exeSize) {
         caller.store(returnAddress - reinterpret_cast<uintptr_t>(host->exeBase), std::memory_order_relaxed);
@@ -40,7 +42,10 @@ void HookAngleLimit(void* terrain, const float* position, float a, float b, floa
         callerInGame.store(false, std::memory_order_relaxed);
     }
     __try {
-        if (position) { x.store(position[0], std::memory_order_relaxed); z.store(position[2], std::memory_order_relaxed); }
+        if (position) {
+            brushX=position[0];brushZ=position[2];brushPositionValid=std::isfinite(brushX)&&std::isfinite(brushZ);
+            x.store(brushX, std::memory_order_relaxed); z.store(brushZ, std::memory_order_relaxed);
+        }
         brush[0].store(a, std::memory_order_relaxed);
         brush[1].store(b, std::memory_order_relaxed);
         brush[2].store(c, std::memory_order_relaxed);
@@ -49,6 +54,10 @@ void HookAngleLimit(void* terrain, const float* position, float a, float b, floa
         angleLimit.store(limit, std::memory_order_relaxed);
     } __except (EXCEPTION_EXECUTE_HANDLER) { }
     calls.fetch_add(1, std::memory_order_relaxed);
+    // For the accepted Stage 8 rule, a native brush only conflicts with the
+    // active project when its estimated outer radius overlaps that footprint.
+    // The second float is the outer-radius parameter in the verified brush ABI.
+    if(brushPositionValid) NotifyNativeTerrainEdit(brushX,brushZ,b);
     original(terrain, position, a, b, c, d, flag, limit);
 }
 }

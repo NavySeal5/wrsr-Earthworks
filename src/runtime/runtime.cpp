@@ -6,6 +6,7 @@
 #include "save_store.h"
 #include "vehicle_filter.h"
 #include "native_terrain_probe.h"
+#include "../core/terrain_grid.h"
 #include "../core/productivity.h"
 #include <algorithm>
 #include <cmath>
@@ -29,9 +30,15 @@ ULONGLONG lastFacilityRefresh = 0;
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
+using RaiseFn = void (*)(void*,const float*,float,float,float,float,bool);
+using TextureFn = void (*)(void*);
 LateFn originalLate = nullptr;
 LoadFn originalLoad = nullptr;
 HeightFn heightQuery = nullptr;
+RaiseFn raiseLower = nullptr;
+TextureFn openHeightmap = nullptr, closeHeightmap = nullptr;
+double lastSimulationHour = -1;
+ULONGLONG lastCompletionCheck = 0;
 using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
 using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
@@ -75,6 +82,33 @@ bool ReadHeight(float x, float z, float* out)
         return std::isfinite(*out) && std::abs(*out) < 100000;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
+void* TerrainObject()
+{
+    __try {
+        auto* holder=*reinterpret_cast<unsigned char**>(host->exeBase+0x9941F0);
+        return holder ? *reinterpret_cast<void* const*>(holder+0xED8) : nullptr;
+    } __except(EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
+}
+bool ReadTerrainGrid(void* terrain,TerrainGrid* out)
+{
+    __try {
+        auto* p=static_cast<unsigned char*>(terrain);
+        out->originX=*reinterpret_cast<float*>(p+0x890);out->originZ=*reinterpret_cast<float*>(p+0x898);
+        out->heightScale=*reinterpret_cast<float*>(p+0x89C);out->width=*reinterpret_cast<int*>(p+0x220);
+        out->depth=*reinterpret_cast<int*>(p+0x224);
+        out->stepX=*reinterpret_cast<float*>(p+0x87C)/out->width;out->stepZ=*reinterpret_cast<float*>(p+0x880)/out->depth;
+        return out->width>=64 && out->width<=8192 && out->depth>=64 && out->depth<=8192
+            && out->stepX>0.1f && out->stepX<50 && out->stepZ>0.1f && out->stepZ<50
+            && std::isfinite(out->heightScale) && out->heightScale>10 && out->heightScale<100000;
+    } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+bool ApplyProjectVertex(void* terrain,const TerrainGrid& grid,int x,int z,float delta)
+{
+    __try {
+        const Point point=grid.At(x,z);const float pos[]={point.x,0,point.z};
+        raiseLower(terrain,pos,0.20f,0.45f,delta/grid.heightScale,-1.0f,false);return true;
+    } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
 bool AvailabilitySignal()
 {
     // These two fixed-address scalars outlive worlds. Late stops running in
@@ -97,7 +131,7 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
-    durableState = DurableState{}; savePending = false; loadMessagePending = false;
+    durableState = DurableState{}; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false;
     ProbeWorldBoundary();
     ResetWorkforce();
@@ -111,14 +145,18 @@ void RefreshProjectStatus()
     current.projectId=0;
     current.projectFacilityId=0;
     current.assignedFacilityFound=false;
+    current.projectStatus=ProjectStatus::Draft;
+    current.projectNeedsReview=false;
+    current.projectProgress=0;
     current.projectFacilityDistance=0;
     current.queuedPlan=Plan{};
     for (const auto& project : durableState.projects) {
-        if (project.status==ProjectStatus::Queued) {
-            current.projectQueued=true; current.projectId=project.id; current.queuedPlan=project.plan; break;
+        if (project.status==ProjectStatus::Queued || project.status==ProjectStatus::Running || project.status==ProjectStatus::Paused) {
+            current.projectQueued=true; current.projectId=project.id; current.queuedPlan=project.plan;
+            current.projectStatus=project.status; current.projectNeedsReview=project.needsReview; current.projectProgress=project.progress; break;
         }
     }
-    for(const auto& project:durableState.projects)if(project.status==ProjectStatus::Queued) {
+    for(const auto& project:durableState.projects)if(project.id==current.projectId && current.projectQueued) {
         current.projectFacilityId=project.facilityId;
         if(project.facilityId) {
             BuildingReading facility{};
@@ -206,9 +244,12 @@ void Process(const Command& command)
         Changed(); Message("Redid the draft edit."); break;
     case Action::ConfirmProject: {
         if(!current.plan.complete) { Message("Select a complete area before confirming a project."); break; }
-        if(!durableState.projects.empty()) { Message("Stage 6 supports one queued project. Complete or remove it in a later stage before adding another."); break; }
+        for(const auto& saved:durableState.projects)if(saved.status==ProjectStatus::Queued || saved.status==ProjectStatus::Running || saved.status==ProjectStatus::Paused) {
+            Message("Stage 8 supports one active project at a time.");return;
+        }
         SavedProject project;
         project.id=1;
+        for(const auto& saved:durableState.projects)project.id=std::max(project.id,saved.id+1);
         project.status=ProjectStatus::Queued;
         project.plan=current.plan;
         durableState.projects.push_back(project);
@@ -238,6 +279,58 @@ void Process(const Command& command)
     case Action::ClearProjectAssignment:
         for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Queued)project.facilityId=0;
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
+    case Action::StartProject:
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
+            BuildingReading facility{};const auto workforce=ReadWorkforce();
+            if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
+                Message("Native terrain writer is unavailable for this game build. Project remains queued.");break;
+            }
+            if(!project.facilityId || !FindEarthworksFacility(project.facilityId,&facility)) {
+                Message("Assigned Earthworks facility is missing or unreadable.");break;
+            }
+            if(!workforce.selected || !workforce.buildingValid || workforce.building.id!=project.facilityId
+                || !workforce.occupantsValid || !workforce.vehiclesValid || !workforce.parkedValid) {
+                Message("Select the assigned facility and wait for complete workforce readings before starting.");break;
+            }
+            if(!workforce.occupants && !workforce.eligibleMachineCandidates) {
+                Message("The assigned facility has no observed workers or parked Earthworks machine candidates.");break;
+            }
+            Plan refreshed=project.plan;
+            if(!SamplePlan(&refreshed)) {Message("Cannot recheck every planned terrain sample. Replan this project before starting.");break;}
+            float maxDifference=0;
+            for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
+            if(maxDifference>0.001f) {Message("Terrain changed since planning. Replan the footprint before starting.");break;}
+            project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
+            lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            RefreshProjectStatus();Message("Project started. Work follows simulation time; no extra costs are charged.");break;
+        }
+        break;
+    case Action::PauseProject:
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Running) {
+            project.status=ProjectStatus::Paused;RefreshProjectStatus();Message("Project paused. Current terrain and progress are kept.");break;
+        }
+        break;
+    case Action::ResumeProject:
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
+            project.status=ProjectStatus::Running;lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            RefreshProjectStatus();Message("Project resumed.");break;
+        }
+        break;
+    case Action::ReviewResumeProject:
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
+            if(!SamplePlan(&project.plan)) {Message("Could not read the project footprint. It remains paused for review.");break;}
+            project.needsReview=false;project.status=ProjectStatus::Running;
+            lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            RefreshProjectStatus();Message("Footprint reviewed. Project resumed toward its saved target.");break;
+        }
+        break;
+    case Action::CancelProject:
+        for(auto& project:durableState.projects)if(project.id==current.projectId &&
+            (project.status==ProjectStatus::Queued || project.status==ProjectStatus::Running || project.status==ProjectStatus::Paused)) {
+            project.status=ProjectStatus::Cancelled;project.needsReview=false;RefreshProjectStatus();
+            Message("Project cancelled. Terrain already changed is kept.");break;
+        }
+        break;
     case Action::CaptureTest: ProcessProbe(ProbeAction::Capture); break;
     case Action::RaiseTest: ProcessProbe(ProbeAction::Raise); break;
     case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
@@ -251,6 +344,120 @@ void Process(const Command& command)
     case Action::ClearInspector: ResetWorkforce();current.mode=PickMode::None;break;
     case Action::LogInspector: LogWorkforce();break;
     }
+}
+void NotifyNativeTerrainEditImpl(float x,float z,float brushRadius) noexcept
+{
+    if(!std::isfinite(x) || !std::isfinite(z) || !std::isfinite(brushRadius))return;
+    for(auto& project:durableState.projects)if(project.status==ProjectStatus::Running) {
+        const float minX=std::min(project.plan.a.x,project.plan.b.x),maxX=std::max(project.plan.a.x,project.plan.b.x);
+        const float minZ=std::min(project.plan.a.z,project.plan.b.z),maxZ=std::max(project.plan.a.z,project.plan.b.z);
+        const float dx=std::max({minX-x,0.0f,x-maxX});
+        const float dz=std::max({minZ-z,0.0f,z-maxZ});
+        const float radius=std::clamp(std::abs(brushRadius),0.0f,1000.0f);
+        if(dx*dx+dz*dz<=radius*radius) {
+            project.status=ProjectStatus::Paused;project.needsReview=true;
+            RefreshProjectStatus();
+            Message("Native terrain edit overlapped this project. It is paused; review the footprint before resuming.");
+            host->log("earthworks  project=%llu paused for overlapping native terrain edit at (%.2f,%.2f), radius=%.2f",
+                static_cast<unsigned long long>(project.id),x,z,radius);
+            break;
+        }
+    }
+}
+void TickProjectRunner()
+{
+    SavedProject* project=nullptr;
+    for(auto& saved:durableState.projects)if(saved.status==ProjectStatus::Running){project=&saved;break;}
+    if(!project || !current.ready)return;
+    const double clockHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+    if(lastSimulationHour<0){lastSimulationHour=clockHour;return;}
+    const double elapsed=clockHour-lastSimulationHour;lastSimulationHour=clockHour;
+    if(!std::isfinite(elapsed) || elapsed<=0)return;
+    auto workforce=ReadWorkforce();
+    if(!workforce.selected || !workforce.buildingValid || workforce.building.id!=project->facilityId) {
+        if(!SelectEarthworksFacility(project->facilityId)) {
+            project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+            Message("Assigned facility disappeared or could not be read. Project paused for review.");return;
+        }
+        workforce=ReadWorkforce();
+    }
+    if(!workforce.selected || !workforce.buildingValid || workforce.building.id!=project->facilityId
+        || !workforce.occupantsValid || !workforce.parkedValid || !workforce.vehiclesValid) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        Message("Facility workforce or vehicle reading failed. Project paused for review.");return;
+    }
+    const int workers=static_cast<int>(workforce.occupants);
+    const double relativeRate=workforce.eligibleMachineCandidates
+        ? MachineRate(std::min(workers,10),ReferenceGroundworksRating)
+        : WorkerOnlyRate(workers);
+    if(relativeRate<=0) {
+        project->status=ProjectStatus::Paused;RefreshProjectStatus();
+        Message("No productive workers are currently observed at the assigned facility. Project paused.");return;
+    }
+    // Provisional Stage 8 conversion: one relative manual-rate unit completes
+    // 10 m3 per simulation hour. Balancing remains open under D10/D14.
+    project->workRemainderM3=static_cast<float>(std::min(1.0e9,
+        static_cast<double>(project->workRemainderM3)+relativeRate*10.0*std::min(elapsed,1.0)));
+    void* terrain=TerrainObject();TerrainGrid grid{};GridRect rect{};
+    if(!terrain || !ReadTerrainGrid(terrain,&grid) || !SnapInside(project->plan,grid,&rect)) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        Message("Terrain bounds changed or cannot be read. Project paused for review.");return;
+    }
+    const int count=rect.Count();
+    if(count<=0 || count>40000) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        Message("Project footprint exceeds the current safe execution limit. It is paused for replanning.");return;
+    }
+    const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
+    const double precision=static_cast<double>(grid.heightScale)/60000.0;
+    const int batch=std::min(count,64);
+    const double threshold=cellArea*precision*batch;
+    if(project->workRemainderM3<threshold)return;
+    const double maxStep=0.05;
+    const double requestedStep=project->workRemainderM3/(cellArea*batch);
+    const float step=static_cast<float>(std::min(requestedStep,maxStep));
+    if(!std::isfinite(step) || step<=0)return;
+    if(!openHeightmap || !closeHeightmap || !raiseLower || !heightQuery) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        Message("Native terrain writer became unavailable. Project paused for review.");return;
+    }
+    __try { openHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();Message("Terrain writer failed to open; project paused for review.");return;
+    }
+    double usedVolume=0;int edited=0;bool failed=false;
+    for(int n=0;n<batch;++n) {
+        const uint32_t linear=(project->executionCursor++)%static_cast<uint32_t>(count);
+        const int x=rect.x0+static_cast<int>(linear%static_cast<uint32_t>(rect.x1-rect.x0+1));
+        const int z=rect.z0+static_cast<int>(linear/static_cast<uint32_t>(rect.x1-rect.x0+1));
+        const auto point=grid.At(x,z);float currentHeight=0;
+        if(!ReadHeight(point.x,point.z,&currentHeight)) {failed=true;break;}
+        const float difference=project->plan.target-currentHeight;
+        if(std::abs(difference)<=precision)continue;
+        const float delta=std::copysign(std::min(std::abs(difference),step),difference);
+        if(!ApplyProjectVertex(terrain,grid,x,z,delta)) {failed=true;break;}
+        float afterHeight=0;
+        if(!ReadHeight(point.x,point.z,&afterHeight)) {failed=true;break;}
+        const double applied=std::abs(static_cast<double>(afterHeight-currentHeight));
+        usedVolume+=applied*cellArea;if(applied>0)++edited;
+    }
+    __try { closeHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) { failed=true; }
+    if(failed) {
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        Message("Terrain edit/readback failed. Project paused for review; inspect the area before resuming.");return;
+    }
+    project->workRemainderM3=static_cast<float>(std::max(0.0,static_cast<double>(project->workRemainderM3)-usedVolume));
+    const auto estimate=Estimate(project->plan);const double total=estimate.cut+estimate.fill;
+    if(total>0)project->progress=std::clamp(project->progress+static_cast<float>(usedVolume/total),0.0f,1.0f);
+    const auto now=GetTickCount64();
+    if(now-lastCompletionCheck>=500) {
+        lastCompletionCheck=now;bool complete=true;
+        for(int z=rect.z0;z<=rect.z1 && complete;++z)for(int x=rect.x0;x<=rect.x1;++x) {
+            const auto point=grid.At(x,z);float value=0;
+            if(!ReadHeight(point.x,point.z,&value) || std::abs(project->plan.target-value)>precision*1.1) {complete=false;break;}
+        }
+        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;RefreshProjectStatus();Message("Earthworks project completed.");}
+        else if(edited)current.projectProgress=project->progress;
+    } else if(edited)current.projectProgress=project->progress;
 }
 void Tick()
 {
@@ -282,6 +489,7 @@ void Tick()
     current.probe = ReadProbeView();
     current.nativeTerrainCall = ReadNativeTerrainCallProbe();
     if(current.ready)TickWorkforce();
+    if(current.ready)TickProjectRunner();
     const auto facilityNow=GetTickCount64();
     if(current.projectQueued && current.projectFacilityId && facilityNow-lastFacilityRefresh>=500) {
         lastFacilityRefresh=facilityNow;RefreshProjectStatus();
@@ -395,6 +603,10 @@ Import imports[] = {
     {"?GetMouseRelative@C3D_INPUT@@QEAA?AVC3DVECTOR3@@XZ",reinterpret_cast<void*>(HRelative),reinterpret_cast<void**>(&relative)},
 };
 }
+void NotifyNativeTerrainEdit(float x,float z,float brushRadius) noexcept
+{
+    NotifyNativeTerrainEditImpl(x,z,brushRadius);
+}
 bool LeftTaken() { return panelOpen || mouseCapture || leftRelease; }
 void ClearInputLatches()
 {
@@ -418,8 +630,12 @@ void Enqueue(Command command)
 }
 bool InstallRuntime()
 {
+    const auto engine=static_cast<HMODULE>(host->engineModule);
     heightQuery = reinterpret_cast<HeightFn>(GetProcAddress(static_cast<HMODULE>(host->engineModule),
         "?CollisionTerrainHeightOverPoint@C3D_TERRAIN@@QEAAMVC3DVECTOR3@@@Z"));
+    raiseLower=reinterpret_cast<RaiseFn>(GetProcAddress(engine,"?EditRaiseLower@C3D_TERRAIN@@QEAAXVC3DVECTOR3@@MMMM_N@Z"));
+    openHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureOpen@C3D_TERRAIN@@QEAAXXZ"));
+    closeHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureClose@C3D_TERRAIN@@QEAAXXZ"));
     if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
         || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
         || !host->findIatSlot || !host->patchIat || !host->installInlineHook
@@ -440,6 +656,7 @@ bool InstallRuntime()
     host->log("earthworks  bindings installed: 13 input imports, frame, world-load, office assignment, and Earthworks vehicle slot filters");
     BindTerrainProbe();
     BindNativeTerrainCallProbe();
+    host->log("earthworks  terrain executor bindings %s",raiseLower&&heightQuery&&openHeightmap&&closeHeightmap?"available":"unavailable; projects remain queued");
     return true;
 }
 }

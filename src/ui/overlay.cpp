@@ -227,16 +227,36 @@ void DrawInterface(const Snapshot& s)
         if(ImGui::Button("Confirm and queue project"))Send(Action::ConfirmProject);
         ImGui::EndDisabled();
     }
-    if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. Stage 7 never edits terrain.",s.projectId);
-    if(s.projectQueued)ImGui::TextWrapped("Grey wireframe: queued project. Coloured wireframe: editable draft.");
+    if(s.projectQueued) {
+        const char* status=s.projectStatus==ProjectStatus::Running?"Running":s.projectStatus==ProjectStatus::Paused?"Paused":"Queued";
+        ImGui::TextColored({0.95f,0.82f,0.35f,1},"Project %llu | %s",s.projectId,status);
+        if(s.projectStatus==ProjectStatus::Running || s.projectStatus==ProjectStatus::Paused) {
+            char progressLabel[32];sprintf_s(progressLabel,"%.0f%%",s.projectProgress*100.0f);
+            ImGui::ProgressBar(s.projectProgress,{0,0},progressLabel);
+            ImGui::TextDisabled("Terrain progress; one machine maximum in this prototype.");
+            ImGui::TextDisabled("Provisional output: 10 m3 per simulation hour per manual-rate unit.");
+            if(s.projectStatus==ProjectStatus::Running) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
+            else if(s.projectNeedsReview) {
+                ImGui::TextColored({1,0.65f,0.3f,1},"Terrain changed in the footprint. Review before resuming.");
+                if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
+            } else if(ImGui::Button("Resume project"))Send(Action::ResumeProject);
+            ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);
+        } else {
+            ImGui::TextWrapped("Grey wireframe: queued project. Coloured wireframe: editable draft.");
+            ImGui::BeginDisabled(!s.assignedFacilityFound);
+            if(ImGui::Button("Start project"))Send(Action::StartProject);
+            ImGui::EndDisabled();
+            ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);
+        }
+    }
     {
-        ImGui::SeparatorText("Stage 7 | Facility dry-run");
+        ImGui::SeparatorText("Stage 8 | Project execution");
         if(!s.projectQueued) {
             ImGui::TextWrapped("First plan an area and press Confirm and queue project. Then choose an Earthworks facility here.");
         } else {
             if(ImGui::Button("Find Earthworks facility"))Send(Action::InspectBuilding);
             ImGui::SameLine();
-            ImGui::BeginDisabled(!s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
+            ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued || !s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
             if(ImGui::Button("Assign selected facility"))Send(Action::AssignProject);
             ImGui::EndDisabled();
             if(s.workforce.selected && s.workforce.buildingValid) {
@@ -247,7 +267,7 @@ void DrawInterface(const Snapshot& s)
             } else ImGui::TextDisabled("Click Find, click near a facility on the map, then choose its Earthworks facility result below.");
         }
         if(s.projectQueued && s.projectFacilityId) {
-            ImGui::SameLine();if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);
+            ImGui::SameLine();ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued);if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);ImGui::EndDisabled();
             if(s.assignedFacilityFound) {
                 ImGui::Text("Assigned Earthworks facility ID %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
                 ImGui::TextWrapped("Distance only. Operating range and footprint coverage are not established.");

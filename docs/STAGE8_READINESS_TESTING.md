@@ -1,10 +1,21 @@
-# Stage 8 readiness check — native work overlap
+# Stage 8 — one-project execution test
 
-Build 0.8.0 reservation-probe and 0.8.1 partial observations are recorded below. The current diagnostic build is **0.8.2-angle-limit-probe**; it adds a read-only counter for the native `C3D_TERRAIN::EditRaiseLowerAngleLimit` import used by the vanilla terrain tool and displays the last game caller and brush inputs. It does not write terrain or reserve vehicles.
+Build **0.9.0-runner-prototype** is the first build that applies native terrain edits for a queued Earthworks project. It adds start/pause/resume/cancel, a progress display, persistent execution state, a 40,000-heightmap-vertex footprint cap, and a 64-vertex-per-frame write budget. It uses one observed parked earthmoving-machine candidate with up to 10 observed facility workers, or facility workers alone when no machine candidate is present. The provisional output is 10 m3 per simulation hour per manual-rate unit (D45). The game has not been launched or tested on this build.
 
-Build 0.8.1 was staged in the project-local RML runtime and loaded in-game for the earlier partial check. Build 0.8.2 is now staged in the project-local RML runtime. Built and staged DLL SHA-256: `a0186a5864956ceff05606e90bff873207376fa5e414df749eff937f84d7c6ac`. It has not been launched or tested in-game. Stage 8 readiness still requires tracing machine availability/reservation before any executor is added.
+The earlier 0.8.2 probe check and source observations remain below as historical evidence. This build does not reserve a vehicle, move it to the project, animate it, or charge fuel. The read-only workforce data remains candidate/occupant counts, and workers outside the selected facility are not counted. The native overlap hook covers vanilla Raise/Lower calls observed through `EditRaiseLowerAngleLimit`; other terrain-changing game tools may not yet trigger review. Use a disposable save and inspect the patch after every step.
 
-Purpose: check whether vanilla terrain work can use workers or machines held at the dedicated Earthworks facility. This is a diagnostic only. It does not start an Earthworks project or authorize autonomous terrain edits.
+## User test for build 0.9.0
+
+1. Close the game and project-local RML. Run `launch-prototype.cmd`, confirm **0.9.0-runner-prototype**, then open a disposable save with an Earthworks facility. Keep this build away from valuable saves until terrain-shape behavior is reviewed.
+2. Staff the facility and park one allowed excavator or bulldozer in it. Open Earthworks, choose **Find Earthworks facility**, select the facility, and wait until worker/vehicle readings are complete.
+3. Select a small, empty rectangle (about 20 × 20 m), set a target height clearly above or below current ground, and confirm/queue. Assign the selected facility, then choose **Start project**. Verify the project status changes to Running, the grey wireframe remains visible, and the terrain begins moving toward the target. Watch for steps, holes, or edits outside the footprint.
+4. Pause the simulation. Verify the progress and terrain stop changing. Resume the simulation and verify both continue. Use **Pause project**, then **Resume project**, and confirm progress is retained.
+5. While it is running, use vanilla Raise/Lower with a brush wholly outside the project footprint; it should keep running. Then make a small brush edit that overlaps the footprint; Earthworks should pause and request review. Choose **Review terrain and resume** only after inspecting the altered patch; verify work continues toward the saved target.
+6. On a separate project, cancel after partial work. Confirm existing terrain is kept and the project stops. Do not use Undo as a terrain rollback.
+7. Save and reload a partially completed project. Confirm its assignment, progress and queued/running status are restored, and it continues without a sudden terrain jump. If the loaded project starts paused, resume it explicitly.
+8. Report game date/speed, workers observed, vehicle candidate type, starting/target heights, footprint, progress changes, any terrain outside the area, pause/conflict behavior, and whether time or money/fuel changed.
+
+Stop and reload the disposable save if terrain changes outside the selected footprint, native calls fault, or the overlay reports a terrain readback error. The runner does not currently intercept every possible road/building terrain edit, so inspect the full area before placing native construction over it.
 
 ## Use a disposable save
 
