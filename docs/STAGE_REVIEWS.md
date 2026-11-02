@@ -27,7 +27,7 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 | 6 — Durable plans | Accepted | Versioned companion-state encoding, atomic file replacement, native save-trigger observation and saved-heightmap SHA-256 matching implemented | User accepted after confirming ordinary save/reload preserves the draft and queued project. Queued grey-wireframe visibility, stale-state protection, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested and are deferred. See [STAGE6_TESTING.md](STAGE6_TESTING.md) |
 | 7 — Office/assignments | Accepted | Build 0.7.3-facility-identity; companion save preserves assignment by building ID and descriptor | User confirmed separate Save As/reload retained project 1's assignment to facility ID 14 and automatic recognition of `9100000012/EarthworksDevelopmentFacility`; screenshot dry-run showed 0 occupants/candidates and no terrain work |
 | 8 — One autonomous project | Accepted | Build 0.9.1 adds a bounded native terrain runner, simulation-time pacing, persisted progress, start/pause/resume/review/cancel controls, and overlap-only pausing for vanilla Raise/Lower brush calls. D39–D45 set prototype rules | User: “everything seems to work”; accepted and authorized progression. Earlier probe confirmed the native terrain call target. This acceptance does not claim unreported edge cases or later balance/integration work |
-| 9 — Multiple projects/operations | Planned | Scheduling rules open | Pending |
+| 9 — Multiple projects/operations | Design accepted; implementation next | D46 defines concurrent multi-machine projects, manual priority ordering, priority-first worker allocation, skipping paused/review-blocked work, and rejection of overlapping live projects | User chose the scheduling rules on 2 November 2026; implementation and user-run in-game check pending |
 | 10 — Balanced candidate | Planned | Scope/balance open | Pending |
 
 **Stage 6 implementation — accepted with deferred checks**
@@ -297,3 +297,10 @@ A single user statement can accept the current result and authorize progression.
 
 - User report: “everything seems to work, continue”. Stage 8 is accepted and Stage 9 is authorized to begin.
 - Acceptance covers the user's observed first autonomous prototype behavior after the bounds-review correction. No claim is made here that every persistence, conflict, resource-use, vehicle-reservation or edge-case check was separately performed. Deferred items remain candidates for later integration/balance work.
+
+**Stage 9 scheduling decisions — 2 November 2026**
+
+- User selected concurrent projects using available machines, with the option for one project to use multiple machines. The player can reorder priority; facility assignments remain manual under D38.
+- Allocate facility workers to higher-priority eligible projects first. Skip paused or review-blocked projects so lower-priority eligible work may proceed.
+- Reject confirmation of a project whose footprint overlaps any queued, running or paused project. Completed and cancelled projects do not reserve their old footprint.
+- D46 records these rules. Implementation is authorized; no Stage 9 code or in-game tests have been completed yet.

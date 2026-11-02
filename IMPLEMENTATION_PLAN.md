@@ -215,20 +215,20 @@ Acceptance evidence: first complete player-reviewed autonomous earthworks loop, 
 
 **14. Stage 9 — multiple projects, offices and conflicts**
 
-Before implementation, ask about sequential versus shared capacity, priorities/automatic assignment, whether blocked projects hold up a queue, overlap rules and reassignment behaviour.
+Stage 9 decisions are recorded in D46. The player manually assigns each project to a facility (D38), can reorder project priority, and a facility may run several projects concurrently using its available machines. A project may use multiple machines. Allocate workers to eligible projects in priority order; a paused or review-blocked project is skipped. A facility can use workers without machines under D31/D32, but the shared workers must never be counted for more than one active project. Reject a newly confirmed project if it overlaps a queued, running or paused project; completed and cancelled footprints are reusable.
 
-Implementation: add only the chosen scheduling model. Reuse the same validated single-project executor; do not create a second terrain-writing path.
+Implementation: expose the complete project list and selected-project controls, priority reorder actions, persisted selection/order, per-facility resource allocation, and deterministic conflict checks. Reuse the existing terrain executor for all running projects. Keep each observed machine and worker allocated at most once across the facility's active projects. Stage 9 uses observed parked machine candidates as the prototype's available equipment signal; it does not establish native vehicle reservation, fuel accounting, nor exact work skill availability, so make those limits explicit in the panel and checklist. Do not silently auto-assign facilities.
 
 In-game checklist:
 
-1. Queue several projects and verify the agreed order and status display.
-2. Run two operations and show that workers/machines are counted only once.
-3. Block or pause the first project and observe the chosen queue behaviour.
-4. Exercise overlapping plans, reassignment and an office being demolished.
-5. Add new infrastructure or manual edits near an active footprint; verify protective checks and conflict handling.
-6. Save/reload with several states present and repeat the queue check.
+1. Confirm multiple disjoint plans, assign projects to one or more facilities, and reorder priorities; verify order survives save/reload.
+2. With two or more machines, run multiple projects and check each machine/worker contributes to at most one project's rate. Verify a higher-priority project receives workers first and lower jobs wait when capacity runs out.
+3. Pause or require review for a higher-priority project and verify the scheduler skips it while eligible lower-priority work proceeds.
+4. Try to confirm overlapping active/queued footprints and verify the confirmation is rejected. Confirm a new project may reuse a completed or cancelled footprint after replanning against current terrain.
+5. Demolish an assigned facility and verify only its projects pause/report missing assignment; other facilities continue.
+6. Save/reload with queued, running, paused and completed work; verify project order, facility assignments, progress and scheduling resume correctly.
 
-Acceptance evidence: the user can predict which project runs and why, capacity is conserved and conflicts are explained. Split scheduling and expanded terrain/protection support into separate review builds if needed.
+Acceptance evidence: the user can see and predict which projects run, worker/machine capacity is counted once, priority and blockage rules match D46, and overlaps are explained before enqueueing. Fuel/material costs, native vehicle reservation and expanded terrain-protection hooks remain later integration/balance work.
 
 **15. Stage 10 — balance and candidate package**
 
