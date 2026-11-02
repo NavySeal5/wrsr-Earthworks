@@ -106,9 +106,26 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
     for (int i=0; i<count; ++i) if (!Project(s,clipped[i],&screen[i])) return;
     ImGui::GetBackgroundDrawList()->AddConvexPolyFilled(screen,count,(color & 0x00FFFFFFu) | (55u<<24));
 }
+void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
+{
+    if(!p.complete) return;
+    const ImU32 gray=IM_COL32(175,180,190,210);
+    for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
+        const auto a=p.Vertex(x,z,true);
+        if(x<GridCells) Line(s,a,p.Vertex(x+1,z,true),gray,1.5f);
+        if(z<GridCells) Line(s,a,p.Vertex(x,z+1,true),gray,1.5f);
+    }
+    const int corners[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
+    for(int i=0;i<4;++i) {
+        const auto a=p.Vertex(corners[i][0],corners[i][1],true);
+        const auto b=p.Vertex(corners[(i+1)%4][0],corners[(i+1)%4][1],true);
+        Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
+    }
+}
 void DrawPreview(const Snapshot& s)
 {
     if (!s.ready || !s.cameraValid) return;
+    if(s.projectQueued) DrawQueuedWireframe(s,s.queuedPlan);
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
@@ -182,7 +199,7 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({390,240},{700,std::max(300.0f,display.y-180)});
     bool open=true;
     ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.6.0");
+    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.6.1");
     ImGui::TextWrapped("Plan a flat rectangle, save drafts, and queue one project. This stage does not execute terrain work.");
     ImGui::Separator();
     ImGui::BeginChild("Planning status",{0,ImGui::GetTextLineHeight()*3+4},ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
@@ -208,6 +225,7 @@ void DrawInterface(const Snapshot& s)
         ImGui::EndDisabled();
     }
     if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. No terrain work runs in Stage 6.",s.projectId);
+    if(s.projectQueued)ImGui::TextDisabled("Grey wireframe: queued project. Coloured wireframe: editable draft.");
     ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
     ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
     ImGui::SameLine(); if (ImGui::Button("Clear preview")) Send(Action::Clear);

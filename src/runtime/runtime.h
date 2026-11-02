@@ -20,6 +20,7 @@ struct Snapshot {
     Point cursor{};
     float view[16]{}, projection[16]{};
     Plan plan{};
+    Plan queuedPlan{};
     Volumes volumes{};
     ProbeView probe{};
     WorkforceView workforce{};

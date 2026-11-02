@@ -6,11 +6,11 @@ User-run in-game check for the versioned Earthworks companion state. The agent m
 
 1. Start the disposable save with the Stage 6 build. Open Earthworks and create a complete rectangle preview with a distinctive target height.
 2. Record the native ground height at one point inside the rectangle and the preview target shown by Earthworks.
-3. Click **Confirm and queue project**. Confirm Earthworks reports one queued project and explicitly says no terrain work runs in this stage.
-4. Select a different rectangle and set a second target height so the save contains both a queued project and an unconfirmed draft.
+3. Click **Confirm and queue project**. Confirm the editable draft clears, a grey wireframe remains at the queued target, and Earthworks explicitly says no terrain work runs in this stage. Close the Earthworks panel and confirm the grey wireframe remains visible; reopen it to continue.
+4. Create a second rectangle and set a different target height so the save contains both a queued project and an unconfirmed draft. Confirm the queued wireframe stays grey while the editable draft has its cut/fill colors.
 5. Use the game's ordinary Save command. Wait for it to finish, then check the matching folder under `media_soviet/save/` for `earthworks.dat`.
 6. Return to the main menu and reload that same save.
-7. Open Earthworks. Confirm the second rectangle/target and queued-project message return, and confirm actual ground at the recorded point is unchanged.
+7. Open Earthworks. Confirm the second rectangle/target returns in color and the queued project's grey wireframe/message return. Confirm actual ground at the recorded point is unchanged.
 
 ## Save As and stale-state protection
 

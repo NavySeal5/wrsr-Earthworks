@@ -105,9 +105,10 @@ void RefreshProjectStatus()
 {
     current.projectQueued=false;
     current.projectId=0;
+    current.queuedPlan=Plan{};
     for (const auto& project : durableState.projects) {
         if (project.status==ProjectStatus::Queued) {
-            current.projectQueued=true; current.projectId=project.id; break;
+            current.projectQueued=true; current.projectId=project.id; current.queuedPlan=project.plan; break;
         }
     }
 }
@@ -193,7 +194,10 @@ void Process(const Command& command)
         project.plan=current.plan;
         durableState.projects.push_back(project);
         RefreshProjectStatus();
-        ++current.revision;
+        current.plan=Plan{};
+        current.mode=PickMode::Corners;
+        history.Reset();
+        Changed();
         host->log("earthworks  project confirmed and queued id=%llu; terrain execution is not enabled in Stage 6",project.id);
         Message("Project queued. Stage 6 stores it with the native save; terrain execution is not enabled yet.");
         break;
