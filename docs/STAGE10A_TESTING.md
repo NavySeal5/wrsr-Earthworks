@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.7-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.8-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -16,8 +16,8 @@ Build: **0.11.7-stage10a-game-ui**. This is a user-run in-game review. The agent
 2. In **Plan**, select a rectangle with two opposite-corner clicks while leaving the panel open. Set or sample a target height and check that footprint, cut and fill estimates appear.
 3. Add the plan to the project queue. Switch to **Projects** and confirm the new project appears.
 4. Choose a facility on the map. The map click should identify nearby buildings, then the Projects tab should offer recognized Earthworks facilities by distance. Select the intended facility and assign it.
-5. Select different projects and check that status, progress, priority controls, and facility assignment follow the selected project.
-6. Review available queued, running, waiting, paused, review-required, completed and cancelled displays. Start or pause work only in a disposable area if you want to check those states.
+5. Confirm the Projects queue uses a compact row for each project, with progress and per-row up/down, Start/Pause/Resume/Review, and Cancel controls. Select a different project and use a row action to confirm it affects that row's project, not the previously selected one.
+6. Review queued, running, waiting, paused, review-required, completed and cancelled rows. Start or cancel work only in a disposable area if you want to check those actions.
 7. Check error/status messages, long text, window scrolling/resizing, screen edges, and your usual UI scale.
 8. Leave the panel open while using native game controls. Click ordinary map controls and terrain to confirm those left clicks pass through when no terrain-picking action is active.
 9. Save and reload the test save if desired, and confirm the Plan/Projects controls remain consistent with the stored projects.

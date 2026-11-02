@@ -55,6 +55,7 @@ Updated 2 November 2026. This register separates the user's confirmed intent fro
 | D60 | Show the Earthworks launcher button without a separate window background or border | User requested removal of the extra box around the Earthworks button, 3 November 2026 |
 | D61 | Escape cancels an armed terrain-picking action first; a subsequent Escape closes the Earthworks panel | User explicitly specified the two-step Escape behavior for Select area, Sample height and the open panel, 3 November 2026 |
 | D62 | Suppress Escape in the game's input hooks while Earthworks consumes it, and lighten selected/pressed control backgrounds while keeping text color fixed | User reported that closing Earthworks also opened the game's Escape menu and requested lighter selected surfaces without dynamic text color, 3 November 2026 |
+| D63 | Present projects as native-style list rows with per-project move-up, move-down, start/resume-or-pause, and cancel controls | User requested the Projects list follow the construction-office queue concept, with controls on each row, 3 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 

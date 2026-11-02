@@ -53,6 +53,11 @@ void Send(Action action, float value = 0)
     Enqueue({action,value,frameGeneration});
 }
 void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
+void SendProjectAction(Action action,uint64_t projectId)
+{
+    SendProject(Action::SelectProject,projectId);
+    SendProject(action,projectId);
+}
 const char* ProjectStatusName(ProjectStatus status)
 {
     switch(status) {
@@ -341,35 +346,68 @@ void DrawInterface(const Snapshot& s)
         }
         if(ImGui::BeginTabItem("Projects")) {
             if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
-            ImGui::BeginChild("Project queue",{0,155},ImGuiChildFlags_Borders);
-            for(size_t i=0;i<s.projectCount;++i) {
-                const auto& project=s.projects[i];
-                char label[160];
-                if(project.facilityId)sprintf_s(label,"Project %llu  |  %s  |  %.0f%%  |  Facility %u",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status),project.progress*100.0f,project.facilityId);
-                else sprintf_s(label,"Project %llu  |  %s  |  %.0f%%  |  Unassigned",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status),project.progress*100.0f);
-                if(ImGui::Selectable(label,s.projectId==project.id))SendProject(Action::SelectProject,project.id);
+            ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
+            if(s.projectCount && ImGui::BeginTable("Project rows",5,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,2.7f);
+                ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.1f);
+                ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.35f);
+                ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.15f);
+                ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthStretch,1.0f);
+                ImGui::TableHeadersRow();
+                for(size_t i=0;i<s.projectCount;++i) {
+                    const auto& project=s.projects[i];
+                    ImGui::PushID(static_cast<int>(project.id));
+                    ImGui::TableNextRow(ImGuiTableRowFlags_None,34.0f);
+                    ImGui::TableNextColumn();
+                    char label[80];
+                    sprintf_s(label,"Project %llu  |  %s",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status));
+                    if(ImGui::Selectable(label,s.projectId==project.id,ImGuiSelectableFlags_None,{0,28}))SendProject(Action::SelectProject,project.id);
+
+                    ImGui::TableNextColumn();
+                    char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",project.progress*100.0f);
+                    ImGui::ProgressBar(project.progress,{0,24},progressLabel);
+
+                    ImGui::TableNextColumn();
+                    const bool movable=ProjectCanMove(project.status);
+                    const float priorityWidth=ImGui::GetContentRegionAvail().x;
+                    const float moveButtonWidth=(priorityWidth-ImGui::GetStyle().ItemSpacing.x)*0.5f;
+                    ImGui::BeginDisabled(!movable);
+                    if(ImGui::Button("↑",{moveButtonWidth,26}))SendProject(Action::MoveProjectUp,project.id);
+                    ImGui::SetItemTooltip("Move project up");
+                    ImGui::SameLine(0,ImGui::GetStyle().ItemSpacing.x);
+                    if(ImGui::Button("↓",{moveButtonWidth,26}))SendProject(Action::MoveProjectDown,project.id);
+                    ImGui::SetItemTooltip("Move project down");
+                    ImGui::EndDisabled();
+
+                    ImGui::TableNextColumn();
+                    Action workAction=Action::StartProject;
+                    const char* workLabel="Done";
+                    bool workEnabled=false;
+                    if(project.status==ProjectStatus::Queued) {workAction=Action::StartProject;workLabel="Start";workEnabled=project.facilityId!=0;}
+                    else if(project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting) {workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
+                    else if(project.status==ProjectStatus::Paused) {workAction=project.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=project.needsReview?"Review":"Resume";workEnabled=project.facilityId!=0;}
+                    ImGui::BeginDisabled(!workEnabled);
+                    if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,26}))SendProjectAction(workAction,project.id);
+                    ImGui::EndDisabled();
+
+                    ImGui::TableNextColumn();
+                    const bool cancellable=project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused;
+                    ImGui::BeginDisabled(!cancellable);
+                    if(ImGui::Button("Cancel",{ImGui::GetContentRegionAvail().x,26}))SendProjectAction(Action::CancelProject,project.id);
+                    ImGui::EndDisabled();
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
             }
             ImGui::EndChild();
             if(s.projectTotal>s.projectCount)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Showing %zu of %zu projects.",s.projectCount,s.projectTotal);
             if(s.projectQueued) {
                 ImGui::SeparatorText("Selected project");
                 ImGui::Text("Project %llu  |  %s",static_cast<unsigned long long>(s.projectId),ProjectStatusName(s.projectStatus));
-                const bool movable=ProjectCanMove(s.projectStatus);
-                ImGui::BeginDisabled(!movable);if(ImGui::Button("Move up"))SendProject(Action::MoveProjectUp,s.projectId);ImGui::SameLine();if(ImGui::Button("Move down"))SendProject(Action::MoveProjectDown,s.projectId);ImGui::EndDisabled();
-                if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused) {
-                    char progressLabel[32];sprintf_s(progressLabel,"%.0f%%",s.projectProgress*100.0f);
-                    ImGui::ProgressBar(s.projectProgress,{0,0},progressLabel);
-                    if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
-                }
-                if(s.projectStatus==ProjectStatus::Queued) {ImGui::BeginDisabled(!s.assignedFacilityFound);if(ImGui::Button("Start project"))Send(Action::StartProject);ImGui::EndDisabled();}
-                if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
-                else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview) {
+                if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
+                if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview) {
                     ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
                     if(!s.assignedFacilityFound)ImGui::TextDisabled("Assign this project to an Earthworks facility first.");
-                    else if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
-                } else if(s.projectStatus==ProjectStatus::Paused&&ImGui::Button("Resume project"))Send(Action::ResumeProject);
-                if(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused) {
-                    ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);
                 }
                 if(s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled)ImGui::TextDisabled("This project is finished; its area can be planned again.");
                 ImGui::SeparatorText("Facility");
