@@ -9,6 +9,13 @@ Build: **0.7.3-facility-identity**. The game reports the dedicated Workshop buil
 - The Earthworks Development Facility files are present locally, but enabling this local Development project did not satisfy the game's missing Workshop content check. The missing item(s) have not yet been identified.
 - Next: inspect which Workshop item IDs the save expects, then repeat the save/reload check in a disposable save where required content is available. Do not overwrite save A.
 
+## Clean-save retry — 2026-11-02
+
+- The user re-saved the world in a cleaner state. It then loaded through RML with no missing-Workshop prompt, and the Earthworks panel opened successfully. The panel reported that saved Earthworks drafts/projects were restored, but there was no queued project to assign.
+- Created a 9.9 × 28.2 m test footprint (280 m²), sampled the ground at 6.77 m, and queued project 1. The UI reported **Preview ready. Actual terrain is unchanged** and later confirmed the project was queued.
+- The inspector distinguished ordinary construction office ID 15 from Earthworks facility ID 14 (`9100000012/EarthworksDevelopmentFacility`). Project 1 was manually assigned to facility 14. Dry-run showed 0 observed occupants, 0 parked bulldozer/excavator candidates, and provisional rate 0.00. No terrain work ran.
+- Save/reload verification remains pending. A separate manual Save As target is needed before reloading; the original clean save has not been overwritten. The in-game Save As control was not located in this session, so the assigned project is currently only in the running session.
+
 ## Test in a disposable save
 
 1. Close the game and project-local RML. Run `scripts/Stage-Diagnostics.ps1`, then run `launch-prototype.cmd`, confirm **Earthworks Planning - Dedicated Facility Prototype**, version **0.7.3-facility-identity**, and launch through RML.
