@@ -244,7 +244,7 @@ Scope to review before implementation:
 - Review readability at the user's normal resolution, window scaling, panel size/scrolling, button labels, status/error messages and interaction with native game controls.
 - Prepare an in-game review build and user-run checklist; a successful compile alone cannot establish visual or interaction acceptance.
 
-The high-level direction is resolved in D50: purpose-built facility and a player-first workflow, with technical diagnostics moved out of the ordinary main flow. Detailed art direction and whether advanced diagnostics remain accessible in a separate area or developer build still need a concrete proposal. Building footprint, slots, vehicle restrictions and native building type should not change without a separate decision and feasibility review. Any new gameplay behavior discovered during UI work returns to the decision gate instead of being silently added.
+The high-level direction is resolved in D50 and D52: purpose-built facility, player-first workflow, and technical inspector/terrain probes in a developer-only build, absent from the player UI. Building footprint, exterior design and panel layout still need a concrete proposal. Building slots, vehicle restrictions and native building type should not change without a separate decision and feasibility review. Any new gameplay behavior discovered during UI work returns to the decision gate instead of being silently added.
 
 In-game checklist:
 
