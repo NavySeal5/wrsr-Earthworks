@@ -35,7 +35,7 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - User chose to preserve both drafts and confirmed projects across save/reload (D33).
 - Added versioned companion-state encoding with CRC validation, bounded decode, a SHA-256 fingerprint of the matching save's `heightmap.dds`, and atomic replacement at `media_soviet/save/<slot>/earthworks.dat`. The runtime observes the native save trigger through the existing Late hook and restores only after the loaded save's fingerprint matches.
 - Added a queue-only confirmation control. Stage 6 can save a queued project but never executes terrain work. Scheduling and autonomous work remain later stages.
-- Missing companion data leaves the screen empty. Corrupt or terrain-mismatched metadata is rejected and shown as a status message; the native save and terrain are not changed. Recovery beyond this warning remains open for review.
+- Missing companion data leaves the screen empty. Corrupt or terrain-mismatched metadata is rejected and shown as a status message; the native save and terrain are not changed. The user chose warning-and-discard with no import/recovery flow for now (D34).
 - Build: `0.6.0-durable-plans`; x64 build succeeded and was staged in the project-local RML runtime. Built and staged DLL SHA-256: `EAC430C4E862D33E3E498BE1A4FD9E89037A3ACE349EE7AB073CFCD277C5B0FE`. No game or automated tests were run by the agent. User checklist: [STAGE6_TESTING.md](STAGE6_TESTING.md).
 
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.

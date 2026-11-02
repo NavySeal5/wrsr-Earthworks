@@ -166,7 +166,7 @@ Acceptance evidence: user-approved interaction and a credible preview, with unch
 
 Implementation: create versioned draft/queued-project records and match their metadata to the correct native save snapshot. The 0.6.0-durable-plans prototype writes an atomic `earthworks.dat` companion in the native save folder after the observed native save trigger completes. It records a checksum and SHA-256 of that slot's `heightmap.dds`; load restores only a valid matching companion. This stage can confirm one plan as queued, but cannot execute terrain work. The code remains subject to the user's Save/Save As/autosave/reload check.
 
-The user chose to retain drafts and confirmed projects (D33). Missing companion data produces an empty plan state; corrupt or mismatched data is refused with a status message. The native save and terrain are never rewritten during recovery. Recovery beyond this warning remains open for user review. A terrain fingerprint binds metadata to a save snapshot but does not replace execution-time checks that compare each project's sampled ground to the current terrain.
+The user chose to retain drafts and confirmed projects (D33). Missing companion data produces an empty plan state; corrupt or mismatched data is refused with a status message and discarded, with no manual recovery/import flow for now (D34). The native save and terrain are never rewritten during recovery. A terrain fingerprint binds metadata to a save snapshot but does not replace execution-time checks that compare each project's sampled ground to the current terrain.
 
 In-game checklist:
 
