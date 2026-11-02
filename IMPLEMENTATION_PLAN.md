@@ -179,22 +179,22 @@ In-game checklist:
 
 Acceptance evidence: correct matching snapshots and user-approved retention/recovery behaviour. Steam Cloud support is not assumed; test it separately if requested for the release.
 
-**12. Stage 7 — the agreed office and assignments**
+**12. Stage 7 — office assignment dry-run**
 
-Implementation: build the office design chosen from Stage 4's evidence. Connect current workers, usable owned machines, explicit equipment reservation and a single planned project. Display available capacity in a labelled dry-run mode without changing terrain.
+The existing dedicated 5-worker/2-machine development facility is the test office. Implement a player-selected assignment from one queued project to the session-registered facility, then show a dry-run of observed occupants and matching parked vehicles. Treat parked vehicles as candidates only: current evidence does not prove idle status, native availability or exclusive reservation. Do not edit terrain, consume resources, reserve vehicles, or estimate completion time in this stage. Show the provisional D32 relative rate only with a clear estimate label.
 
-Before implementation, resolve the office model, workforce/productivity rules, range measurement, project assignment and the scope of fuel/soil/cost accounting needed by the first autonomous version. Numeric capacity/radius values are user-reviewed tuning, not engine facts.
+Before implementing assignment/range behavior, resolve the range display and whether assignment is manual or automatic. D08's production range and partial-plan rules remain open; any Stage 7 range result is explicitly provisional and cannot authorize autonomous execution. Fuel, cost and soil/material accounting (D09) are deferred to the first autonomous-project design and must be resolved before Stage 8 execution. Native availability and exclusive reservation remain Stage 4 blockers, not promises of this dry-run.
 
 In-game checklist:
 
-1. Place/use the agreed operation and assign a queued plan.
-2. Change staffing and machinery; confirm displayed capacity responds.
-3. Check projects just inside and outside the agreed range boundary.
-4. Confirm reserved equipment cannot contribute to native or another mod project simultaneously.
-5. Pause/unassign the plan, remove equipment and demolish the office; review status and reservation release.
-6. Confirm repeated saves/loads resolve the correct operation and equipment.
+1. Assign one queued plan to the selected registered facility and check the summary is labelled as a dry-run.
+2. Change occupants and parked allowlisted vehicle candidates; confirm the displayed observed counts respond.
+3. Check the chosen provisional range boundary and the agreed whole-plan/partial-coverage behavior.
+4. Confirm the display never claims that candidates are reserved or available and does not change terrain.
+5. Unassign the plan or clear/demolish the facility; review project status and the dry-run summary.
+6. Confirm save/reload behavior for assignment only if persistence is included in the accepted Stage 7 scope.
 
-Acceptance evidence: the office and assignment workflow behave as agreed, with actual resource availability and no terrain edits. Unproven machinery exclusivity blocks Stage 8.
+Acceptance evidence: assignment, dry-run labels, displayed observations and chosen provisional range behavior match the user's expectations, with no terrain edits. This does not establish actual resource availability or exclusive machinery reservation. Both remain prerequisites for Stage 8.
 
 **13. Stage 8 — first autonomous project**
 
@@ -283,4 +283,4 @@ The earlier, ungated plan is preserved for history in [the archived plan](docs/a
 
 **18. Immediate next action**
 
-The planning prototype, Stage 3, Stage 4a, Stage 4b and Stage 4d vehicle allowlist are accepted by the user. D30 fixes the Earthworks vehicle classes to bulldozers, excavators, dumpers and buses only; build 0.5.2 corrects the false negatives and the user reports it is working great. D31 sets the productivity direction: 10 workers for one machine at manual-terrain speed, proportional partial staffing, no machine output with zero workers, worker-only work at the native labor-terrain baseline, and workers operating machines without additional labor output. Stage 4 remains in progress for rate calibration, multi-machine allocation, native machine availability/exclusive reservation and fuel. The user performs all in-game tests; no agent gameplay testing is permitted. Continue read-only feasibility research and prepare user-run calibration instructions before autonomous execution work.
+Stage 6 is accepted with stale-state protection deferred. Stage 7 preparation is recorded in [STAGE7_PREPARATION.md](docs/STAGE7_PREPARATION.md). Ask the user to choose manual versus automatic plan assignment and the provisional range/coverage display before dependent code is implemented. Stage 7's proposed output is a dry-run only and cannot imply reserved/available vehicles. Stage 4's actual availability and exclusive reservation remain unresolved and block Stage 8. The user performs all in-game tests; provide instructions and pause for their report rather than testing in game.

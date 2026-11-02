@@ -25,7 +25,7 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 | 4 — Workforce/machinery feasibility | In progress | 0.5.2 vehicle allowlist accepted; D31 direction and D32 provisional relative rate selected | User: "working great now" after the 0.5.2 correction. The initial formula is documented; the unisolated native sample still does not validate it. Multi-machine allocation, availability/reservation and fuel remain open |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Accepted | Versioned companion-state encoding, atomic file replacement, native save-trigger observation and saved-heightmap SHA-256 matching implemented | User accepted after confirming ordinary save/reload preserves the draft and queued project. Queued grey-wireframe visibility, stale-state protection, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested and are deferred. See [STAGE6_TESTING.md](STAGE6_TESTING.md) |
-| 7 — Office/assignments | Planned | Representation and rules open | Pending |
+| 7 — Office/assignments | In progress — preparation | Dry-run scope documented; range and assignment mode await user choice; no feature code yet | Pending |
 | 8 — One autonomous project | Planned | Not implemented | Pending |
 | 9 — Multiple projects/operations | Planned | Scheduling rules open | Pending |
 | 10 — Balanced candidate | Planned | Scope/balance open | Pending |
@@ -38,6 +38,14 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Missing companion data leaves the screen empty. Corrupt or terrain-mismatched metadata is rejected and shown as a status message; the native save and terrain are not changed. The user chose warning-and-discard with no import/recovery flow for now (D34).
 - Build: `0.6.1-queued-wireframe`; x64 build succeeded and was staged in the project-local RML runtime. Built and staged DLL SHA-256: `7511A8054DBDB8AFF66C08151937F09E68CE476A8348A3E6250ECFDFA9380903`. No game or automated tests were run by the agent. User checklist: [STAGE6_TESTING.md](STAGE6_TESTING.md).
 - User-run result and acceptance: ordinary save and reload preserved both the editable draft and queued project. The user accepted Stage 6 while deferring stale-state protection. Queued grey-wireframe visibility, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested. These are recorded as unverified; they are not treated as passed.
+
+**Stage 7 preparation — awaiting gameplay/UX decisions**
+
+- User authorized continuing to the next stage after accepting Stage 6.
+- Proposed bounded Stage 7: manually assign one queued plan to the currently registered dedicated facility and show a dry-run of observed staffing and matching parked vehicle candidates. No terrain edits, fuel/material use, reservation or completion estimate.
+- Current probe readings cannot establish that parked vehicles are idle, natively available or exclusively reserved. UI wording must call them candidates. Stage 4 reservation/availability remains a blocker before autonomous execution.
+- The official native references establish different distances for different mechanics: terrain machinery in a depot/Construction Office within 1,000 m, and citizen walking up to 480 m on the fastest paths. Neither establishes this mod's facility range. See [Stage 7 preparation](STAGE7_PREPARATION.md).
+- Waiting for the user to choose the provisional range/coverage display and manual versus automatic project assignment. No Stage 7 feature code has been implemented; no in-game checks have been run by the agent.
 
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.
 
