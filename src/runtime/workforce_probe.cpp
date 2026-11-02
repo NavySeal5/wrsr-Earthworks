@@ -95,18 +95,19 @@ bool Vehicle(Address address,Address building,const Address* parked,unsigned par
     if(out->positionValid)out->distance=Distance(position,origin);
     return true;
 }
-void Sample()
+bool SampleIdentity(const Identity& identity,WorkforceView* output)
 {
+    if(!output)return false;
     Address building=0;
-    if(!Resolve(selected,&building)) {
-        view=WorkforceView{};
-        strcpy_s(view.status,"Building identity no longer resolves (removed, changed or unreadable). Select again; replacements are never followed automatically.");
-        return;
+    if(!Resolve(identity,&building)) {
+        *output=WorkforceView{};
+        strcpy_s(output->status,"Building identity no longer resolves (removed, changed or unreadable). Select again; replacements are never followed automatically.");
+        return false;
     }
     WorkforceView next;
-    next.selected=true;next.samples=view.samples+1;
-    if(!DescribeBuilding(building,selected.slot,&next.building)) {
-        view=next;strcpy_s(view.status,"Building fields unreadable. No staffing or equipment conclusions are available.");return;
+    next.selected=true;next.samples=output->samples+1;
+    if(!DescribeBuilding(building,identity.slot,&next.building)) {
+        *output=next;strcpy_s(output->status,"Building fields unreadable. No staffing or equipment conclusions are available.");return false;
     }
     next.buildingValid=true;
     List occupants,parked,vehicles;
@@ -141,8 +142,10 @@ void Sample()
     next.selectedIsEarthworksFacility=next.building.earthworksFacility;
     next.blockedConstructionAssignments=blockedAssignments;
     strcpy_s(next.status,"Read-only sample. Counts describe native lists/links; they do not establish usable workers or machines.");
-    view=next;
+    *output=next;
+    return next.buildingValid;
 }
+void Sample() { SampleIdentity(selected,&view); }
 }
 void ResetWorkforce() {view=WorkforceView{};candidates={};selected={};blockedAssignments=0;lastSample=0;}
 void FindWorkforceBuildings(Point point)
@@ -206,6 +209,15 @@ bool SelectEarthworksFacility(unsigned id)
     unsigned liveId=0;
     if(!Read(address,&liveId) || liveId!=id)return false;
     selected={reading.slot,id,address};view=WorkforceView{};view.selected=true;lastSample=0;Sample();return true;
+}
+bool ReadEarthworksFacilityWorkforce(unsigned id,WorkforceView* out)
+{
+    BuildingReading reading{};
+    if(!FindEarthworksFacility(id,&reading))return false;
+    List buildings;if(!PointerList(World()+0x11B08,262144,&buildings))return false;
+    Address address=0;unsigned liveId=0;
+    if(!Element(buildings,reading.slot,&address) || !address || !Read(address,&liveId) || liveId!=id)return false;
+    return SampleIdentity({reading.slot,reading.id,address},out);
 }
 void TickWorkforce()
 {

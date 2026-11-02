@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "earthworks.planning",
-  "name": "Earthworks Planning - Durable Plans Prototype",
-  "version": "0.9.1-bounds-review",
-  "description": "One-project Earthworks runner with simulation-time progress and clearer start-area validation. Productivity and terrain writes remain a prototype.",
+  "name": "Earthworks Planning - Multi-project Prototype",
+  "version": "0.10.0-stage9-multiproject",
+  "description": "Multiple manually assigned projects with facility priorities, shared worker/machine allocation, and overlap protection. Productivity remains provisional.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },
   "supportedGameVersions": ["1.1.1.9"],

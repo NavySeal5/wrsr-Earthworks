@@ -39,6 +39,7 @@ bool IsEarthworksBuilding(void* building);
 bool IsEarthworksFacility(void* building);
 bool FindEarthworksFacility(unsigned id, BuildingReading* reading);
 bool SelectEarthworksFacility(unsigned id);
+bool ReadEarthworksFacilityWorkforce(unsigned id, WorkforceView* out);
 void TickWorkforce();
 void LogWorkforce();
 WorkforceView ReadWorkforce();

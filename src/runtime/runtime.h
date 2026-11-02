@@ -9,9 +9,19 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, ConfirmProject, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector };
+enum class Action { Pick, Select, Sample, Target, Clear, Undo, Redo, ConfirmProject, SelectProject, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector };
 enum class PickMode { Corners, Sample, None, InspectBuilding };
-struct Command { Action action; float value = 0; uint64_t generation = 0; };
+struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; };
+struct ProjectBrief {
+    uint64_t id = 0;
+    ProjectStatus status = ProjectStatus::Draft;
+    unsigned facilityId = 0;
+    unsigned allocatedWorkers = 0, allocatedMachines = 0;
+    float progress = 0;
+    bool needsReview = false;
+    Point a{},b{};
+    float target = 0;
+};
 struct Snapshot {
     bool ready = false, cursorValid = false, cameraValid = false, canUndo = false, canRedo = false;
     bool projectQueued = false;
@@ -21,6 +31,7 @@ struct Snapshot {
     float projectProgress = 0;
     uint64_t generation = 0, revision = 0;
     uint64_t projectId = 0;
+    size_t projectCount = 0, projectTotal = 0;
     unsigned projectFacilityId = 0;
     float projectFacilityDistance = 0;
     int day = 0, year = 0;
@@ -29,6 +40,7 @@ struct Snapshot {
     float view[16]{}, projection[16]{};
     Plan plan{};
     Plan queuedPlan{};
+    std::array<ProjectBrief,MaxVisibleProjects> projects{};
     Volumes volumes{};
     ProbeView probe{};
     NativeTerrainCallView nativeTerrainCall{};

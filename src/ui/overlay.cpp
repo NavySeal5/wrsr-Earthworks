@@ -34,6 +34,23 @@ uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
 void Send(Action action, float value = 0) { Enqueue({action,value,frameGeneration}); }
+void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
+const char* ProjectStatusName(ProjectStatus status)
+{
+    switch(status) {
+    case ProjectStatus::Queued:return "Queued";
+    case ProjectStatus::Running:return "Running";
+    case ProjectStatus::Paused:return "Paused";
+    case ProjectStatus::Waiting:return "Waiting";
+    case ProjectStatus::Completed:return "Completed";
+    case ProjectStatus::Cancelled:return "Cancelled";
+    default:return "Draft";
+    }
+}
+bool ProjectCanMove(ProjectStatus status)
+{
+    return status==ProjectStatus::Queued||status==ProjectStatus::Running||status==ProjectStatus::Waiting||status==ProjectStatus::Paused;
+}
 bool Hit(const RECT& rect, LPARAM point)
 {
     const POINT p = {GET_X_LPARAM(point),GET_Y_LPARAM(point)};
@@ -123,10 +140,21 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
         Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
     }
 }
+void DrawQueuedOutline(const Snapshot& s,Point a,Point b,float targetHeight,ImU32 color)
+{
+    const Point corners[]={{a.x,targetHeight,a.z},{b.x,targetHeight,a.z},{b.x,targetHeight,b.z},{a.x,targetHeight,b.z}};
+    for(int i=0;i<4;++i)Line(s,corners[i],corners[(i+1)%4],color,2.5f);
+}
 void DrawPreview(const Snapshot& s)
 {
     if (!s.ready || !s.cameraValid) return;
-    if(s.projectQueued) DrawQueuedWireframe(s,s.queuedPlan);
+    for(size_t i=0;i<s.projectCount;++i) {
+        const auto& project=s.projects[i];
+        if(project.status!=ProjectStatus::Queued&&project.status!=ProjectStatus::Running
+            &&project.status!=ProjectStatus::Waiting&&project.status!=ProjectStatus::Paused)continue;
+        if(project.id==s.projectId)DrawQueuedWireframe(s,s.queuedPlan);
+        else DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(175,180,190,205));
+    }
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
@@ -201,9 +229,9 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSizeConstraints({480,300},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
-    ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  STAGE 7 DRY-RUN");
-    ImGui::TextWrapped("Plan a flat rectangle, save drafts, and queue one project. This stage does not execute terrain work.");
+    ImGui::Begin("Earthworks | Project planning",&open,ImGuiWindowFlags_NoSavedSettings);
+    ImGui::TextColored({0.4f,0.9f,0.75f,1},"EARTHWORKS FACILITY  |  STAGE 9 PROJECT OPERATIONS");
+    ImGui::TextWrapped("Plan separate terrain footprints, assign each project, set priority, and start work explicitly.");
     ImGui::Separator();
     ImGui::BeginChild("Planning status",{0,ImGui::GetTextLineHeight()*3+4},ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
     ImGui::TextWrapped("%s",s.message);
@@ -223,67 +251,67 @@ void DrawInterface(const Snapshot& s)
         ImGui::TextColored({1,0.62f,0.26f,1},"Cut estimate: %.0f m3",s.volumes.cut);
         ImGui::TextColored({0.24f,0.87f,0.65f,1},"Fill estimate: %.0f m3",s.volumes.fill);
         ImGui::TextWrapped("Sharp footprint edges. The overlay is visible through terrain. Volumes use a sampled grid and are estimates.");
-        ImGui::BeginDisabled(s.projectQueued);
         if(ImGui::Button("Confirm and queue project"))Send(Action::ConfirmProject);
-        ImGui::EndDisabled();
     }
+    ImGui::SeparatorText("Stage 9 | Project queue and priorities");
+    if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Confirm a terrain plan to create one.");
+    ImGui::BeginChild("Project queue",{0,145},ImGuiChildFlags_Borders);
+    for(size_t i=0;i<s.projectCount;++i) {
+        const auto& project=s.projects[i];
+        char label[160];
+        if(project.facilityId)sprintf_s(label,"Project %llu | %s | %.0f%% | Facility %u",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status),project.progress*100.0f,project.facilityId);
+        else sprintf_s(label,"Project %llu | %s | %.0f%% | Unassigned",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status),project.progress*100.0f);
+        if(ImGui::Selectable(label,s.projectId==project.id))SendProject(Action::SelectProject,project.id);
+    }
+    ImGui::EndChild();
+    if(s.projectTotal>s.projectCount)ImGui::TextColored({1,0.65f,0.3f,1},"Showing first %zu of %zu project records.",s.projectCount,s.projectTotal);
     if(s.projectQueued) {
-        const char* status=s.projectStatus==ProjectStatus::Running?"Running":s.projectStatus==ProjectStatus::Paused?"Paused":"Queued";
-        ImGui::TextColored({0.95f,0.82f,0.35f,1},"Project %llu | %s",s.projectId,status);
-        if(s.projectStatus==ProjectStatus::Running || s.projectStatus==ProjectStatus::Paused) {
+        ImGui::TextColored({0.95f,0.82f,0.35f,1},"Selected project %llu | %s",static_cast<unsigned long long>(s.projectId),ProjectStatusName(s.projectStatus));
+        auto selectedBrief=s.projects.begin();while(selectedBrief!=s.projects.begin()+s.projectCount&&selectedBrief->id!=s.projectId)++selectedBrief;
+        const bool hasBrief=selectedBrief!=s.projects.begin()+s.projectCount;
+        const bool movable=ProjectCanMove(s.projectStatus);
+        ImGui::BeginDisabled(!movable);if(ImGui::Button("Priority up"))SendProject(Action::MoveProjectUp,s.projectId);ImGui::SameLine();if(ImGui::Button("Priority down"))SendProject(Action::MoveProjectDown,s.projectId);ImGui::EndDisabled();
+        if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused) {
             char progressLabel[32];sprintf_s(progressLabel,"%.0f%%",s.projectProgress*100.0f);
             ImGui::ProgressBar(s.projectProgress,{0,0},progressLabel);
-            ImGui::TextDisabled("Terrain progress; one machine maximum in this prototype.");
+            if(hasBrief&&selectedBrief->allocatedMachines)
+                ImGui::Text("Allocated this tick: %u worker(s), %u machine(s).",selectedBrief->allocatedWorkers,selectedBrief->allocatedMachines);
+            if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started; waiting for higher-priority work or facility capacity.");
             ImGui::TextDisabled("Provisional output: 10 m3 per simulation hour per manual-rate unit.");
-            if(s.projectStatus==ProjectStatus::Running) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
-            else if(s.projectNeedsReview) {
-                ImGui::TextColored({1,0.65f,0.3f,1},"Project needs review before it can resume.");
-                if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
-            } else if(ImGui::Button("Resume project"))Send(Action::ResumeProject);
-            ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);
-        } else {
-            ImGui::TextWrapped("Grey wireframe: queued project. Coloured wireframe: editable draft.");
-            ImGui::BeginDisabled(!s.assignedFacilityFound);
-            if(ImGui::Button("Start project"))Send(Action::StartProject);
-            ImGui::EndDisabled();
+        }
+        if(s.projectStatus==ProjectStatus::Queued) {ImGui::BeginDisabled(!s.assignedFacilityFound);if(ImGui::Button("Start project"))Send(Action::StartProject);ImGui::EndDisabled();}
+        if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
+        else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview) {
+            ImGui::TextColored({1,0.65f,0.3f,1},"Project needs review before it can resume.");
+            if(!s.assignedFacilityFound)ImGui::TextDisabled("Assign this project to another Earthworks facility first.");
+            else if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
+        } else if(s.projectStatus==ProjectStatus::Paused&&ImGui::Button("Resume project"))Send(Action::ResumeProject);
+        if(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused) {
             ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);
         }
-    }
-    {
-        ImGui::SeparatorText("Stage 8 | Project execution");
-        if(!s.projectQueued) {
-            ImGui::TextWrapped("First plan an area and press Confirm and queue project. Then choose an Earthworks facility here.");
-        } else {
-            if(ImGui::Button("Find Earthworks facility"))Send(Action::InspectBuilding);
-            ImGui::SameLine();
-            ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued || !s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
-            if(ImGui::Button("Assign selected facility"))Send(Action::AssignProject);
-            ImGui::EndDisabled();
-            if(s.workforce.selected && s.workforce.buildingValid) {
-                if(s.workforce.building.earthworksFacility)
-                    ImGui::Text("Selected Earthworks facility ID %u. Assign it above.",s.workforce.building.id);
-                else
-                    ImGui::TextDisabled("Selected building is not an Earthworks facility.");
-            } else ImGui::TextDisabled("Click Find, click near a facility on the map, then choose its Earthworks facility result below.");
-        }
-        if(s.projectQueued && s.projectFacilityId) {
+        if(s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled)ImGui::TextDisabled("This record is complete; its old terrain footprint may be planned again.");
+        ImGui::SeparatorText("Facility assignment");
+        if(ImGui::Button("Find Earthworks facility"))Send(Action::InspectBuilding);
+        ImGui::SameLine();
+        const bool canAssign=s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused;
+        ImGui::BeginDisabled(!canAssign||!s.workforce.selected||!s.workforce.buildingValid||!s.workforce.building.earthworksFacility);
+        if(ImGui::Button(s.projectFacilityId?"Assign / reassign facility":"Assign selected facility"))Send(Action::AssignProject);
+        ImGui::EndDisabled();
+        if(s.workforce.selected&&s.workforce.buildingValid) {
+            if(s.workforce.building.earthworksFacility)ImGui::Text("Selected Earthworks facility ID %u.",s.workforce.building.id);
+            else ImGui::TextDisabled("Selected building is not an Earthworks facility.");
+        } else ImGui::TextDisabled("Click Find, click near a facility, then choose its Earthworks result in the inspector.");
+        if(s.projectFacilityId) {
             ImGui::SameLine();ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued);if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);ImGui::EndDisabled();
             if(s.assignedFacilityFound) {
-                ImGui::Text("Assigned Earthworks facility ID %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
-                ImGui::TextWrapped("Distance only. Operating range and footprint coverage are not established.");
+                ImGui::Text("Facility %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
+                ImGui::TextWrapped("Distance only; operating range and footprint coverage are not established.");
                 const auto& w=s.workforce;
-                if(w.selected && w.buildingValid && w.building.id==s.projectFacilityId) {
-                    if(w.occupantsValid && w.parkedValid && w.vehiclesValid) {
-                        const double relativeRate=w.eligibleMachineCandidates
-                            ? MachineRate(std::min(static_cast<int>(w.occupants),10),ReferenceGroundworksRating)
-                            : WorkerOnlyRate(static_cast<int>(w.occupants));
-                        ImGui::Text("Observed occupants: %u | parked bulldozer/excavator candidates: %u",w.occupants,w.eligibleMachineCandidates);
-                        ImGui::Text("Provisional one-machine relative rate: %.2f manual-rate units",relativeRate);
-                        ImGui::TextDisabled("Dry-run estimate only; candidates are not reserved or verified available. No completion time is estimated.");
-                    } else ImGui::TextColored({1,0.65f,0.3f,1},"Staffing/equipment readings incomplete; no capacity summary.");
-                } else ImGui::TextDisabled("Select the assigned facility in the inspector to view its latest read-only counts.");
-            } else ImGui::TextColored({1,0.65f,0.3f,1},"Assigned facility ID %u is not present or could not be verified in this world.",s.projectFacilityId);
-        } else if(s.projectQueued) ImGui::TextDisabled("No facility assigned yet.");
+                if(w.selected&&w.buildingValid&&w.building.id==s.projectFacilityId&&w.occupantsValid&&w.parkedValid&&w.vehiclesValid)
+                    ImGui::Text("Observed at facility: %u workers and %u parked machine candidates.",w.occupants,w.eligibleMachineCandidates);
+                else ImGui::TextDisabled("Select this facility in the read-only inspector to see current counts.");
+            } else ImGui::TextColored({1,0.65f,0.3f,1},"Assigned facility ID %u is missing or unreadable.",s.projectFacilityId);
+        } else ImGui::TextDisabled("No facility assigned to this project yet.");
     }
     ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
     ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
@@ -334,7 +362,9 @@ void DrawInterface(const Snapshot& s)
             ImGui::TextWrapped("Raw job state and route stops are native diagnostics, not proof of availability or reservation. Machine skill rating, fuel and exclusive use remain UNVERIFIED. Parked matches are candidates only. Ordinary construction assignments are blocked automatically for the dedicated facility.");
             ImGui::Text("Blocked ordinary construction assignments this session: %u",w.blockedConstructionAssignments);
         if(w.building.earthworksFacility && s.projectQueued) {
+            ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued&&s.projectStatus!=ProjectStatus::Paused);
             if(ImGui::Button("Assign this facility now"))Send(Action::AssignProject);
+            ImGui::EndDisabled();
         }
         }
         if(ImGui::Button("Log inspector snapshot"))Send(Action::LogInspector);

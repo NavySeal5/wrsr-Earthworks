@@ -7,10 +7,11 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 3;
+constexpr uint32_t StateSchemaVersion = 4;
 constexpr size_t MaxSavedProjects = 128;
+constexpr size_t MaxVisibleProjects = MaxSavedProjects;
 
-enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5 };
+enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5, Waiting = 6 };
 
 struct SavedProject {
     uint64_t id = 0;
@@ -20,6 +21,7 @@ struct SavedProject {
     float progress = 0;
     bool needsReview = false;
     float workRemainderM3 = 0;
+    unsigned allocatedWorkers = 0, allocatedMachines = 0;
     Plan plan{};
 };
 

@@ -96,7 +96,7 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
     PutPlan(payload,state.draft);
     for (size_t i=0; i<state.projects.size(); ++i) {
         const auto& p=state.projects[i];
-        if (!p.id || static_cast<uint8_t>(p.status) > static_cast<uint8_t>(ProjectStatus::Cancelled) || !ValidPlan(p.plan) || !p.plan.complete
+        if (!p.id || static_cast<uint8_t>(p.status) > static_cast<uint8_t>(ProjectStatus::Waiting) || !ValidPlan(p.plan) || !p.plan.complete
             || !std::isfinite(p.progress) || p.progress < 0 || p.progress > 1
             || !std::isfinite(p.workRemainderM3) || p.workRemainderM3 < 0) return false;
         for (size_t j=0; j<i; ++j) if (state.projects[j].id == p.id) return false;
@@ -127,7 +127,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     while (r.pos < r.size) {
         if (parsed.projects.size() >= MaxSavedProjects) return false;
         SavedProject p; uint8_t status=0;
-        if (!r.U64(&p.id) || !r.U8(&status) || !p.id || status>static_cast<uint8_t>(ProjectStatus::Cancelled)) return false;
+        if (!r.U64(&p.id) || !r.U8(&status) || !p.id || status>static_cast<uint8_t>(version>=4?ProjectStatus::Waiting:ProjectStatus::Cancelled)) return false;
         p.status=static_cast<ProjectStatus>(status);
         if(version>=2 && !r.U32(&p.facilityId))return false;
         if(version>=3) {
