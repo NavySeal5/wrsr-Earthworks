@@ -17,7 +17,7 @@
 
 namespace ew {
 const TsmHost* host = nullptr;
-std::atomic<bool> panelOpen{false}, mouseCapture{false}, keyboardCapture{false}, leftRelease{false};
+std::atomic<bool> panelOpen{false}, mouseCapture{false}, keyboardCapture{false}, leftRelease{false}, mapPickCapture{false};
 namespace {
 std::mutex dataMutex;
 Snapshot published, current;
@@ -200,7 +200,7 @@ void ResetWorld()
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
     durableState = DurableState{}; selectedProjectId=0; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
-    history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false;
+    history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false;
     ProbeWorldBoundary();
     ResetWorkforce();
     std::lock_guard<std::mutex> lock(dataMutex);
@@ -310,8 +310,8 @@ void Process(const Command& command)
         } else Message("Enter a finite height within the terrain preview's numeric range.");
         break;
     case Action::Clear:
-        history.Commit(current.plan); current.plan = Plan{}; current.mode = PickMode::Corners;
-        Changed(); Message("Preview cleared. Click the first corner."); break;
+        history.Commit(current.plan); current.plan = Plan{}; current.mode = PickMode::None;
+        Changed(); Message("Preview cleared. Select area to begin again."); break;
     case Action::Undo:
         current.plan = history.Undo(current.plan);
         current.mode = current.plan.complete ? PickMode::None : PickMode::Corners;
@@ -335,7 +335,7 @@ void Process(const Command& command)
         selectedProjectId=project.id;
         RefreshProjectStatus();
         current.plan=Plan{};
-        current.mode=PickMode::Corners;
+        current.mode=PickMode::None;
         history.Reset();
         Changed();
         host->log("earthworks  project confirmed and queued id=%llu priority=%zu",static_cast<unsigned long long>(project.id),durableState.projects.size());
@@ -773,7 +773,7 @@ void NotifyNativeTerrainEdit(float x,float z,float brushRadius) noexcept
 {
     NotifyNativeTerrainEditImpl(x,z,brushRadius);
 }
-bool LeftTaken() { return panelOpen || mouseCapture || leftRelease; }
+bool LeftTaken() { return mapPickCapture || mouseCapture || leftRelease; }
 void ClearInputLatches()
 {
     __try {

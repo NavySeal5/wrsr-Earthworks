@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.1-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.2-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -18,9 +18,11 @@ Build: **0.11.1-stage10a-game-ui**. This is a user-run in-game review. The agent
 5. Select different projects and check that status, progress, priority controls, and facility assignment follow the selected project.
 6. Review available queued, running, waiting, paused, review-required, completed and cancelled displays. Start or pause work only in a disposable area if you want to check those states.
 7. Check error/status messages, long text, window scrolling/resizing, screen edges, and your usual UI scale.
-8. Keep the panel open for terrain selection; close it before using native game controls. Confirm normal game clicks work again after closing it.
+8. Leave the panel open while using native game controls. Click ordinary map controls and terrain to confirm those left clicks pass through when no terrain-picking action is active.
 9. Save and reload the test save if desired, and confirm the Plan/Projects controls remain consistent with the stored projects.
 10. Review the visual skin against the game menus: parchment body texture, worn brown edge, red title bar and selected tab, tan controls, and dark readable text. Resize the window and check that the panel edge remains proportional.
+11. Check the title: no white rectangle around the parchment, white title text, and visible “−” minimize and “X” close controls. Minimize, restore, and close the panel.
+12. With Earthworks open but **Select area** or **Sample height** inactive, click ordinary map controls and terrain; vanilla input should pass through and no Earthworks area should be created. Then arm Select area and verify only its two terrain clicks are captured; repeat with Sample height's single terrain click. After each action completes, ordinary terrain clicks should pass through again.
 
 ## Expected results
 
@@ -29,6 +31,7 @@ Build: **0.11.1-stage10a-game-ui**. This is a user-run in-game review. The agent
 - Facility picking/assignment is handled in the Projects tab without raw diagnostic data.
 - Developer-only inspector and terrain-probe UI are absent from this player build.
 - Earthworks uses the installed game's parchment panel art and red/tan menu palette; unavailable art falls back to a matching solid parchment color.
+- Ordinary left clicks pass through while no map-picking action is armed; Select area and Sample height capture only their intentional terrain clicks.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 
 ## Report back

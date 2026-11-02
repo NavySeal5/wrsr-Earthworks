@@ -34,6 +34,9 @@ WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
 RECT buttonRect{}, panelRect{};
 bool panelRectValid = false;
+bool panelMinimized = false;
+bool restorePanelSize = false;
+float expandedPanelHeight = 640.0f;
 #ifdef EARTHWORKS_DEVELOPER_UI
 bool showProbe=true;
 #endif
@@ -85,10 +88,11 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; }
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
-    const bool leftOwned = LeftTaken() || over;
+    const bool mapPick = mapPickCapture && !over && WorldHit(lParam);
+    const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     if (message == WM_LBUTTONDOWN && leftOwned) {
         leftRelease = true;
-        if (panelOpen && !over && WorldHit(lParam) && GetForegroundWindow() == gameWindow) Send(Action::Pick);
+        if (mapPick && GetForegroundWindow() == gameWindow) Send(Action::Pick);
     }
     if (message == WM_LBUTTONUP) leftRelease = false;
     const bool otherMouse = message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK
@@ -211,7 +215,7 @@ void DrawProbe(const Snapshot& s)
     }
 }
 #endif
-void DrawPanelPaper();
+void DrawPanelPaper(float headerHeight);
 void DrawInterface(const Snapshot& s)
 {
     frameGeneration=s.generation;
@@ -235,13 +239,47 @@ void DrawInterface(const Snapshot& s)
     if (!panelOpen) { panelRectValid=false; return; }
     const float panelWidth=std::min(660.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
+    constexpr float headerHeight=42.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints({480,300},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
+    if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
+    else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
+    else ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints({480,44},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
-    ImGui::Begin("Earthworks | Terrain projects",&open,ImGuiWindowFlags_NoSavedSettings);
-    DrawPanelPaper();
-    ImGui::TextColored({0.40f,0.10f,0.09f,1},"EARTHWORKS");
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::Begin("##EarthworksPanel",&open,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleColor();
+    const bool collapsedThisFrame=panelMinimized;
+    auto* panelDraw=ImGui::GetWindowDrawList();
+    const auto panelPos=ImGui::GetWindowPos(),panelSize=ImGui::GetWindowSize();
+    const ImU32 headerColor=IM_COL32(102,27,24,255),headerBorder=IM_COL32(72,43,28,255);
+    panelDraw->AddRectFilled(panelPos,{panelPos.x+panelSize.x,panelPos.y+headerHeight},headerColor,4.0f,ImDrawFlags_RoundCornersTop);
+    panelDraw->AddRect(panelPos,{panelPos.x+panelSize.x,panelPos.y+headerHeight},headerBorder,4.0f,ImDrawFlags_RoundCornersTop,1.0f);
+    panelDraw->AddText({panelPos.x+14.0f,panelPos.y+(headerHeight-ImGui::GetTextLineHeight())*0.5f},IM_COL32(255,255,255,255),"Earthworks | Terrain projects");
+    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.40f,0.10f,0.09f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.65f,0.22f,0.18f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.32f,0.08f,0.07f,1});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+    ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-70.0f,panelPos.y+6.0f});
+    if(ImGui::Button("-",{30.0f,30.0f})) { panelMinimized=!panelMinimized; restorePanelSize=!panelMinimized; }
+    ImGui::SameLine(0,4.0f);
+    if(ImGui::Button("X",{30.0f,30.0f})) open=false;
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(4);
+    if(!panelMinimized && !collapsedThisFrame) expandedPanelHeight=panelSize.y;
+    if(!open) {
+        panelOpen=false; mapPickCapture=false; leftRelease=true; panelRectValid=false;
+        ImGui::End();
+        host->log("earthworks  planning panel closed; native left clicks released after button up");
+        return;
+    }
+    if(collapsedThisFrame || panelMinimized) {
+        RememberRect(&panelRect); panelRectValid=true; ImGui::End(); return;
+    }
+    DrawPanelPaper(headerHeight);
+    ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
     ImGui::TextWrapped("Plan terrain work and manage projects from one place.");
     ImGui::Separator();
     ImGui::TextWrapped("%s",s.message);
@@ -425,10 +463,9 @@ void DrawInterface(const Snapshot& s)
         ImGui::EndTabBar();
     }
     ImGui::Separator();
-    ImGui::TextWrapped("Keep this panel open while selecting terrain. Close it before using native game controls. Plans save with the current republic; planning does not change terrain.");
+    ImGui::TextWrapped("Map clicks pass through normally. Select area and Sample height capture only their required terrain clicks. Plans save with the current republic; planning does not change terrain.");
     if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) open=false;
-    RememberRect(&panelRect); panelRectValid=open; ImGui::End();
-    if (!open) { panelOpen=false; leftRelease=true; host->log("earthworks  planning panel closed; native left clicks released after button up"); }
+    RememberRect(&panelRect); panelRectValid=true; ImGui::End();
 }
 void CleanupTarget() { if (target) { target->Release(); target=nullptr; } }
 void LoadPanelPaper()
@@ -474,11 +511,10 @@ void LoadPanelPaper()
     if(uninitialize) CoUninitialize();
     if(FAILED(hr)) host->log("earthworks  native parchment texture unavailable; using color fallback");
 }
-void DrawPanelPaper()
+void DrawPanelPaper(float headerHeight)
 {
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
-    const auto& style=ImGui::GetStyle();
-    const float top=pos.y+ImGui::GetTextLineHeight()+style.FramePadding.y*2.0f;
+    const float top=pos.y+headerHeight;
     auto* draw=ImGui::GetWindowDrawList();
     if(!panelPaper) { draw->AddRectFilled({pos.x,top},{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255)); return; }
     const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
@@ -574,6 +610,7 @@ void Render(IDXGISwapChain* swap)
 #endif
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
+    mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None;
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
     keyboardCapture=focused && io.WantTextInput && panelOpen;
@@ -601,7 +638,7 @@ HRESULT STDMETHODCALLTYPE Present(IDXGISwapChain* swap,UINT interval,UINT flags)
     }
     ++presentDepth;
     try { if (!(flags & DXGI_PRESENT_TEST)) Render(swap); }
-    catch (...) { panelOpen=false; mouseCapture=false; keyboardCapture=false; host->log("earthworks  overlay exception; input released"); }
+    catch (...) { panelOpen=false; mouseCapture=false; keyboardCapture=false; leftRelease=false; mapPickCapture=false; host->log("earthworks  overlay exception; input released"); }
     const auto hr=originalPresent(swap,interval,flags);
     --presentDepth; return hr;
 }

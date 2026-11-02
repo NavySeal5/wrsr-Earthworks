@@ -45,11 +45,11 @@ struct Snapshot {
     ProbeView probe{};
     NativeTerrainCallView nativeTerrainCall{};
     WorkforceView workforce{};
-    PickMode mode = PickMode::Corners;
+    PickMode mode = PickMode::None;
     char message[160] = "Load a republic to begin.";
 };
 extern const TsmHost* host;
-extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease;
+extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease, mapPickCapture;
 bool LeftTaken();
 bool InstallRuntime();
 void ClearInputLatches();
