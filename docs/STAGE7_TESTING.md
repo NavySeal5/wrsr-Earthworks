@@ -2,6 +2,13 @@
 
 Build: **0.7.3-facility-identity**. The game reports the dedicated Workshop building's type descriptor asset name as `9100000012/EarthworksDevelopmentFacility`; this build recognizes that exact string. It also widens the Earthworks panel, allows it to be resized, and wraps long inspector text. It no longer requires the inspector's session registration button. Only the dry-run is implemented; no autonomous terrain work is enabled.
 
+## Latest save/reload attempt — 2026-11-02
+
+- The local RML Development project `9100000012` was disabled in the active profile. It was enabled and verified in RML; the dashboard showed **1 Development project(s) active**. The RML local runtime configuration now has `developmentItems["9100000012"] = true`.
+- The game was relaunched through RML and loading save **A** (`save\autosave2`) still showed **Missing Workshop item(s)**. The prompt was canceled. No subscription was started, no save was loaded or altered, and the persistence check remains incomplete.
+- The Earthworks Development Facility files are present locally, but enabling this local Development project did not satisfy the game's missing Workshop content check. The missing item(s) have not yet been identified.
+- Next: inspect which Workshop item IDs the save expects, then repeat the save/reload check in a disposable save where required content is available. Do not overwrite save A.
+
 ## Test in a disposable save
 
 1. Close the game and project-local RML. Run `scripts/Stage-Diagnostics.ps1`, then run `launch-prototype.cmd`, confirm **Earthworks Planning - Dedicated Facility Prototype**, version **0.7.3-facility-identity**, and launch through RML.
