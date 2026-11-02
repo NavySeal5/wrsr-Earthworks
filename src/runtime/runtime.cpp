@@ -278,6 +278,12 @@ void Process(const Command& command)
         current.mode = PickMode::Sample;
         Message("Click the ground to sample its height.");
         break;
+    case Action::CancelPick:
+        if(current.mode==PickMode::Sample) Message("Height sampling cancelled.");
+        else if(current.mode==PickMode::Corners) Message("Area selection cancelled. The current draft is kept.");
+        else if(current.mode==PickMode::InspectBuilding) Message("Facility picking cancelled.");
+        current.mode=PickMode::None;
+        break;
     case Action::Pick: {
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {

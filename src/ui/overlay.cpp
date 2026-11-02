@@ -38,13 +38,20 @@ bool panelRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
 float expandedPanelHeight = 640.0f;
+bool escapeKeyDown = false;
+bool escapeOwned = false;
+bool pickCancelledByEscape = false;
 #ifdef EARTHWORKS_DEVELOPER_UI
 bool showProbe=true;
 #endif
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
-void Send(Action action, float value = 0) { Enqueue({action,value,frameGeneration}); }
+void Send(Action action, float value = 0)
+{
+    if(action==Action::Select || action==Action::Sample || action==Action::InspectBuilding) pickCancelledByEscape=false;
+    Enqueue({action,value,frameGeneration});
+}
 void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
 const char* ProjectStatusName(ProjectStatus status)
 {
@@ -86,7 +93,23 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam));
-    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; }
+    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; }
+    bool escapeMessage=false;
+    if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
+        if(!escapeKeyDown) {
+            escapeKeyDown=true;
+            if(panelOpen) {
+                escapeOwned=true;
+                if(mapPickCapture) { mapPickCapture=false; pickCancelledByEscape=true; Send(Action::CancelPick); }
+                else { panelOpen=false; panelRectValid=false; keyboardCapture=false; pickCancelledByEscape=false; host->log("earthworks  planning panel closed with Escape"); }
+            }
+        }
+        escapeMessage=escapeOwned;
+    } else if(message==WM_KEYUP && wParam==VK_ESCAPE) {
+        escapeKeyDown=false;
+        escapeMessage=escapeOwned;
+        escapeOwned=false;
+    }
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
     const bool mapPick = mapPickCapture && !over && WorldHit(lParam);
@@ -99,7 +122,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool otherMouse = message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK
         || message == WM_MBUTTONDOWN || message == WM_MBUTTONUP || message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL;
     const bool keyMessage = message == WM_KEYDOWN || message == WM_CHAR || message == WM_SYSKEYDOWN;
-    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyMessage && keyboardCapture);
+    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyMessage && keyboardCapture) || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
     return CallWindowProcW(originalWndProc,window,message,wParam,lParam);
@@ -468,7 +491,7 @@ void DrawInterface(const Snapshot& s)
         ImGui::EndTabBar();
     }
     ImGui::Separator();
-    ImGui::TextWrapped("Map clicks pass through normally. Select area and Sample height capture only their required terrain clicks. Plans save with the current republic; planning does not change terrain.");
+    ImGui::TextWrapped("Map clicks pass through normally. Select area and Sample height capture only their required terrain clicks. Esc cancels map picking; Esc again closes this panel. Planning does not change terrain.");
     if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) open=false;
     RememberRect(&panelRect); panelRectValid=true; ImGui::End();
 }
@@ -630,7 +653,8 @@ void Render(IDXGISwapChain* swap)
 #endif
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
-    mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None;
+    if(snapshot.mode==PickMode::None) pickCancelledByEscape=false;
+    mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
     keyboardCapture=focused && io.WantTextInput && panelOpen;

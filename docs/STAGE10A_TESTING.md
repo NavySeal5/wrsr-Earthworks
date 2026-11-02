@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.5-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.6-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -24,6 +24,7 @@ Build: **0.11.5-stage10a-game-ui**. This is a user-run in-game review. The agent
 10. Compare the panel to a native window: Arial UI text, rounded parchment corners with no extra rectangular box, and a red title strip integrated into the parchment art. Check the white title and close/minimize controls, then resize the window and check the corners.
 11. Check the title: no white rectangle around the parchment, white title text, and visible “−” minimize and “X” close controls. Minimize, restore, and close the panel.
 12. With Earthworks open but **Select area** or **Sample height** inactive, click ordinary map controls and terrain; vanilla input should pass through and no Earthworks area should be created. Then arm Select area and verify only its two terrain clicks are captured; repeat with Sample height's single terrain click. After each action completes, ordinary terrain clicks should pass through again.
+13. While Select area is active, press Escape once and confirm picking stops while the panel stays open; press Escape again and confirm the panel closes. Repeat with Sample height. Holding Escape should count as one press, not cancel and close at once.
 
 ## Expected results
 

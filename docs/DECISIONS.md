@@ -53,6 +53,7 @@ Updated 2 November 2026. This register separates the user's confirmed intent fro
 | D58 | Use the game's integrated `menu/strip.png` panel art so its parchment, edge and red header read as one native window surface, without an added rectangular frame | User supplied a screenshot comparing Earthworks to a native building panel and requested removing the box and integrating the header, 2 November 2026; supersedes D56's initial `bottommenu_area.png` panel-only treatment |
 | D59 | Use the game's configured Arial UI font and round the parchment panel's visible corners | User requested the game font and rounded borders, 3 November 2026; `media_soviet/gui/default.ini` specifies Arial, and the game panel texture is clipped with rounded corners |
 | D60 | Show the Earthworks launcher button without a separate window background or border | User requested removal of the extra box around the Earthworks button, 3 November 2026 |
+| D61 | Escape cancels an armed terrain-picking action first; a subsequent Escape closes the Earthworks panel | User explicitly specified the two-step Escape behavior for Select area, Sample height and the open panel, 3 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
