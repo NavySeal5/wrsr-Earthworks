@@ -1,12 +1,12 @@
 # Stage 7 — facility assignment dry-run
 
-Build: **0.7.2-wide-panel**. This build widens the Earthworks panel, allows it to be resized, and wraps long inspector text. It also automatically recognizes buildings whose type descriptor asset name is exactly `EarthworksDevelopmentFacility`. It no longer requires the inspector's session registration button. Only the dry-run is implemented; no autonomous terrain work is enabled.
+Build: **0.7.3-facility-identity**. The game reports the dedicated Workshop building's type descriptor asset name as `9100000012/EarthworksDevelopmentFacility`; this build recognizes that exact string. It also widens the Earthworks panel, allows it to be resized, and wraps long inspector text. It no longer requires the inspector's session registration button. Only the dry-run is implemented; no autonomous terrain work is enabled.
 
 ## Test in a disposable save
 
-1. Close the game and project-local RML. Run `launch-prototype.cmd`, confirm **Earthworks Planning - Dedicated Facility Prototype**, version **0.7.2-wide-panel**, and launch through RML.
+1. Close the game and project-local RML. Run `scripts/Stage-Diagnostics.ps1`, then run `launch-prototype.cmd`, confirm **Earthworks Planning - Dedicated Facility Prototype**, version **0.7.3-facility-identity**, and launch through RML.
 2. Load a disposable republic containing the Earthworks Development Facility (test). Do not register it; no registration button should appear.
-3. Place two Earthworks facilities if convenient. Confirm the inspector labels each placed copy as an automatically recognized Earthworks facility. Find an ordinary native construction office too; it must be labelled **Other building**.
+3. Place two Earthworks facilities if convenient. Confirm the inspector labels each placed copy as an automatically recognized Earthworks facility. The candidate row should say **Earthworks facility** and show asset name `9100000012/EarthworksDevelopmentFacility`. Find an ordinary native construction office too; it must be labelled **Other building**.
 4. Inspect the ordinary office. Confirm its vehicle purchasing and normal construction controls still behave as before. Inspect an Earthworks facility and confirm ordinary construction assignments are blocked there. Check the allowed vehicle classes (bulldozers, excavators, dumpers, buses) and at least one excluded type.
 5. Create and confirm a small terrain plan. Confirm the queued grey wireframe remains visible and the ground does not change.
 6. In the Stage 7 panel, click **Find Earthworks facility**, then click near one Earthworks facility on the map. In the inspector below, choose the explicitly labelled Earthworks facility result. Return to the Stage 7 panel and click **Assign selected facility** (or click **Assign this facility now** in the inspector). Confirm the selected facility ID is shown. The distance is to the plan centre and must be presented as distance only, with no in-range/coverage claim.

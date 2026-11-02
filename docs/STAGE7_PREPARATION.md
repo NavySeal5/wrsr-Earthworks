@@ -17,7 +17,7 @@ The existing test facility uses 5 worker places and 2 machine slots by user choi
 
 1. **Range display (D37):** User chose distance only, with no operating range or coverage claim.
 2. **Project assignment (D38):** User chose manual assignment of one queued project to a chosen facility.
-3. **Facility identity (D36):** User chose automatic recognition of every instance, without per-session registration. The generated building object's internal asset name is `EarthworksDevelopmentFacility`. Community HDO source for the same supported game build documents that the building type descriptor starts with the internal asset name. Runtime compares that bounded exact string; category/subtype alone is not used. User in-game verification is still required.
+3. **Facility identity (D36):** User chose automatic recognition of every instance, without per-session registration. The user's in-game inspector screenshot showed the full descriptor asset name `9100000012/EarthworksDevelopmentFacility`. An earlier comparison used only the object folder name and therefore did not match; runtime now compares the bounded full string observed in game. Category/subtype alone is not used.
 4. **Assignment persistence:** The user's answer to the session-registration question requested permanent facility identity. The project assignment is stored as the native building ID in companion schema v2 and is resolved on reload only when exactly one current building has both that ID and the Earthworks asset name. Schema v1 remains readable as unassigned. If the ID is missing or ambiguous, the dry-run reports unresolved and does not auto-reassign.
 
 ## Stage boundary
