@@ -754,9 +754,9 @@ BOOL_HOOK(HMiddleDown,middleDown,mouseCapture.load())
 #undef BOOL_HOOK
 bool HKeyDown(void* self,int key) { const bool value=keyDown(self,key); return keyboardCapture || escapeCapture ? false:value; }
 bool HKeyPress(void* self,int key) { const bool value=keyPress(self,key); return keyboardCapture || escapeCapture ? false:value; }
-bool HButtonDown(void* self,char* binding) { const bool value=buttonDown(self,binding); return mouseCapture || keyboardCapture || escapeCapture ? false:value; }
-bool HButtonPress(void* self,char* binding) { const bool value=buttonPress(self,binding); return mouseCapture || keyboardCapture || escapeCapture ? false:value; }
-float HAxis(void* self,char* binding,int* out,float a,float b) { const float value=axis(self,binding,out,a,b); return mouseCapture || keyboardCapture || escapeCapture ? 0:value; }
+bool HButtonDown(void* self,char* binding) { const bool value=buttonDown(self,binding); return keyboardCapture || escapeCapture ? false:value; }
+bool HButtonPress(void* self,char* binding) { const bool value=buttonPress(self,binding); return keyboardCapture || escapeCapture ? false:value; }
+float HAxis(void* self,char* binding,int* out,float a,float b) { const float value=axis(self,binding,out,a,b); return keyboardCapture || escapeCapture ? 0:value; }
 float* HRelative(void* self,float* out) { auto* value=relative(self,out); if (mouseCapture) out[0]=out[1]=out[2]=0; return value; }
 struct Import { const char* symbol; void* detour; void** original; };
 Import imports[] = {

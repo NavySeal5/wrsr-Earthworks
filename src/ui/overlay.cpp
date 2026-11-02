@@ -41,6 +41,7 @@ float expandedPanelHeight = 640.0f;
 bool escapeKeyDown = false;
 bool escapeOwned = false;
 bool pickCancelledByEscape = false;
+bool targetHeightEditing = false;
 #ifdef EARTHWORKS_DEVELOPER_UI
 bool showProbe=true;
 #endif
@@ -249,6 +250,7 @@ void DrawProbe(const Snapshot& s)
 void DrawPanelPaper(bool headerOnly);
 void DrawInterface(const Snapshot& s)
 {
+    targetHeightEditing = false;
     frameGeneration=s.generation;
     if (!s.ready) { panelOpen=false; panelRectValid=false; buttonRect={}; return; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
@@ -329,6 +331,7 @@ void DrawInterface(const Snapshot& s)
             ImGui::TextDisabled("Click two opposite corners on the ground; keep this panel open while selecting.");
             ImGui::SetNextItemWidth(180);
             if (ImGui::InputFloat("Target height (m)",&height,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue)) Send(Action::Target,height);
+            targetHeightEditing = ImGui::IsItemActive();
             ImGui::SameLine(); if (ImGui::Button("Apply height")) Send(Action::Target,height);
             if (s.plan.complete) {
                 ImGui::SeparatorText("Planned area");
@@ -699,7 +702,7 @@ void Render(IDXGISwapChain* swap)
     mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
-    keyboardCapture=focused && io.WantTextInput && panelOpen;
+    keyboardCapture=focused && io.WantTextInput && targetHeightEditing && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
     ImGui::GetIO().MouseDrawCursor=focused && (mouseCapture || panelOpen);
     ClearInputLatches();
