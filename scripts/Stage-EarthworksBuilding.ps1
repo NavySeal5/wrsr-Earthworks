@@ -94,4 +94,4 @@ if(-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Path $
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 Write-Host "Staged dedicated Earthworks content item $id at $target"
 Write-Host 'Temporary settings: 5 worker places, native construction_office3 shell with two vehicle-station placements.'
-Write-Host 'The plugin blocks assignment of this registered building from ordinary construction jobs; registration is session-only.'
+Write-Host 'The plugin recognizes this facility by its unique internal asset name. Ordinary construction offices remain unaffected.'

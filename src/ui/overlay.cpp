@@ -8,6 +8,7 @@
 #include "../runtime/runtime.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
+#include "../core/productivity.h"
 #include "imgui_impl_dx11.h"
 #include <algorithm>
 #include <cstdio>
@@ -199,7 +200,7 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({390,240},{700,std::max(300.0f,display.y-180)});
     bool open=true;
     ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  0.6.1");
+    ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  STAGE 7 DRY-RUN");
     ImGui::TextWrapped("Plan a flat rectangle, save drafts, and queue one project. This stage does not execute terrain work.");
     ImGui::Separator();
     ImGui::BeginChild("Planning status",{0,ImGui::GetTextLineHeight()*3+4},ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
@@ -224,22 +225,46 @@ void DrawInterface(const Snapshot& s)
         if(ImGui::Button("Confirm and queue project"))Send(Action::ConfirmProject);
         ImGui::EndDisabled();
     }
-    if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. No terrain work runs in Stage 6.",s.projectId);
+    if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. Stage 7 never edits terrain.",s.projectId);
     if(s.projectQueued)ImGui::TextDisabled("Grey wireframe: queued project. Coloured wireframe: editable draft.");
+    if(s.projectQueued) {
+        ImGui::SeparatorText("Stage 7 | Facility dry-run");
+        ImGui::BeginDisabled(!s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
+        if(ImGui::Button("Assign selected facility"))Send(Action::AssignProject);
+        ImGui::EndDisabled();
+        if(s.projectFacilityId) {
+            ImGui::SameLine();if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);
+            if(s.assignedFacilityFound) {
+                ImGui::Text("Assigned Earthworks facility ID %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
+                ImGui::TextDisabled("Distance only. Operating range and footprint coverage are not established.");
+                const auto& w=s.workforce;
+                if(w.selected && w.buildingValid && w.building.id==s.projectFacilityId) {
+                    if(w.occupantsValid && w.parkedValid && w.vehiclesValid) {
+                        const double relativeRate=w.eligibleMachineCandidates
+                            ? MachineRate(std::min(static_cast<int>(w.occupants),10),ReferenceGroundworksRating)
+                            : WorkerOnlyRate(static_cast<int>(w.occupants));
+                        ImGui::Text("Observed occupants: %u | parked bulldozer/excavator candidates: %u",w.occupants,w.eligibleMachineCandidates);
+                        ImGui::Text("Provisional one-machine relative rate: %.2f manual-rate units",relativeRate);
+                        ImGui::TextDisabled("Dry-run estimate only; candidates are not reserved or verified available. No completion time is estimated.");
+                    } else ImGui::TextColored({1,0.65f,0.3f,1},"Staffing/equipment readings incomplete; no capacity summary.");
+                } else ImGui::TextDisabled("Select the assigned facility in the inspector to view its latest read-only counts.");
+            } else ImGui::TextColored({1,0.65f,0.3f,1},"Assigned facility ID %u is not present or could not be verified in this world.",s.projectFacilityId);
+        } else ImGui::TextDisabled("No facility assigned. Select an Earthworks facility below, then assign it here.");
+    }
     ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
     ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
     ImGui::SameLine(); if (ImGui::Button("Clear preview")) Send(Action::Clear);
     if(ImGui::CollapsingHeader("Stage 4 | Read-only workforce inspector",ImGuiTreeNodeFlags_DefaultOpen)) {
         const auto& w=s.workforce;
-        ImGui::TextWrapped("Developer readings only. No staffing, machinery or terrain is changed by this inspector.");
+        ImGui::TextWrapped("Facility identity is detected from the dedicated Workshop asset name. Ordinary construction offices remain unchanged.");
         if(ImGui::Button("Find buildings")) Send(Action::InspectBuilding);
         ImGui::SameLine();if(ImGui::Button("Clear inspector")) Send(Action::ClearInspector);
         ImGui::TextWrapped("%s",w.status);
         for(unsigned i=0;i<w.candidateCount;++i) {
             const auto& b=w.candidates[i];ImGui::PushID(static_cast<int>(i));
-            char label[100];sprintf_s(label,"Inspect ID %u | %.1f m from click",b.id,b.distance);
+            char label[120];sprintf_s(label,"%s ID %u | %.1f m from click",b.earthworksFacility?"Earthworks facility":"Other building",b.id,b.distance);
             if(ImGui::Button(label))Send(Action::ChooseBuilding,static_cast<float>(i));
-            ImGui::TextDisabled("X %.1f Z %.1f | category %d / subtype %d",b.position.x,b.position.z,b.category,b.subtype);
+            ImGui::TextDisabled("X %.1f Z %.1f | %s | category %d / subtype %d",b.position.x,b.position.z,b.assetName,b.category,b.subtype);
             ImGui::PopID();
         }
         if(w.selected && !w.buildingValid)ImGui::TextColored({1,0.65f,0.3f,1},"Building fields: UNAVAILABLE");
@@ -248,7 +273,9 @@ void DrawInterface(const Snapshot& s)
             ImGui::Text("Origin X %.1f Z %.1f | category %d / %d",w.building.position.x,w.building.position.z,w.building.category,w.building.subtype);
             if(w.occupantsValid)ImGui::Text("Occupant list: %u non-null / %u slots",w.occupants,w.occupantSlots);
             else ImGui::TextColored({1,0.65f,0.3f,1},"Occupant list: UNAVAILABLE");
-            ImGui::TextWrapped("At workplaces this may track workers; at homes it tracks residents. Compare with native UI. Productivity/worker capacity: unverified.");
+            if(w.building.earthworksFacility)ImGui::TextColored({0.3f,0.9f,0.65f,1},"Automatically recognized Earthworks facility.");
+            else ImGui::TextColored({1,0.65f,0.3f,1},"Not an Earthworks facility; Earthworks filters do not apply.");
+            ImGui::TextWrapped("Occupant-list entries are observed counts; their precise work availability is not verified.");
             if(w.parkedValid)ImGui::Text("Parked list: %u native slots",w.parkedSlots);
             else ImGui::TextColored({1,0.65f,0.3f,1},"Parked list: UNAVAILABLE");
             if(w.vehiclesValid && w.unreadableVehicles==0) {
@@ -259,17 +286,14 @@ void DrawInterface(const Snapshot& s)
             ImGui::Text("Showing %u of %u readable linked vehicles",w.rowCount,w.matchedCount);
             for(unsigned i=0;i<w.rowCount;++i) {
                 const auto& v=w.vehicles[i];
-                ImGui::Text("ID %u | %s%s%s | raw category %u",v.id,v.home?"H ":"",v.assigned?"A ":"",v.parked?"P":"",v.category);
+                ImGui::Text("ID %u | %s%s%s | %s | category %u",v.id,v.home?"H ":"",v.assigned?"A ":"",v.parked?"P":"",v.groundworksMachine&&v.earthworksAllowed?"machine candidate":"not a machine candidate",v.category);
                 ImGui::TextWrapped("%s",v.type);
                 if(v.positionValid)ImGui::TextDisabled("%.1f m from building origin",v.distance);
                 else ImGui::TextDisabled("Position unavailable");
             }
-            ImGui::TextWrapped("Machine skills, fuel, usable availability and reservations: UNVERIFIED. Register only the dedicated Earthworks test building below.");
-            ImGui::Text("Registered Earthworks station: %s | blocked native assignments: %u",
-                w.earthworksOfficeRegistered && w.earthworksOfficeId==w.building.id?"YES":"no",w.blockedConstructionAssignments);
-            if(ImGui::Button("Register selected building as Earthworks station"))Send(Action::RegisterBuilding);
-            ImGui::SameLine();if(ImGui::Button("Clear station registration"))Send(Action::ClearRegistration);
-            ImGui::TextWrapped("Register only Earthworks Development Facility (test), not an ordinary construction office. This session filter accepts road/road-service vehicle type names containing bulldozer/buldozer, excavator/exvacator, dumper/dump truck, gravel, or bus/bust. Other types are rejected. Unusually named mod vehicles may need later classification support; reselect after reload.");
+            ImGui::TextWrapped("Machine skill rating, fuel, usable availability and reservations: UNVERIFIED. Parked matches are candidates only. Ordinary construction assignments are blocked automatically for the dedicated facility.");
+            ImGui::Text("Blocked ordinary construction assignments this session: %u",w.blockedConstructionAssignments);
+            if(w.building.earthworksFacility && ImGui::Button("Assign this facility to queued project"))Send(Action::AssignProject);
         }
         if(ImGui::Button("Log inspector snapshot"))Send(Action::LogInspector);
         ImGui::TextWrapped("Readings refresh about twice per second, including while this panel is closed. Close Earthworks to use native building controls, then reopen to compare.");

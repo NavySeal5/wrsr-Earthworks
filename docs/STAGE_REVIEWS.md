@@ -25,12 +25,12 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 | 4 — Workforce/machinery feasibility | In progress | 0.5.2 vehicle allowlist accepted; D31 direction and D32 provisional relative rate selected | User: "working great now" after the 0.5.2 correction. The initial formula is documented; the unisolated native sample still does not validate it. Multi-machine allocation, availability/reservation and fuel remain open |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Accepted | Versioned companion-state encoding, atomic file replacement, native save-trigger observation and saved-heightmap SHA-256 matching implemented | User accepted after confirming ordinary save/reload preserves the draft and queued project. Queued grey-wireframe visibility, stale-state protection, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested and are deferred. See [STAGE6_TESTING.md](STAGE6_TESTING.md) |
-| 7 — Office/assignments | In progress — preparation | Dry-run scope documented; range and assignment mode await user choice; no feature code yet | Pending |
+| 7 — Office/assignments | Ready for in-game test | Build 0.7.0-stage7-dryrun implements asset-name identity, manual assignment, distance-only display, candidate counts and persisted facility ID | Pending user test; see [STAGE7_TESTING.md](STAGE7_TESTING.md) |
 | 8 — One autonomous project | Planned | Not implemented | Pending |
 | 9 — Multiple projects/operations | Planned | Scheduling rules open | Pending |
 | 10 — Balanced candidate | Planned | Scope/balance open | Pending |
 
-**Stage 6 implementation — awaiting user in-game review**
+**Stage 6 implementation — accepted with deferred checks**
 
 - User chose to preserve both drafts and confirmed projects across save/reload (D33).
 - Added versioned companion-state encoding with CRC validation, bounded decode, a SHA-256 fingerprint of the matching save's `heightmap.dds`, and atomic replacement at `media_soviet/save/<slot>/earthworks.dat`. The runtime observes the native save trigger through the existing Late hook and restores only after the loaded save's fingerprint matches.
@@ -39,15 +39,18 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Build: `0.6.1-queued-wireframe`; x64 build succeeded and was staged in the project-local RML runtime. Built and staged DLL SHA-256: `7511A8054DBDB8AFF66C08151937F09E68CE476A8348A3E6250ECFDFA9380903`. No game or automated tests were run by the agent. User checklist: [STAGE6_TESTING.md](STAGE6_TESTING.md).
 - User-run result and acceptance: ordinary save and reload preserved both the editable draft and queued project. The user accepted Stage 6 while deferring stale-state protection. Queued grey-wireframe visibility, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested. These are recorded as unverified; they are not treated as passed.
 
-**Stage 7 preparation — identity feasibility before implementation**
+**Stage 7 implementation — awaiting user in-game review**
 
 - User authorized continuing to the next stage after accepting Stage 6.
 - User decisions: show distance only without an in-range claim (D37); manually assign a queued plan to the selected facility (D38); every dedicated Earthworks facility instance should be automatically recognized without per-session registration (D36).
-- Proposed bounded Stage 7: manually assign one queued plan to a selected dedicated facility and show a dry-run of observed staffing and matching parked vehicle candidates. No terrain edits, fuel/material use, reservation or completion estimate.
 - Current probe readings cannot establish that parked vehicles are idle, natively available or exclusively reserved. UI wording must call them candidates. Stage 4 reservation/availability remains a blocker before autonomous execution.
-- The current temporary facility reuses the generic native construction-office type. The existing verified runtime identity uses explicit registration and a live instance address plus world slot and ID. Generic category/subtype alone cannot safely distinguish the Earthworks item from ordinary construction offices. Research a unique Workshop asset or verified per-instance signal before removing registration or broadening the vehicle/job filters.
 - The official native references establish different distances for different mechanics: terrain machinery in a depot/Construction Office within 1,000 m, and citizen walking up to 480 m on the fastest paths. Neither establishes this mod's facility range. See [Stage 7 preparation](STAGE7_PREPARATION.md).
-- Stage 7 code is not started pending the identity research required by D36. No in-game checks have been run by the agent.
+- Community HDO source for the target game build documents the type descriptor at building+0x318 and says descriptor entries begin with an internal asset name. The generated Earthworks Workshop object's configured name is exactly `EarthworksDevelopmentFacility`; runtime uses an exact bounded comparison. Other generic construction offices do not match.
+- Build **0.7.0-stage7-dryrun** automatically recognizes facility instances, applies the existing direct ordinary-job block and vehicle allowlist to those instances only, supports manually assigning one queued project, and displays observed occupants, parked bulldozer/excavator candidates, distance to plan centre and the provisional one-machine D32 rate. No range claim, completion estimate, reservation, resource use or terrain editing is part of Stage 7.
+- Companion schema v2 stores the assigned native building ID; v1 remains readable with projects unassigned. Reload resolution requires one unique instance whose ID and exact asset name both match. An unresolved assignment remains queued and is not reassigned.
+- Build **0.7.0-stage7-dryrun**: x64 Release build succeeded; the build script verified AMD64 and the three Tesmio exports. The built and staged DLL hashes match: `077B8DDAA164725FDA8E23E1C7B58B8CFDB9E3617401D7B0E01D5CB459CE275D`.
+- Staging refreshed the project-local RML development preset and generated Workshop item `9100000012`; Steam-subscribed RML configuration is untouched. The game was not launched. No tests were run by the agent.
+- User instructions: [STAGE7_TESTING.md](STAGE7_TESTING.md). Acceptance is pending the user's report.
 
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.
 

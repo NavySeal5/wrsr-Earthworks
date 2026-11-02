@@ -5,7 +5,9 @@
 #include "runtime.h"
 #include "save_store.h"
 #include "vehicle_filter.h"
+#include "../core/productivity.h"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -22,6 +24,7 @@ History history;
 DurableState durableState;
 bool savePending = false;
 bool loadMessagePending = false;
+ULONGLONG lastFacilityRefresh = 0;
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
@@ -105,11 +108,26 @@ void RefreshProjectStatus()
 {
     current.projectQueued=false;
     current.projectId=0;
+    current.projectFacilityId=0;
+    current.assignedFacilityFound=false;
+    current.projectFacilityDistance=0;
     current.queuedPlan=Plan{};
     for (const auto& project : durableState.projects) {
         if (project.status==ProjectStatus::Queued) {
             current.projectQueued=true; current.projectId=project.id; current.queuedPlan=project.plan; break;
         }
+    }
+    for(const auto& project:durableState.projects)if(project.status==ProjectStatus::Queued) {
+        current.projectFacilityId=project.facilityId;
+        if(project.facilityId) {
+            BuildingReading facility{};
+            if(FindEarthworksFacility(project.facilityId,&facility)) {
+                current.assignedFacilityFound=true;
+                const Point center{(project.plan.a.x+project.plan.b.x)*0.5f,0,(project.plan.a.z+project.plan.b.z)*0.5f};
+                current.projectFacilityDistance=std::hypot(center.x-facility.position.x,center.z-facility.position.z);
+            }
+        }
+        break;
     }
 }
 bool SamplePlan(Plan* plan)
@@ -147,7 +165,7 @@ void Process(const Command& command)
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
             FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;
-            Message("See nearby building origins in the Stage 4 inspector.");break;
+            Message("Choose the Earthworks facility in the inspector, then assign it to the queued project.");break;
         }
         Point p = current.cursor;
         if (!ReadHeight(p.x,p.z,&p.y)) { Message("Cannot sample terrain here. Try another point."); break; }
@@ -198,10 +216,27 @@ void Process(const Command& command)
         current.mode=PickMode::Corners;
         history.Reset();
         Changed();
-        host->log("earthworks  project confirmed and queued id=%llu; terrain execution is not enabled in Stage 6",project.id);
-        Message("Project queued. Stage 6 stores it with the native save; terrain execution is not enabled yet.");
+        host->log("earthworks  project confirmed and queued id=%llu; Stage 7 dry-run only, no terrain execution",project.id);
+        Message("Project queued. Assign an Earthworks facility to review its dry-run capacity.");
         break;
     }
+    case Action::AssignProject: {
+        if(!current.projectQueued) { Message("Queue a project before assigning a facility."); break; }
+        const auto workforce=ReadWorkforce();
+        if(!workforce.selected || !workforce.buildingValid || !workforce.building.earthworksFacility) {
+            Message("Select a recognized Earthworks facility in the inspector first.");break;
+        }
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
+            project.facilityId=workforce.building.id;RefreshProjectStatus();
+            SelectEarthworksFacility(project.facilityId);
+            Message("Project assigned. Dry-run only: parked equipment is shown as candidates, not reserved.");
+            break;
+        }
+        break;
+    }
+    case Action::ClearProjectAssignment:
+        for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Queued)project.facilityId=0;
+        RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::CaptureTest: ProcessProbe(ProbeAction::Capture); break;
     case Action::RaiseTest: ProcessProbe(ProbeAction::Raise); break;
     case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
@@ -212,11 +247,6 @@ void Process(const Command& command)
         if(std::isfinite(command.value) && command.value>=0 && command.value<WorkforceCandidates)
             SelectWorkforceBuilding(static_cast<unsigned>(command.value));
         break;
-    case Action::RegisterBuilding:
-        if(RegisterEarthworksBuilding())Message("Station registered: named bulldozers, excavators, dumpers and buses only. Ordinary construction assignments are blocked.");
-        else Message("Select a readable building before registering it.");
-        break;
-    case Action::ClearRegistration:ClearEarthworksBuilding();Message("Earthworks station registration cleared.");break;
     case Action::ClearInspector: ResetWorkforce();current.mode=PickMode::None;break;
     case Action::LogInspector: LogWorkforce();break;
     }
@@ -250,6 +280,10 @@ void Tick()
     current.canUndo = history.CanUndo(); current.canRedo = history.CanRedo();
     current.probe = ReadProbeView();
     if(current.ready)TickWorkforce();
+    const auto facilityNow=GetTickCount64();
+    if(current.projectQueued && current.projectFacilityId && facilityNow-lastFacilityRefresh>=500) {
+        lastFacilityRefresh=facilityNow;RefreshProjectStatus();
+    }
     current.workforce=ReadWorkforce();
     { std::lock_guard<std::mutex> lock(dataMutex); published = current; }
 }
@@ -279,6 +313,7 @@ void HookedLoad()
         current.plan=durableState.draft;
         current.volumes=Estimate(current.plan);
         RefreshProjectStatus();
+        if(current.projectFacilityId)SelectEarthworksFacility(current.projectFacilityId);
         ++current.revision;
         Message("Restored saved Earthworks drafts and projects.");
         loadMessagePending=true;
@@ -303,7 +338,7 @@ void HookedConstructionAssign(void* world,void* office,void* construction,float 
 unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t slotHint,int* slot)
 {
     static char lastRejected[65]{};
-    if(IsRegisteredEarthworksBuilding(building)) {
+    if(IsEarthworksFacility(building)) {
         char rejected[65]{};
         if(!AllowEarthworksVehicleType(type,rejected,sizeof(rejected))) {
             if(slot)*slot=-1;

@@ -1,4 +1,4 @@
-# Stage 7 — office assignment dry-run preparation
+# Stage 7 — scope, evidence and selected behavior
 
 ## Proposed bounded deliverable
 
@@ -13,11 +13,13 @@ The existing test facility uses 5 worker places and 2 machine slots by user choi
 - The official Q&A says native raise/lower/level terrain machinery must be in a depot or Construction Office within 1,000 m of the work [Official Q&A](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Question_and_answers). The official citizen guide says maximum walking distance is 480 m on the fastest paths; slower routes reduce it [Official citizens/walking reference](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Units). These measure different native behaviors and do not prove the Earthworks station-to-plan radius, especially for the user's no-travel workplace model.
 - Stage 4 has not verified exclusive vehicle reservation or whether the native manual terrain tool can still use a vehicle held at the Earthworks facility. Stage 7 can report candidates without claiming exclusivity; autonomous work must wait until the reservation interaction is resolved.
 
-## Decisions needed before implementation
+## Decisions and implementation identity
 
-1. **Range rule:** Choose a single radius for all facility contributions, separate worker-only and machine-assisted limits, or defer range display until tested. If a plan crosses the chosen limit, decide whether to mark the whole plan out of range or work only the covered part. Recommendation: use a single provisional 1,000 m limit for machine-assisted dry-runs, because that is the official native terrain-machine distance; label worker-only coverage unverified and ask the user to validate before autonomous use.
-2. **Automatic facility identity (D36):** The user chose permanent automatic recognition of each instance of the dedicated facility. The temporary building inherits a generic native construction-office type, which can also describe ordinary offices. Do not broaden dispatch/vehicle filtering to all construction offices. Establish a unique identity signal from the dedicated Workshop asset or a verified instance field before removing manual registration.
+1. **Range display (D37):** User chose distance only, with no operating range or coverage claim.
+2. **Project assignment (D38):** User chose manual assignment of one queued project to a chosen facility.
+3. **Facility identity (D36):** User chose automatic recognition of every instance, without per-session registration. The generated building object's internal asset name is `EarthworksDevelopmentFacility`. Community HDO source for the same supported game build documents that the building type descriptor starts with the internal asset name. Runtime compares that bounded exact string; category/subtype alone is not used. User in-game verification is still required.
+4. **Assignment persistence:** The user's answer to the session-registration question requested permanent facility identity. The project assignment is stored as the native building ID in companion schema v2 and is resolved on reload only when exactly one current building has both that ID and the Earthworks asset name. Schema v1 remains readable as unassigned. If the ID is missing or ambiguous, the dry-run reports unresolved and does not auto-reassign.
 
 ## Stage boundary
 
-The user resolved D37 and D38: show distance only, and assign projects manually. D36 resolves per-session registration as a desired behavior, but its implementation depends on a verified way to distinguish the dedicated Workshop facility from generic construction offices. The Stage 7 display remains a dry-run: it may show observed occupants and parked allowlisted vehicle candidates plus the provisional D32 rate, but must not describe candidates as reserved/available, write terrain or imply a completion duration. Reservation, fuel and cost accounting remain blockers before Stage 8.
+The user resolved D37 and D38: show distance only, and assign projects manually. D36 requests automatic recognition of every dedicated Workshop facility instance. The implementation uses the exact descriptor asset name, never the generic construction-office category/subtype. The Stage 7 display is a dry-run: it shows observed occupants and parked allowlisted vehicle candidates plus the provisional D32 one-machine rate; it does not describe candidates as reserved/available, write terrain or imply a completion duration. Reservation, fuel and cost accounting remain blockers before Stage 8.

@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.6.1-queued-wireframe";
+    info->version = "0.7.0-stage7-dryrun";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");
@@ -92,6 +92,6 @@ extern "C" __declspec(dllexport) int TsmPluginStart(void)
     if (ew::InstallRuntime()) ew::StartOverlay();
     // A failed partial installation must remain resident: the host owns the
     // trampolines and cannot safely unload a DLL containing active detours.
-    g_host->log("earthworks  startup complete; session-registered facility assignment and vehicle-slot filters active; Stage 3 edits require isolated S03 and explicit test buttons");
+    g_host->log("earthworks  startup complete; asset-identified Earthworks facility filters and Stage 7 dry-run active; Stage 3 edits require isolated S03 and explicit test buttons");
     return 0;
 }

@@ -7,7 +7,7 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 1;
+constexpr uint32_t StateSchemaVersion = 2;
 constexpr size_t MaxSavedProjects = 128;
 
 enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5 };
@@ -15,6 +15,7 @@ enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused 
 struct SavedProject {
     uint64_t id = 0;
     ProjectStatus status = ProjectStatus::Draft;
+    uint32_t facilityId = 0;
     Plan plan{};
 };
 

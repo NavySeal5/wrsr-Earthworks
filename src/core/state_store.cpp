@@ -11,7 +11,8 @@ namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
 constexpr size_t PlanSize = 2 + 7 * sizeof(float) + GridSide * GridSide * sizeof(float);
-constexpr size_t ProjectSize = sizeof(uint64_t) + 1 + PlanSize;
+constexpr size_t ProjectSizeV1 = sizeof(uint64_t) + 1 + PlanSize;
+constexpr size_t ProjectSize = sizeof(uint64_t) + 1 + sizeof(uint32_t) + PlanSize;
 constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + MaxSavedProjects * ProjectSize;
 
 void Put32(std::vector<uint8_t>& out, uint32_t v)
@@ -96,7 +97,7 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
         const auto& p=state.projects[i];
         if (!p.id || static_cast<uint8_t>(p.status) > static_cast<uint8_t>(ProjectStatus::Cancelled) || !ValidPlan(p.plan) || !p.plan.complete) return false;
         for (size_t j=0; j<i; ++j) if (state.projects[j].id == p.id) return false;
-        Put64(payload,p.id); payload.push_back(static_cast<uint8_t>(p.status)); PutPlan(payload,p.plan);
+        Put64(payload,p.id); payload.push_back(static_cast<uint8_t>(p.status)); Put32(payload,p.facilityId); PutPlan(payload,p.plan);
     }
     bytes->clear(); bytes->reserve(HeaderSize+payload.size());
     bytes->insert(bytes->end(),std::begin(Magic),std::end(Magic));
@@ -110,8 +111,11 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || version != StateSchemaVersion
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 1 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
+    const size_t projectSize=version==1?ProjectSizeV1:ProjectSize;
+    const size_t fixedPayload=32+PlanSize;
+    if(payloadSize<fixedPayload || (payloadSize-fixedPayload)%projectSize!=0)return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !GetPlan(r,&parsed.draft)) return false;
@@ -120,10 +124,12 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
         SavedProject p; uint8_t status=0;
         if (!r.U64(&p.id) || !r.U8(&status) || !p.id || status>static_cast<uint8_t>(ProjectStatus::Cancelled)) return false;
         p.status=static_cast<ProjectStatus>(status);
+        if(version>=2 && !r.U32(&p.facilityId))return false;
         if (!GetPlan(r,&p.plan) || !p.plan.complete) return false;
         for (const auto& prior : parsed.projects) if (prior.id==p.id) return false;
         parsed.projects.push_back(p);
     }
+    parsed.schema=StateSchemaVersion;
     *state=std::move(parsed); return true;
 }
 

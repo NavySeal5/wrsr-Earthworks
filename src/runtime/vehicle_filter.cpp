@@ -77,4 +77,16 @@ bool AllowEarthworksVehicleType(void* vehicleType, char* rejectedType, unsigned 
     }
     return allowed;
 }
+bool IsEarthworksVehicleType(void* vehicleType)
+{
+    return AllowEarthworksVehicleType(vehicleType,nullptr,0);
+}
+bool IsGroundworksMachineType(void* vehicleType)
+{
+    char name[65]{}; unsigned category=0;
+    if(!ReadableTypeName(static_cast<const unsigned char*>(vehicleType),name,sizeof(name),&category))return false;
+    if(category!=1 && category!=2)return false;
+    return ContainsWord(name,"bulldozer") || ContainsWord(name,"buldozer")
+        || ContainsWord(name,"excavator") || ContainsWord(name,"exvacator");
+}
 }

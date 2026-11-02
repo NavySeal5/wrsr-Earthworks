@@ -5,6 +5,7 @@
 #include <windows.h>
 #include "runtime.h"
 #include "workforce_probe.h"
+#include "vehicle_filter.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -17,7 +18,6 @@ struct Identity { unsigned slot=0,id=0; Address address=0; };
 WorkforceView view;
 std::array<Identity,WorkforceCandidates> candidates;
 Identity selected;
-Identity earthworksOffice;
 unsigned blockedAssignments=0;
 ULONGLONG lastSample=0;
 template<class T> bool Read(Address address,T* out)
@@ -44,8 +44,16 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
 {
     Address type=0;
     out->slot=slot;
-    return address && Read(address,&out->id) && Position(address+0x350,&out->position)
-        && Read(address+0x318,&type) && type && Read(type+0x360,&out->category) && Read(type+0x364,&out->subtype);
+    if(!address || !Read(address,&out->id) || !Position(address+0x350,&out->position)
+        || !Read(address+0x318,&type) || !type || !Read(type+0x360,&out->category) || !Read(type+0x364,&out->subtype))return false;
+    for(unsigned i=0;i+1<sizeof(out->assetName);++i) {
+        char c=0;if(!Read(type+i,&c))return false;
+        if(c==0)break;
+        if(static_cast<unsigned char>(c)<32 || static_cast<unsigned char>(c)>126)return false;
+        out->assetName[i]=c;
+    }
+    out->earthworksFacility=std::strcmp(out->assetName,"EarthworksDevelopmentFacility")==0;
+    return true;
 }
 bool Resolve(const Identity& identity,Address* address)
 {
@@ -58,6 +66,8 @@ bool Vehicle(Address address,Address building,const Address* parked,unsigned par
     Address type=0,home=0,assigned=0;
     if(!Read(address+4,&out->id) || !Read(address+0x1708,&type) || !type ||
         !Read(type+0x294,&out->category) || !Read(address+0x4F0,&home) || !Read(address+0x4F8,&assigned)) return false;
+    out->earthworksAllowed=IsEarthworksVehicleType(reinterpret_cast<void*>(type));
+    out->groundworksMachine=IsGroundworksMachineType(reinterpret_cast<void*>(type));
     out->home=home==building;out->assigned=assigned==building;
     out->parked=std::binary_search(parked,parked+parkedCount,address);
     for(unsigned i=0;i<64;++i) {
@@ -73,7 +83,6 @@ void Sample()
 {
     Address building=0;
     if(!Resolve(selected,&building)) {
-        if(selected.address==earthworksOffice.address && selected.id==earthworksOffice.id)earthworksOffice={};
         view=WorkforceView{};
         strcpy_s(view.status,"Building identity no longer resolves (removed, changed or unreadable). Select again; replacements are never followed automatically.");
         return;
@@ -109,17 +118,17 @@ void Sample()
         if(!Vehicle(address,building,parkedAddresses.data(),next.parkedValid?parked.count:0,next.building.position,&row)) {++next.unreadableVehicles;continue;}
         if(!row.home && !row.assigned && !row.parked)continue;
         next.homeCount+=row.home?1u:0u;next.assignedCount+=row.assigned?1u:0u;next.parkedCount+=row.parked?1u:0u;
+        if(row.parked && row.earthworksAllowed && row.groundworksMachine)++next.eligibleMachineCandidates;
         ++next.matchedCount;
         if(next.rowCount<WorkforceRows)next.vehicles[next.rowCount++]=row;
     }
-    next.earthworksOfficeRegistered=earthworksOffice.address!=0;
-    next.earthworksOfficeId=earthworksOffice.id;
+    next.selectedIsEarthworksFacility=next.building.earthworksFacility;
     next.blockedConstructionAssignments=blockedAssignments;
     strcpy_s(next.status,"Read-only sample. Counts describe native lists/links; they do not establish usable workers or machines.");
     view=next;
 }
 }
-void ResetWorkforce() {view=WorkforceView{};candidates={};selected={};earthworksOffice={};blockedAssignments=0;lastSample=0;}
+void ResetWorkforce() {view=WorkforceView{};candidates={};selected={};blockedAssignments=0;lastSample=0;}
 void FindWorkforceBuildings(Point point)
 {
     ResetWorkforce();List buildings;
@@ -144,38 +153,43 @@ void SelectWorkforceBuilding(unsigned candidate)
     if(candidate>=view.candidateCount)return;
     selected=candidates[candidate];view=WorkforceView{};view.selected=true;lastSample=0;Sample();
 }
-bool RegisterEarthworksBuilding()
-{
-    Address building=0;
-    if(!view.selected || !view.buildingValid || !Resolve(selected,&building))return false;
-    earthworksOffice=selected;view.earthworksOfficeRegistered=true;view.earthworksOfficeId=selected.id;
-    strcpy_s(view.status,"This building is registered for Earthworks in this session. Re-select it after a world reload.");
-    return true;
-}
-void ClearEarthworksBuilding()
-{
-    earthworksOffice={};view.earthworksOfficeRegistered=false;view.earthworksOfficeId=0;
-}
 bool IsEarthworksBuilding(void* building)
 {
-    if(!building || !earthworksOffice.address || reinterpret_cast<Address>(building)!=earthworksOffice.address)return false;
-    Address live=0;
-    if(!Resolve(earthworksOffice,&live) || live!=reinterpret_cast<Address>(building)) {
-        earthworksOffice={};view.earthworksOfficeRegistered=false;view.earthworksOfficeId=0;return false;
-    }
+    if(!IsEarthworksFacility(building))return false;
     ++blockedAssignments;
     view.blockedConstructionAssignments=blockedAssignments;
-    host->log("earthworks  blocked normal construction assignment to registered Earthworks building id=%u",earthworksOffice.id);
+    host->log("earthworks  blocked normal construction assignment to dedicated Earthworks facility");
     return true;
 }
-bool IsRegisteredEarthworksBuilding(void* building)
+bool IsEarthworksFacility(void* building)
 {
-    if(!building || !earthworksOffice.address || reinterpret_cast<Address>(building)!=earthworksOffice.address)return false;
-    Address live=0;
-    if(!Resolve(earthworksOffice,&live) || live!=reinterpret_cast<Address>(building)) {
-        earthworksOffice={};view.earthworksOfficeRegistered=false;view.earthworksOfficeId=0;return false;
+    BuildingReading reading{};
+    return DescribeBuilding(reinterpret_cast<Address>(building),0,&reading) && reading.earthworksFacility;
+}
+bool FindEarthworksFacility(unsigned id,BuildingReading* reading)
+{
+    if(!id || !reading)return false;
+    List buildings;if(!PointerList(World()+0x11B08,262144,&buildings))return false;
+    unsigned found=0;BuildingReading match{};
+    for(unsigned i=0;i<buildings.count;++i) {
+        Address address=0;BuildingReading candidate{};
+        if(!Element(buildings,i,&address))return false;
+        if(!DescribeBuilding(address,i,&candidate) || !candidate.earthworksFacility || candidate.id!=id)continue;
+        match=candidate;++found;
     }
-    return true;
+    if(found!=1)return false;
+    *reading=match;return true;
+}
+bool SelectEarthworksFacility(unsigned id)
+{
+    BuildingReading reading{};
+    if(!FindEarthworksFacility(id,&reading))return false;
+    List buildings;if(!PointerList(World()+0x11B08,262144,&buildings))return false;
+    Address address=0;
+    if(!Element(buildings,reading.slot,&address) || !address)return false;
+    unsigned liveId=0;
+    if(!Read(address,&liveId) || liveId!=id)return false;
+    selected={reading.slot,id,address};view=WorkforceView{};view.selected=true;lastSample=0;Sample();return true;
 }
 void TickWorkforce()
 {
@@ -186,10 +200,10 @@ WorkforceView ReadWorkforce() {return view;}
 void LogWorkforce()
 {
     if(view.selected)Sample();
-    host->log("earthworks  stage04 READ ONLY selected=%d buildingValid=%d building=%u slot=%u category=%d subtype=%d pos=(%.1f,%.1f) sample=%u occupantsValid=%d occupantSlots=%u nonnull=%u parkedValid=%d parkedSlots=%u vehiclesValid=%d unreadable=%u home=%u assigned=%u parked=%u matched=%u shown=%u earthworksRegistered=%d earthworksId=%u blockedConstructionAssignments=%u status=%s",
-        view.selected,view.buildingValid,view.building.id,view.building.slot,view.building.category,view.building.subtype,view.building.position.x,view.building.position.z,
+    host->log("earthworks  stage07 DRY RUN selected=%d buildingValid=%d building=%u slot=%u asset=%s earthworksFacility=%d category=%d subtype=%d pos=(%.1f,%.1f) sample=%u occupantsValid=%d occupantSlots=%u nonnull=%u parkedValid=%d parkedSlots=%u vehiclesValid=%d unreadable=%u home=%u assigned=%u parked=%u matched=%u shown=%u blockedConstructionAssignments=%u status=%s",
+        view.selected,view.buildingValid,view.building.id,view.building.slot,view.building.assetName,view.selectedIsEarthworksFacility,view.building.category,view.building.subtype,view.building.position.x,view.building.position.z,
         view.samples,view.occupantsValid,view.occupantSlots,view.occupants,view.parkedValid,view.parkedSlots,view.vehiclesValid,view.unreadableVehicles,
-        view.homeCount,view.assignedCount,view.parkedCount,view.matchedCount,view.rowCount,view.earthworksOfficeRegistered,view.earthworksOfficeId,view.blockedConstructionAssignments,view.status);
+        view.homeCount,view.assignedCount,view.parkedCount,view.matchedCount,view.rowCount,view.blockedConstructionAssignments,view.status);
     for(unsigned i=0;i<view.rowCount;++i) {
         const auto& r=view.vehicles[i];
         host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d positionValid=%d distance=%.1f",

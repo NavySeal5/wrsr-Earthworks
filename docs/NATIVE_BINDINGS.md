@@ -18,8 +18,8 @@ Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/worl
 | Escape latch | EXE+0xA54C91 | Clear only while text input owns keyboard |
 | Device creation | C3DDLL64 IAT D3D11CreateDeviceAndSwapChain | Observe actual swap-chain creation after the original returns |
 | Present | IDXGISwapChain vtable slot 8 | Render overlay using copied snapshots |
-| Construction assignment filter | Inline EXE+0x161C90, `void(world, office, construction, amount, first, second)` | Block assignment only when `office` is the session-registered Earthworks building; otherwise call the original |
-| Vehicle station slot filter | Inline EXE+0x3E3F40, `bool(world, building, vehicleType, slotHint, int* slot)` | If `building` is the session-registered Earthworks station, reject names outside the initial bulldozer/excavator/dumper/bus patterns; otherwise call the original. Installation requires the exact pinned 17-byte instruction-aligned prologue |
+| Construction assignment filter | Inline EXE+0x161C90, `void(world, office, construction, amount, first, second)` | Block assignment only when `office` resolves to the dedicated Earthworks building type descriptor; otherwise call the original |
+| Vehicle station slot filter | Inline EXE+0x3E3F40, `bool(world, building, vehicleType, slotHint, int* slot)` | For the exact dedicated type descriptor, reject names outside the initial bulldozer/excavator/dumper/bus patterns; ordinary construction offices forward unchanged. Installation requires the exact pinned 17-byte instruction-aligned prologue |
 | Native save boundary | World save path at `world+0x9F8`; save trigger at `world+0x14D35`; observed through the existing Late frame hook | Detect a native save completing, then write an atomic `earthworks.dat` companion in that save folder. On world load, restore only after its SHA-256 fingerprint matches the saved `heightmap.dds` |
 
 In the accepted 0.2.0 preview, terrain/camera reads have SEH guards and no terrain-write path exists. In 0.3.0 the ordinary planning controls remain read-only, with the additional fixture-restricted native experiment described below. Planning math uses copied samples; all terrain calls occur in the native frame callback. Commands carry a world-generation token; a new load drops stale work and undo history. Stage 6 stores drafts/projects in a versioned companion file with a checksum and terrain fingerprint; no native pointer or reservation is persisted. The UI restores companion data only for an exact saved-heightmap match. Rendering also gates snapshots on the two fixed-address readiness scalars because Late stops running in menus; it does not follow terrain/camera pointers.
@@ -52,7 +52,8 @@ Provenance: local RepublicMP commit `630775724abd5e3346eb59f9c66e2873128d74a4`, 
 |---|---|---|
 | Buildings | World = EXE+0x9D4F10; pointer vector +0x11B08 | World-local list, capped at 262144 slots for this diagnostic |
 | Building identity | +0x00 unsigned ID, validated alongside vector slot and address | Never persist pointers; invalidate on mismatch/load |
-| Building origin/type | +0x350 vector3; type pointer +0x318, category +0x360, subtype +0x364 | Origin and raw category values; no inferred office role |
+| Building origin/type | +0x350 vector3; type pointer +0x318, category +0x360, subtype +0x364 | Origin, category/subtype and bounded internal asset name at the descriptor start |
+| Building asset identity | Type descriptor starts with bounded internal asset name | Exact string `EarthworksDevelopmentFacility` identifies every instance of the generated Workshop building, independent of its generic construction-office category/subtype |
 | Occupants | Building pointer vector +0xBC0 | Non-null entries and slots; workers at workplace is a hypothesis to compare, residents at homes use this same list |
 | Parked vehicles | Building pointer vector +0xC70 | Native membership, not verified idle/usable status |
 | World vehicles | World pointer vector +0x12810 | Capped at 65536 slots; faults mark an incomplete scan |
@@ -61,6 +62,12 @@ Provenance: local RepublicMP commit `630775724abd5e3346eb59f9c66e2873128d74a4`, 
 | Vehicle position | +0xDE0 vector3 | Horizontal distance from building origin, not operating range or proof of availability |
 
 No new hooks or native calls are added for this inspector. Main-thread sampling occurs at most twice a wall-clock second while selected, including when the panel is closed; an explicit snapshot request can sample immediately. Every followed field uses an SEH-guarded read. Vector bounds and alignment are checked, parked membership is copied/sorted, native pointers never reach the renderer, and published UI data contains only copied values. Reload clears selection/candidates. Each later sample resolves the selected slot/address/ID before following the building. Lost or unreadable identities require reselection; replacement buildings are not automatically followed.
+
+## Stage 7 dedicated facility identity and dry-run
+
+The pinned community [Helicopter Distribution Office implementation](https://github.com/Ultimate-Universe/WRSR-HelicopterDistributionOffice/blob/main/source/helicopter_distribution_office.cpp) documents the same game's building type descriptor pointer at building+0x318 and a global descriptor vector whose 0xBE8-byte entries begin with the internal asset name. The generated Workshop building's object name is `EarthworksDevelopmentFacility`; runtime recognition compares this exact, bounded descriptor string. It does not use category/subtype alone, so ordinary `$TYPE_CONSTRUCTION_OFFICE` buildings remain untouched. This field is build-specific and needs user verification in the Stage 7 checklist.
+
+Project assignment stores the stable native building ID in companion schema v2; schema v1 remains readable and migrates unassigned. On reload, the ID is resolved only against a building with the exact Earthworks descriptor name, and duplicate/unreadable matches are refused. The dry-run reports occupant counts, parked allowlisted bulldozer/excavator candidates and distance to the plan centre. It does not prove equipment availability, fuel, skill rating, reservation, operation range or execution time. Relative output uses D32's provisional one-machine reference formula.
 
 ## Stage 4d vehicle allowlist prototype
 
