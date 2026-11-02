@@ -229,9 +229,14 @@ void DrawInterface(const Snapshot& s)
         Line(s,{p.x,p.y,p.z},{p.x,p.y+12,p.z},colour,3);
     }
     const auto display=ImGui::GetIO().DisplaySize;
-    ImGui::SetNextWindowPos({display.x-190,86},ImGuiCond_Always);
-    ImGui::SetNextWindowSize({170,62});
+    ImGui::SetNextWindowPos({display.x-170,86},ImGuiCond_Always);
+    ImGui::SetNextWindowSize({150,42});
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
     ImGui::Begin("Earthworks launcher",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
     if (ImGui::Button("Earthworks",{150,42})) {
         panelOpen=!panelOpen.load(); leftRelease=true;
         host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");

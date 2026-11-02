@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.4-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.5-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -12,6 +12,7 @@ Build: **0.11.4-stage10a-game-ui**. This is a user-run in-game review. The agent
 ## Plan and Projects tabs
 
 1. Open Earthworks. Confirm the window has **Plan** and **Projects** tabs and no workforce inspector, raw terrain readings, or terrain-probe controls.
+1a. Confirm the Earthworks launcher button appears by itself without a separate rectangular background or border, and still opens/closes the panel.
 2. In **Plan**, select a rectangle with two opposite-corner clicks while leaving the panel open. Set or sample a target height and check that footprint, cut and fill estimates appear.
 3. Add the plan to the project queue. Switch to **Projects** and confirm the new project appears.
 4. Choose a facility on the map. The map click should identify nearby buildings, then the Projects tab should offer recognized Earthworks facilities by distance. Select the intended facility and assign it.
