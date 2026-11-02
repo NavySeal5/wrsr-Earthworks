@@ -27,6 +27,7 @@ ID3D11Device* device = nullptr;
 ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
 ID3D11ShaderResourceView* panelPaper = nullptr;
+UINT panelPaperWidth = 0, panelPaperHeight = 0;
 IDXGISwapChain* gameChain = nullptr;
 ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
@@ -215,7 +216,7 @@ void DrawProbe(const Snapshot& s)
     }
 }
 #endif
-void DrawPanelPaper(float headerHeight);
+void DrawPanelPaper(bool headerOnly);
 void DrawInterface(const Snapshot& s)
 {
     frameGeneration=s.generation;
@@ -239,7 +240,7 @@ void DrawInterface(const Snapshot& s)
     if (!panelOpen) { panelRectValid=false; return; }
     const float panelWidth=std::min(660.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
-    constexpr float headerHeight=42.0f;
+    constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
     if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
     else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
@@ -247,22 +248,22 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({480,44},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
     ImGui::Begin("##EarthworksPanel",&open,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleVar();
     ImGui::PopStyleColor();
     const bool collapsedThisFrame=panelMinimized;
     auto* panelDraw=ImGui::GetWindowDrawList();
     const auto panelPos=ImGui::GetWindowPos(),panelSize=ImGui::GetWindowSize();
-    const ImU32 headerColor=IM_COL32(102,27,24,255),headerBorder=IM_COL32(72,43,28,255);
-    panelDraw->AddRectFilled(panelPos,{panelPos.x+panelSize.x,panelPos.y+headerHeight},headerColor,4.0f,ImDrawFlags_RoundCornersTop);
-    panelDraw->AddRect(panelPos,{panelPos.x+panelSize.x,panelPos.y+headerHeight},headerBorder,4.0f,ImDrawFlags_RoundCornersTop,1.0f);
-    panelDraw->AddText({panelPos.x+14.0f,panelPos.y+(headerHeight-ImGui::GetTextLineHeight())*0.5f},IM_COL32(255,255,255,255),"Earthworks | Terrain projects");
+    DrawPanelPaper(collapsedThisFrame);
+    panelDraw->AddText({panelPos.x+11.0f,panelPos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Terrain projects");
     ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
-    ImGui::PushStyleColor(ImGuiCol_Button,{0.40f,0.10f,0.09f,1});
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.65f,0.22f,0.18f,1});
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.32f,0.08f,0.07f,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
-    ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-70.0f,panelPos.y+6.0f});
+    ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-70.0f,panelPos.y+14.5f});
     if(ImGui::Button("-",{30.0f,30.0f})) { panelMinimized=!panelMinimized; restorePanelSize=!panelMinimized; }
     ImGui::SameLine(0,4.0f);
     if(ImGui::Button("X",{30.0f,30.0f})) open=false;
@@ -278,7 +279,6 @@ void DrawInterface(const Snapshot& s)
     if(collapsedThisFrame || panelMinimized) {
         RememberRect(&panelRect); panelRectValid=true; ImGui::End(); return;
     }
-    DrawPanelPaper(headerHeight);
     ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
     ImGui::TextWrapped("Plan terrain work and manage projects from one place.");
     ImGui::Separator();
@@ -478,7 +478,7 @@ void LoadPanelPaper()
     const auto slash=path.find_last_of(L"\\/");
     if(slash==std::wstring::npos) return;
     path.resize(slash+1);
-    path+=L"media_soviet\\editor\\bottommenu_area.png";
+    path+=L"media_soviet\\menu\\strip.png";
     const auto init=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
     if(FAILED(init) && init!=RPC_E_CHANGED_MODE) return;
     const bool uninitialize=SUCCEEDED(init);
@@ -507,25 +507,24 @@ void LoadPanelPaper()
         Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
         hr=device->CreateTexture2D(&desc,&data,&texture);
         if(SUCCEEDED(hr)) hr=device->CreateShaderResourceView(texture.Get(),nullptr,&panelPaper);
+        if(SUCCEEDED(hr)) { panelPaperWidth=width; panelPaperHeight=height; }
     }
     if(uninitialize) CoUninitialize();
     if(FAILED(hr)) host->log("earthworks  native parchment texture unavailable; using color fallback");
 }
-void DrawPanelPaper(float headerHeight)
+void DrawPanelPaper(bool headerOnly)
 {
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
-    const float top=pos.y+headerHeight;
     auto* draw=ImGui::GetWindowDrawList();
-    if(!panelPaper) { draw->AddRectFilled({pos.x,top},{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255)); return; }
+    if(!panelPaper || !panelPaperWidth || !panelPaperHeight) {
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255));
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+52.0f},IM_COL32(150,60,55,255));
+        return;
+    }
     const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
-    const float edge=18.0f/512.0f;
-    const float left=std::min(20.0f,size.x*0.08f),right=left;
-    const float topEdge=std::min(18.0f,(pos.y+size.y-top)*0.08f),bottom=topEdge;
-    const float xs[]={pos.x,pos.x+left,pos.x+size.x-right,pos.x+size.x};
-    const float ys[]={top,top+topEdge,pos.y+size.y-bottom,pos.y+size.y};
-    const float us[]={0.0f,edge,1.0f-edge,1.0f},vs[]={0.0f,edge,1.0f-edge,1.0f};
-    for(int y=0;y<3;++y) for(int x=0;x<3;++x)
-        draw->AddImage(texture,{xs[x],ys[y]},{xs[x+1],ys[y+1]},{us[x],vs[y]},{us[x+1],vs[y+1]});
+    const ImVec2 uv0{52.0f/panelPaperWidth,20.0f/panelPaperHeight};
+    const ImVec2 uv1{605.0f/panelPaperWidth,(headerOnly?63.0f:698.0f)/panelPaperHeight};
+    draw->AddImage(texture,pos,{pos.x+size.x,pos.y+size.y},uv0,uv1);
 }
 bool CreateTarget(IDXGISwapChain* swap)
 {
