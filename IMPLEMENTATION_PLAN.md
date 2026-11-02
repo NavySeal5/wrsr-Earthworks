@@ -282,4 +282,6 @@ The earlier, ungated plan is preserved for history in [the archived plan](docs/a
 
 **18. Immediate next action**
 
-Stage 6 is accepted with stale-state protection deferred. Stage 7 build 0.7.1-assignment-ux is ready for the user's in-game review; instructions are in [STAGE7_TESTING.md](docs/STAGE7_TESTING.md). It is a dry-run only and cannot imply reserved/available vehicles. Stage 4's actual availability and exclusive reservation remain unresolved and block Stage 8. The user performs all in-game tests; provide instructions and pause for their report rather than testing in game.
+Stage 6 is accepted with stale-state protection deferred. Stage 7 is accepted: the user confirmed that a separately saved and reloaded test slot retained queued project 1's assignment to Earthworks facility ID 14, and the inspector again recognized `9100000012/EarthworksDevelopmentFacility`. The dry-run remains read-only; the screenshot showed 0 observed occupants, 0 machine candidates and rate 0.00. Details are in [STAGE7_TESTING.md](docs/STAGE7_TESTING.md).
+
+Stage 8 is the next implementation stage, but autonomous terrain work remains gated on resolving actual native machine availability and exclusive reservation, then agreeing on fuel, cost and soil/material accounting. Before implementation, ask the user about throughput, visible work behaviour, pause/cancel semantics and terrain-change conflicts as described in Stage 8. Do not present Stage 7's candidates or dry-run rate as proof that equipment is available.

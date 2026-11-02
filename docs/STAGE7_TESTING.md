@@ -2,7 +2,7 @@
 
 Build: **0.7.3-facility-identity**. The game reports the dedicated Workshop building's type descriptor asset name as `9100000012/EarthworksDevelopmentFacility`; this build recognizes that exact string. It also widens the Earthworks panel, allows it to be resized, and wraps long inspector text. It no longer requires the inspector's session registration button. Only the dry-run is implemented; no autonomous terrain work is enabled.
 
-## Latest save/reload attempt — 2026-11-02
+## Initial save/load attempt — 2026-11-02
 
 - The local RML Development project `9100000012` was disabled in the active profile. It was enabled and verified in RML; the dashboard showed **1 Development project(s) active**. The RML local runtime configuration now has `developmentItems["9100000012"] = true`.
 - The game was relaunched through RML and loading save **A** (`save\autosave2`) still showed **Missing Workshop item(s)**. The prompt was canceled. No subscription was started, no save was loaded or altered, and the persistence check remains incomplete.
@@ -14,7 +14,9 @@ Build: **0.7.3-facility-identity**. The game reports the dedicated Workshop buil
 - The user re-saved the world in a cleaner state. It then loaded through RML with no missing-Workshop prompt, and the Earthworks panel opened successfully. The panel reported that saved Earthworks drafts/projects were restored, but there was no queued project to assign.
 - Created a 9.9 × 28.2 m test footprint (280 m²), sampled the ground at 6.77 m, and queued project 1. The UI reported **Preview ready. Actual terrain is unchanged** and later confirmed the project was queued.
 - The inspector distinguished ordinary construction office ID 15 from Earthworks facility ID 14 (`9100000012/EarthworksDevelopmentFacility`). Project 1 was manually assigned to facility 14. Dry-run showed 0 observed occupants, 0 parked bulldozer/excavator candidates, and provisional rate 0.00. No terrain work ran.
-- Save/reload verification remains pending. A separate manual Save As target is needed before reloading; the original clean save has not been overwritten. The in-game Save As control was not located in this session, so the assigned project is currently only in the running session.
+- The user saved the assigned state to a separate slot and reloaded it. Their screenshot shows queued project 1 still assigned to Earthworks facility ID 14, with the inspector recognizing the dedicated facility asset name. The dry-run remains at 0 observed occupants, 0 machine candidates and rate 0.00; the terrain is unchanged. Save/reload persistence is confirmed, and the original clean save was kept separate.
+
+Stage 7 is accepted. The dry-run does not verify actual machine availability, exclusive reservation, work radius, fuel or production balancing; these remain out of scope and prerequisites for autonomous execution.
 
 ## Test in a disposable save
 
