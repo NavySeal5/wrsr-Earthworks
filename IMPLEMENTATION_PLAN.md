@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 2 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured) and Stage 4b dedicated-facility checklist. The user fixed the Earthworks building's accepted vehicles to bulldozers, excavators, dumpers and buses only. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Stage 6's ordinary save/reload check passed by user report; stale-state, Save As and autosave checks remain outstanding. See the stage review log for evidence and progression.
+Updated 2 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The user fixed the Earthworks building's accepted vehicles to bulldozers, excavators, dumpers and buses only. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Stale-state, Save As, autosave and corrupt/mismatched companion checks were not tested and remain documented as unverified. See the stage review log for evidence and progression.
 
 **1. What we are building**
 

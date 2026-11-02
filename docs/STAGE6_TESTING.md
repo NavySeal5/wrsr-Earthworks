@@ -2,7 +2,7 @@
 
 User-run in-game check for the versioned Earthworks companion state. The agent must not perform these game checks. Do not use a valuable save; make a disposable copy first. Native terrain remains unchanged by this stage.
 
-**Reported so far:** the user confirmed ordinary save/reload preserves the draft and queued project. Stale-state protection is deferred; Save As and autosave have not been reported.
+**User acceptance:** ordinary save/reload preserves the draft and queued project. The user accepted Stage 6 and deferred the remaining checks listed below. They are untested, not passed.
 
 ## Save and reload a draft
 
@@ -30,4 +30,4 @@ User-run in-game check for the versioned Earthworks companion state. The agent m
 - Whether the game returned to the menu and exited normally.
 - Whether saving or loading caused a noticeable pause.
 
-This validates draft and queued-project persistence. Queue ordering and execution are not implemented in this stage. The terrain fingerprint ties companion data to a save snapshot; it does not revalidate each draft's sampled ground after terrain is edited and saved again. Stage 6 performs no terrain writes, and Stage 8 must revalidate the project footprint before any execution.
+Queue ordering and execution are not implemented in this stage. The terrain fingerprint ties companion data to a save snapshot; it does not revalidate each draft's sampled ground after terrain is edited and saved again. Stage 6 performs no terrain writes, and Stage 8 must revalidate the project footprint before any execution.
