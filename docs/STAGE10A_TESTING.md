@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.9-stage10a-keyboard-input**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.10-stage10a-game-cursor**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -27,6 +27,7 @@ Build: **0.11.9-stage10a-keyboard-input**. This is a user-run in-game review. Th
 13. While Select area is active, press Escape once and confirm picking stops while the panel stays open; press Escape again and confirm the panel closes without opening the game's Escape menu. Repeat with Sample height. Holding Escape should count as one press, not cancel and close at once.
 14. Check selected tabs and pressed/hovered controls: their backgrounds should be lighter, dark text should remain the same color and readable, and text color should not switch with the state.
 15. Hover over the Earthworks panel and use WASD and other usual gameplay shortcuts; movement and game shortcuts should continue. Click panel buttons and tabs, then repeat. Focus the Target height field and type a value; while it is actively being edited, keystrokes should go into the field instead of controlling the game. Click elsewhere in the panel and confirm gameplay keys pass through again.
+16. Move the cursor over the panel and its buttons; confirm the game's in-game cursor remains visible and no Windows arrow/text cursor or second software cursor appears.
 
 ## Expected results
 
@@ -38,6 +39,7 @@ Build: **0.11.9-stage10a-keyboard-input**. This is a user-run in-game review. Th
 - Panel text uses the game's Arial UI font defined in `media_soviet/gui/default.ini`, with a default-font fallback if the system Arial file is unavailable.
 - Ordinary left clicks pass through while no map-picking action is armed; Select area and Sample height capture only their intentional terrain clicks.
 - Keyboard input passes through while the panel is hovered or clicked, and is captured only while the Target height field is actively edited.
+- The game's in-game cursor remains the only visible cursor over the Earthworks panel.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 
 ## Report back

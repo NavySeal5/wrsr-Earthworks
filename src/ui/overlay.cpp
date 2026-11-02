@@ -613,6 +613,7 @@ bool Initialize(IDXGISwapChain* swap)
     device->GetImmediateContext(&context); gameWindow=desc.OutputWindow;
     gui=ImGui::CreateContext(); ImGui::SetCurrentContext(gui);
     auto& io=ImGui::GetIO(); io.IniFilename=nullptr; io.LogFilename=nullptr;
+    io.ConfigFlags|=ImGuiConfigFlags_NoMouseCursorChange;
     ImFontConfig fontConfig{};
     fontConfig.PixelSnapH=true;
     wchar_t windowsDirectory[MAX_PATH]{};
@@ -704,7 +705,9 @@ void Render(IDXGISwapChain* swap)
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
     keyboardCapture=focused && io.WantTextInput && targetHeightEditing && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
-    ImGui::GetIO().MouseDrawCursor=focused && (mouseCapture || panelOpen);
+    // Preserve the game's own cursor. The overlay must not replace it with a
+    // Win32 system shape or draw an ImGui software cursor over the game.
+    ImGui::GetIO().MouseDrawCursor=false;
     ClearInputLatches();
     ImGui::Render();
     ID3D11RenderTargetView* oldTarget=nullptr; ID3D11DepthStencilView* oldDepth=nullptr;
