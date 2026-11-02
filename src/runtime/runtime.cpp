@@ -99,6 +99,8 @@ bool ReadTerrainGrid(void* terrain,TerrainGrid* out)
         out->stepX=*reinterpret_cast<float*>(p+0x87C)/out->width;out->stepZ=*reinterpret_cast<float*>(p+0x880)/out->depth;
         return out->width>=64 && out->width<=8192 && out->depth>=64 && out->depth<=8192
             && out->stepX>0.1f && out->stepX<50 && out->stepZ>0.1f && out->stepZ<50
+            && std::isfinite(out->originX) && std::isfinite(out->originZ)
+            && std::isfinite(out->stepX) && std::isfinite(out->stepZ)
             && std::isfinite(out->heightScale) && out->heightScale>10 && out->heightScale<100000;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
@@ -108,6 +110,54 @@ bool ApplyProjectVertex(void* terrain,const TerrainGrid& grid,int x,int z,float 
         const Point point=grid.At(x,z);const float pos[]={point.x,0,point.z};
         raiseLower(terrain,pos,0.20f,0.45f,delta/grid.heightScale,-1.0f,false);return true;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+enum class ProjectAreaError { None, TerrainMissing, GridInvalid, OutsideHeightmap, TooSmall, TooLarge };
+ProjectAreaError CheckProjectArea(const Plan& plan,TerrainGrid* gridOut,GridRect* rectOut)
+{
+    void* terrain=TerrainObject();
+    if(!terrain)return ProjectAreaError::TerrainMissing;
+    TerrainGrid grid{};
+    const bool gridValid=ReadTerrainGrid(terrain,&grid);
+    if(gridOut)*gridOut=grid;
+    if(!gridValid)return ProjectAreaError::GridInvalid;
+    if(!plan.complete || !SnapInside(plan,grid,rectOut)) {
+        const float x0=(std::min(plan.a.x,plan.b.x)-grid.originX)/grid.stepX;
+        const float x1=(std::max(plan.a.x,plan.b.x)-grid.originX)/grid.stepX;
+        const float z0=(std::min(plan.a.z,plan.b.z)-grid.originZ)/grid.stepZ;
+        const float z1=(std::max(plan.a.z,plan.b.z)-grid.originZ)/grid.stepZ;
+        if(!std::isfinite(x0)||!std::isfinite(x1)||!std::isfinite(z0)||!std::isfinite(z1)
+            || x0<3 || z0<3 || x1>static_cast<float>(grid.width-4) || z1>static_cast<float>(grid.depth-4))
+            return ProjectAreaError::OutsideHeightmap;
+        return ProjectAreaError::TooSmall;
+    }
+    const int count=rectOut->Count();
+    if(count<=0)return ProjectAreaError::TooSmall;
+    if(count>40000)return ProjectAreaError::TooLarge;
+    return ProjectAreaError::None;
+}
+const char* ProjectAreaErrorText(ProjectAreaError error)
+{
+    switch(error) {
+    case ProjectAreaError::None:return "valid";
+    case ProjectAreaError::TerrainMissing:return "terrain object unavailable";
+    case ProjectAreaError::GridInvalid:return "heightmap dimensions or spacing unreadable";
+    case ProjectAreaError::OutsideHeightmap:return "footprint outside the supported heightmap interior";
+    case ProjectAreaError::TooSmall:return "footprint contains no complete heightmap cell";
+    case ProjectAreaError::TooLarge:return "footprint exceeds the 40,000-vertex limit";
+    }
+    return "unknown geometry error";
+}
+const char* ProjectAreaMessage(ProjectAreaError error)
+{
+    switch(error) {
+    case ProjectAreaError::None:return "Project area is valid.";
+    case ProjectAreaError::TerrainMissing:return "Terrain is not ready. The project remains queued; try again when the world is fully loaded.";
+    case ProjectAreaError::GridInvalid:return "The terrain heightmap could not be read. The project remains queued; capture the runtime log if this repeats.";
+    case ProjectAreaError::OutsideHeightmap:return "The footprint reaches outside the supported heightmap area. Replan inside the playable terrain.";
+    case ProjectAreaError::TooSmall:return "The footprint is smaller than one terrain cell. Enlarge the selected area.";
+    case ProjectAreaError::TooLarge:return "The footprint exceeds the current 40,000-vertex limit. Reduce the area.";
+    }
+    return "Terrain area validation failed.";
 }
 bool AvailabilitySignal()
 {
@@ -295,11 +345,22 @@ void Process(const Command& command)
             if(!workforce.occupants && !workforce.eligibleMachineCandidates) {
                 Message("The assigned facility has no observed workers or parked Earthworks machine candidates.");break;
             }
+            TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
+            if(areaError!=ProjectAreaError::None) {
+                host->log("earthworks  start rejected project=%llu facility=%u area=%s grid=%dx%d origin=(%.3f,%.3f) step=(%.3f,%.3f) plan=(%.3f,%.3f)..(%.3f,%.3f)",
+                    static_cast<unsigned long long>(project.id),project.facilityId,ProjectAreaErrorText(areaError),grid.width,grid.depth,
+                    grid.originX,grid.originZ,grid.stepX,grid.stepZ,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
+                Message(ProjectAreaMessage(areaError));break;
+            }
             Plan refreshed=project.plan;
             if(!SamplePlan(&refreshed)) {Message("Cannot recheck every planned terrain sample. Replan this project before starting.");break;}
             float maxDifference=0;
             for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
-            if(maxDifference>0.001f) {Message("Terrain changed since planning. Replan the footprint before starting.");break;}
+            if(maxDifference>0.001f) {
+                host->log("earthworks  start rejected project=%llu terrain changed after planning maxDelta=%.6f area=(%.3f,%.3f)..(%.3f,%.3f)",
+                    static_cast<unsigned long long>(project.id),maxDifference,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
+                Message("Terrain changed since planning. Replan the footprint before starting.");break;
+            }
             project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
             lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
             RefreshProjectStatus();Message("Project started. Work follows simulation time; no extra costs are charged.");break;
@@ -312,12 +373,16 @@ void Process(const Command& command)
         break;
     case Action::ResumeProject:
         for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
+            TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
+            if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
             project.status=ProjectStatus::Running;lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
             RefreshProjectStatus();Message("Project resumed.");break;
         }
         break;
     case Action::ReviewResumeProject:
         for(auto& project:durableState.projects)if(project.id==current.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
+            TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
+            if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
             if(!SamplePlan(&project.plan)) {Message("Could not read the project footprint. It remains paused for review.");break;}
             project.needsReview=false;project.status=ProjectStatus::Running;
             lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
@@ -394,20 +459,21 @@ void TickProjectRunner()
         project->status=ProjectStatus::Paused;RefreshProjectStatus();
         Message("No productive workers are currently observed at the assigned facility. Project paused.");return;
     }
+    TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project->plan,&grid,&rect);
+    if(areaError==ProjectAreaError::TerrainMissing)return;
+    if(areaError!=ProjectAreaError::None) {
+        project->status=ProjectStatus::Paused;project->needsReview=false;RefreshProjectStatus();
+        host->log("earthworks  project=%llu paused by area check: %s grid=%dx%d origin=(%.3f,%.3f) step=(%.3f,%.3f) plan=(%.3f,%.3f)..(%.3f,%.3f)",
+            static_cast<unsigned long long>(project->id),ProjectAreaErrorText(areaError),grid.width,grid.depth,
+            grid.originX,grid.originZ,grid.stepX,grid.stepZ,project->plan.a.x,project->plan.a.z,project->plan.b.x,project->plan.b.z);
+        Message(ProjectAreaMessage(areaError));return;
+    }
+    void* terrain=TerrainObject();if(!terrain)return;
     // Provisional Stage 8 conversion: one relative manual-rate unit completes
     // 10 m3 per simulation hour. Balancing remains open under D10/D14.
     project->workRemainderM3=static_cast<float>(std::min(1.0e9,
         static_cast<double>(project->workRemainderM3)+relativeRate*10.0*std::min(elapsed,1.0)));
-    void* terrain=TerrainObject();TerrainGrid grid{};GridRect rect{};
-    if(!terrain || !ReadTerrainGrid(terrain,&grid) || !SnapInside(project->plan,grid,&rect)) {
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
-        Message("Terrain bounds changed or cannot be read. Project paused for review.");return;
-    }
     const int count=rect.Count();
-    if(count<=0 || count>40000) {
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
-        Message("Project footprint exceeds the current safe execution limit. It is paused for replanning.");return;
-    }
     const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
     const double precision=static_cast<double>(grid.heightScale)/60000.0;
     const int batch=std::min(count,64);

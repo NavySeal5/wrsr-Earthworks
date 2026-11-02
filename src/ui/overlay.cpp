@@ -237,7 +237,7 @@ void DrawInterface(const Snapshot& s)
             ImGui::TextDisabled("Provisional output: 10 m3 per simulation hour per manual-rate unit.");
             if(s.projectStatus==ProjectStatus::Running) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
             else if(s.projectNeedsReview) {
-                ImGui::TextColored({1,0.65f,0.3f,1},"Terrain changed in the footprint. Review before resuming.");
+                ImGui::TextColored({1,0.65f,0.3f,1},"Project needs review before it can resume.");
                 if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
             } else if(ImGui::Button("Resume project"))Send(Action::ResumeProject);
             ImGui::SameLine();if(ImGui::Button("Cancel project"))Send(Action::CancelProject);

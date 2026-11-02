@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(EarthworksPlanning VERSION 0.9.0 LANGUAGES CXX)
+project(EarthworksPlanning VERSION 0.9.1 LANGUAGES CXX)
 option(EARTHWORKS_TRACE_FAULT "Enable temporary native fault tracing during investigation" OFF)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
