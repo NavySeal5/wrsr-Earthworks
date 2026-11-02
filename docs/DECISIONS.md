@@ -29,6 +29,9 @@ Updated 1 November 2026. This register separates the user's confirmed intent fro
 | D33 | Save both unconfirmed drafts and confirmed projects across native save/reload. A companion is acceptable if it is bound to the matching native terrain snapshot; mismatched/corrupt companion data must not restore plans or modify terrain | User selected “Save drafts and projects (Recommended)” for Stage 6, 2 November 2026 |
 | D34 | If companion data is corrupt or belongs to different terrain, show a warning and discard it for now; do not offer manual recovery/import | User: “show warning and discard for now”, 2 November 2026 |
 | D35 | Queued projects remain visible in the world as a grey wireframe, distinct from the coloured editable draft | User, 2 November 2026 |
+| D36 | Every instance of the dedicated Earthworks facility is recognized as an Earthworks facility without per-session registration | User: "The facility should always be considered an earthworks facility from now on", following the question about session-only registration and saved links. The current development asset is built from a generic construction-office type; a safe per-asset runtime identity still needs to be established |
+| D37 | Stage 7 range UI shows distance only and does not claim in-range coverage | User selected "Distance only (Recommended)" for the dry-run; operating range remains open for a later stage |
+| D38 | The player manually assigns a queued project to a chosen Earthworks facility | User selected "Manual assignment (Recommended)" for Stage 7 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 

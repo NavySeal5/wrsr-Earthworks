@@ -39,13 +39,15 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Build: `0.6.1-queued-wireframe`; x64 build succeeded and was staged in the project-local RML runtime. Built and staged DLL SHA-256: `7511A8054DBDB8AFF66C08151937F09E68CE476A8348A3E6250ECFDFA9380903`. No game or automated tests were run by the agent. User checklist: [STAGE6_TESTING.md](STAGE6_TESTING.md).
 - User-run result and acceptance: ordinary save and reload preserved both the editable draft and queued project. The user accepted Stage 6 while deferring stale-state protection. Queued grey-wireframe visibility, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested. These are recorded as unverified; they are not treated as passed.
 
-**Stage 7 preparation — awaiting gameplay/UX decisions**
+**Stage 7 preparation — identity feasibility before implementation**
 
 - User authorized continuing to the next stage after accepting Stage 6.
-- Proposed bounded Stage 7: manually assign one queued plan to the currently registered dedicated facility and show a dry-run of observed staffing and matching parked vehicle candidates. No terrain edits, fuel/material use, reservation or completion estimate.
+- User decisions: show distance only without an in-range claim (D37); manually assign a queued plan to the selected facility (D38); every dedicated Earthworks facility instance should be automatically recognized without per-session registration (D36).
+- Proposed bounded Stage 7: manually assign one queued plan to a selected dedicated facility and show a dry-run of observed staffing and matching parked vehicle candidates. No terrain edits, fuel/material use, reservation or completion estimate.
 - Current probe readings cannot establish that parked vehicles are idle, natively available or exclusively reserved. UI wording must call them candidates. Stage 4 reservation/availability remains a blocker before autonomous execution.
+- The current temporary facility reuses the generic native construction-office type. The existing verified runtime identity uses explicit registration and a live instance address plus world slot and ID. Generic category/subtype alone cannot safely distinguish the Earthworks item from ordinary construction offices. Research a unique Workshop asset or verified per-instance signal before removing registration or broadening the vehicle/job filters.
 - The official native references establish different distances for different mechanics: terrain machinery in a depot/Construction Office within 1,000 m, and citizen walking up to 480 m on the fastest paths. Neither establishes this mod's facility range. See [Stage 7 preparation](STAGE7_PREPARATION.md).
-- Waiting for the user to choose the provisional range/coverage display, manual versus automatic project assignment, and whether assignment resets on reload or uses an investigated stable facility link. No Stage 7 feature code has been implemented; no in-game checks have been run by the agent.
+- Stage 7 code is not started pending the identity research required by D36. No in-game checks have been run by the agent.
 
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.
 

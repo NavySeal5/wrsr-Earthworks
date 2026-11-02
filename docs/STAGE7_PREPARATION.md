@@ -2,7 +2,7 @@
 
 ## Proposed bounded deliverable
 
-Assign one queued plan to the session-registered dedicated Earthworks facility, then show a dry-run summary of its staffing and machinery candidates. The dry-run will not change terrain, consume fuel or materials, reserve machines, or estimate completion time. It must label parked vehicle matches as *candidates*, because the current native readings do not prove that a vehicle is idle or exclusively available.
+Assign one queued plan manually to a selected dedicated Earthworks facility, then show a dry-run summary of its staffing and machinery candidates. Recognize all Earthworks facility instances without per-session registration. Show distance to the plan without declaring operating range or coverage. The dry-run will not change terrain, consume fuel or materials, reserve machines, or estimate completion time. It must label parked vehicle matches as *candidates*, because the current native readings do not prove that a vehicle is idle or exclusively available.
 
 The existing test facility uses 5 worker places and 2 machine slots by user choice (D27). These remain developer test values, not a release balance. The inspector's 150 m building-pick distance is only a click-selection aid, not a project operating radius.
 
@@ -16,9 +16,8 @@ The existing test facility uses 5 worker places and 2 machine slots by user choi
 ## Decisions needed before implementation
 
 1. **Range rule:** Choose a single radius for all facility contributions, separate worker-only and machine-assisted limits, or defer range display until tested. If a plan crosses the chosen limit, decide whether to mark the whole plan out of range or work only the covered part. Recommendation: use a single provisional 1,000 m limit for machine-assisted dry-runs, because that is the official native terrain-machine distance; label worker-only coverage unverified and ask the user to validate before autonomous use.
-2. **Assignment:** Choose manual assignment of a selected queued project to the currently registered facility, or automatic assignment to the closest eligible registered facility. Recommendation: manual assignment for Stage 7's one-facility dry-run so the player controls which dedicated station's capacity the panel displays.
-3. **Assignment persistence:** Registration currently resets on world reload and no stable facility link has been verified. Choose whether the dry-run assignment is session-only, clearing on reload while leaving the queued project intact, or whether to investigate a saved facility link. Recommendation: keep assignment session-only for this prototype.
+2. **Automatic facility identity (D36):** The user chose permanent automatic recognition of each instance of the dedicated facility. The temporary building inherits a generic native construction-office type, which can also describe ordinary offices. Do not broaden dispatch/vehicle filtering to all construction offices. Establish a unique identity signal from the dedicated Workshop asset or a verified instance field before removing manual registration.
 
 ## Stage boundary
 
-Even after those choices, the Stage 7 display is a dry-run. It may show actual observed occupants and parked allowlisted vehicle candidates, plus the provisional D32 rate. It must not describe candidates as reserved/available, write terrain, or imply a completion duration. Stage 7 user checks should verify assignment display, range status and changing counts without terrain edits. Reservation, fuel and cost accounting remain explicit blockers before Stage 8.
+The user resolved D37 and D38: show distance only, and assign projects manually. D36 resolves per-session registration as a desired behavior, but its implementation depends on a verified way to distinguish the dedicated Workshop facility from generic construction offices. The Stage 7 display remains a dry-run: it may show observed occupants and parked allowlisted vehicle candidates plus the provisional D32 rate, but must not describe candidates as reserved/available, write terrain or imply a completion duration. Reservation, fuel and cost accounting remain blockers before Stage 8.
