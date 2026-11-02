@@ -195,11 +195,13 @@ void DrawInterface(const Snapshot& s)
     }
     RememberRect(&buttonRect); ImGui::End();
     if (!panelOpen) { panelRectValid=false; return; }
-    ImGui::SetNextWindowPos({display.x-450,160},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize({430,0},ImGuiCond_Always);
-    ImGui::SetNextWindowSizeConstraints({390,240},{700,std::max(300.0f,display.y-180)});
+    const float panelWidth=std::min(660.0f,std::max(480.0f,display.x-20.0f));
+    const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
+    ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints({480,300},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
-    ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::Begin("Earthworks | Planning prototype",&open,ImGuiWindowFlags_NoSavedSettings);
     ImGui::TextColored({0.4f,0.9f,0.75f,1},"DEDICATED FACILITY  |  STAGE 7 DRY-RUN");
     ImGui::TextWrapped("Plan a flat rectangle, save drafts, and queue one project. This stage does not execute terrain work.");
     ImGui::Separator();
@@ -226,7 +228,7 @@ void DrawInterface(const Snapshot& s)
         ImGui::EndDisabled();
     }
     if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. Stage 7 never edits terrain.",s.projectId);
-    if(s.projectQueued)ImGui::TextDisabled("Grey wireframe: queued project. Coloured wireframe: editable draft.");
+    if(s.projectQueued)ImGui::TextWrapped("Grey wireframe: queued project. Coloured wireframe: editable draft.");
     {
         ImGui::SeparatorText("Stage 7 | Facility dry-run");
         if(!s.projectQueued) {
@@ -248,7 +250,7 @@ void DrawInterface(const Snapshot& s)
             ImGui::SameLine();if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);
             if(s.assignedFacilityFound) {
                 ImGui::Text("Assigned Earthworks facility ID %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
-                ImGui::TextDisabled("Distance only. Operating range and footprint coverage are not established.");
+                ImGui::TextWrapped("Distance only. Operating range and footprint coverage are not established.");
                 const auto& w=s.workforce;
                 if(w.selected && w.buildingValid && w.building.id==s.projectFacilityId) {
                     if(w.occupantsValid && w.parkedValid && w.vehiclesValid) {
@@ -276,7 +278,7 @@ void DrawInterface(const Snapshot& s)
             const auto& b=w.candidates[i];ImGui::PushID(static_cast<int>(i));
             char label[120];sprintf_s(label,"%s ID %u | %.1f m from click",b.earthworksFacility?"Earthworks facility":"Other building",b.id,b.distance);
             if(ImGui::Button(label))Send(Action::ChooseBuilding,static_cast<float>(i));
-            ImGui::TextDisabled("X %.1f Z %.1f | %s | category %d / subtype %d",b.position.x,b.position.z,b.assetName,b.category,b.subtype);
+            ImGui::TextWrapped("X %.1f Z %.1f | %s | category %d / subtype %d",b.position.x,b.position.z,b.assetName,b.category,b.subtype);
             ImGui::PopID();
         }
         if(w.selected && !w.buildingValid)ImGui::TextColored({1,0.65f,0.3f,1},"Building fields: UNAVAILABLE");

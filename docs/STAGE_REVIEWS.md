@@ -54,6 +54,13 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Staging refreshed the project-local RML development preset and generated Workshop item `9100000012`; Steam-subscribed RML configuration is untouched. The game was not launched. No tests were run by the agent.
 - User instructions: [STAGE7_TESTING.md](STAGE7_TESTING.md). Acceptance is pending the user's report.
 
+**Stage 7 panel readability update — 0.7.2-wide-panel**
+
+- User feedback: long Earthworks panel text is cut off; request was to widen the panel or make it side-scrollable.
+- Changed the initial panel width from 430 px to 660 px (bounded by screen width), replaced automatic content sizing with a bounded, normally scrollable window, and wrapped the queued-plan note, distance disclaimer and candidate asset/category line. The window can be resized and moved during the session.
+- Build **0.7.2-wide-panel** compiled in Release; the build script verified AMD64 and all three Tesmio exports. DLL SHA-256: `91BAD3D44D2F97E5A68B50555B07B13B30234B0C4D4FDCEBAF549E720C0A0E1F`. `git diff --check` passed. No tests were run.
+- Staging is deferred while the game/RML holds the old DLL. After closing both, run `scripts/Stage-Diagnostics.ps1`; then use the updated [Stage 7 checklist](STAGE7_TESTING.md) to verify width, wrapping, move/resize behavior, and the facility assignment flow. User review remains pending.
+
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.
 
 **Stage 1 review packet — original diagnostic evidence**
