@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.0-stage10a-player-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.1-stage10a-game-ui**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -20,6 +20,7 @@ Build: **0.11.0-stage10a-player-ui**. This is a user-run in-game review. The age
 7. Check error/status messages, long text, window scrolling/resizing, screen edges, and your usual UI scale.
 8. Keep the panel open for terrain selection; close it before using native game controls. Confirm normal game clicks work again after closing it.
 9. Save and reload the test save if desired, and confirm the Plan/Projects controls remain consistent with the stored projects.
+10. Review the visual skin against the game menus: parchment body texture, worn brown edge, red title bar and selected tab, tan controls, and dark readable text. Resize the window and check that the panel edge remains proportional.
 
 ## Expected results
 
@@ -27,6 +28,7 @@ Build: **0.11.0-stage10a-player-ui**. This is a user-run in-game review. The age
 - Map selection remains available while the Earthworks window is open.
 - Facility picking/assignment is handled in the Projects tab without raw diagnostic data.
 - Developer-only inspector and terrain-probe UI are absent from this player build.
+- Earthworks uses the installed game's parchment panel art and red/tan menu palette; unavailable art falls back to a matching solid parchment color.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 
 ## Report back

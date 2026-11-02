@@ -3,6 +3,8 @@
 // adapted from RepublicMP, commit 630775724abd5e3346eb59f9c66e2873128d74a4.
 #include <windows.h>
 #include <windowsx.h>
+#include <wincodec.h>
+#include <wrl/client.h>
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include "../runtime/runtime.h"
@@ -13,6 +15,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <mutex>
+#include <string>
+#include <vector>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND,UINT,WPARAM,LPARAM);
 namespace ew {
@@ -22,6 +26,7 @@ PresentFn originalPresent = nullptr;
 ID3D11Device* device = nullptr;
 ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
+ID3D11ShaderResourceView* panelPaper = nullptr;
 IDXGISwapChain* gameChain = nullptr;
 ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
@@ -206,6 +211,7 @@ void DrawProbe(const Snapshot& s)
     }
 }
 #endif
+void DrawPanelPaper();
 void DrawInterface(const Snapshot& s)
 {
     frameGeneration=s.generation;
@@ -234,7 +240,8 @@ void DrawInterface(const Snapshot& s)
     ImGui::SetNextWindowSizeConstraints({480,300},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
     ImGui::Begin("Earthworks | Terrain projects",&open,ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored({0.4f,0.9f,0.75f,1},"EARTHWORKS");
+    DrawPanelPaper();
+    ImGui::TextColored({0.40f,0.10f,0.09f,1},"EARTHWORKS");
     ImGui::TextWrapped("Plan terrain work and manage projects from one place.");
     ImGui::Separator();
     ImGui::TextWrapped("%s",s.message);
@@ -253,8 +260,8 @@ void DrawInterface(const Snapshot& s)
             if (s.plan.complete) {
                 ImGui::SeparatorText("Planned area");
                 ImGui::Text("%.1f x %.1f m  |  %.0f m2",s.plan.Width(),s.plan.Depth(),static_cast<double>(s.plan.Width())*s.plan.Depth());
-                ImGui::TextColored({1,0.62f,0.26f,1},"Cut estimate: %.0f m3",s.volumes.cut);
-                ImGui::TextColored({0.24f,0.87f,0.65f,1},"Fill estimate: %.0f m3",s.volumes.fill);
+                ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",s.volumes.cut);
+                ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",s.volumes.fill);
                 ImGui::TextWrapped("Sharp edges. The preview is visible through terrain. Volume figures are sampled estimates.");
                 if(ImGui::Button("Add project to queue"))Send(Action::ConfirmProject);
             } else ImGui::TextDisabled("Select an area to preview the planned terrain.");
@@ -275,7 +282,7 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::Selectable(label,s.projectId==project.id))SendProject(Action::SelectProject,project.id);
             }
             ImGui::EndChild();
-            if(s.projectTotal>s.projectCount)ImGui::TextColored({1,0.65f,0.3f,1},"Showing %zu of %zu projects.",s.projectCount,s.projectTotal);
+            if(s.projectTotal>s.projectCount)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Showing %zu of %zu projects.",s.projectCount,s.projectTotal);
             if(s.projectQueued) {
                 ImGui::SeparatorText("Selected project");
                 ImGui::Text("Project %llu  |  %s",static_cast<unsigned long long>(s.projectId),ProjectStatusName(s.projectStatus));
@@ -289,7 +296,7 @@ void DrawInterface(const Snapshot& s)
                 if(s.projectStatus==ProjectStatus::Queued) {ImGui::BeginDisabled(!s.assignedFacilityFound);if(ImGui::Button("Start project"))Send(Action::StartProject);ImGui::EndDisabled();}
                 if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting) {if(ImGui::Button("Pause project"))Send(Action::PauseProject);}
                 else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview) {
-                    ImGui::TextColored({1,0.65f,0.3f,1},"Terrain needs review before work can resume.");
+                    ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
                     if(!s.assignedFacilityFound)ImGui::TextDisabled("Assign this project to an Earthworks facility first.");
                     else if(ImGui::Button("Review terrain and resume"))Send(Action::ReviewResumeProject);
                 } else if(s.projectStatus==ProjectStatus::Paused&&ImGui::Button("Resume project"))Send(Action::ResumeProject);
@@ -310,10 +317,10 @@ void DrawInterface(const Snapshot& s)
                         if(ImGui::Button(facilityLabel))Send(Action::ChooseBuilding,static_cast<float>(i));
                         ImGui::PopID();
                     }
-                    if(!foundEarthworks)ImGui::TextColored({1,0.65f,0.3f,1},"No Earthworks facility found nearby. Click closer to its centre.");
+                    if(!foundEarthworks)ImGui::TextColored({0.55f,0.25f,0.08f,1},"No Earthworks facility found nearby. Click closer to its centre.");
                 } else if(s.workforce.selected&&s.workforce.buildingValid) {
                     if(s.workforce.building.earthworksFacility)ImGui::Text("Selected Earthworks facility %u.",s.workforce.building.id);
-                    else ImGui::TextColored({1,0.65f,0.3f,1},"Selected building is not an Earthworks facility.");
+                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Selected building is not an Earthworks facility.");
                 } else ImGui::TextDisabled("Click near your facility after choosing this action.");
                 const bool canAssign=s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused;
                 ImGui::BeginDisabled(!canAssign||!s.workforce.selected||!s.workforce.buildingValid||!s.workforce.building.earthworksFacility);
@@ -322,7 +329,7 @@ void DrawInterface(const Snapshot& s)
                 if(s.projectFacilityId) {
                     ImGui::SameLine();ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued);if(ImGui::Button("Clear"))Send(Action::ClearProjectAssignment);ImGui::EndDisabled();
                     if(s.assignedFacilityFound)ImGui::Text("Assigned facility %u  |  %.1f m from project centre",s.projectFacilityId,s.projectFacilityDistance);
-                    else ImGui::TextColored({1,0.65f,0.3f,1},"Assigned facility %u is missing or unreadable.",s.projectFacilityId);
+                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Assigned facility %u is missing or unreadable.",s.projectFacilityId);
                 } else ImGui::TextDisabled("No facility assigned.");
             }
             ImGui::EndTabItem();
@@ -342,14 +349,14 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TextWrapped("X %.1f Z %.1f | %s | category %d / subtype %d",b.position.x,b.position.z,b.assetName,b.category,b.subtype);
                     ImGui::PopID();
                 }
-                if(w.selected && !w.buildingValid)ImGui::TextColored({1,0.65f,0.3f,1},"Building fields: UNAVAILABLE");
+                if(w.selected && !w.buildingValid)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Building fields: UNAVAILABLE");
                 if(w.selected && w.buildingValid) {
                     ImGui::Text("Building ID %u | slot %u | sample %u",w.building.id,w.building.slot,w.samples);
                     ImGui::Text("Origin X %.1f Z %.1f | category %d / %d",w.building.position.x,w.building.position.z,w.building.category,w.building.subtype);
                     if(w.occupantsValid)ImGui::Text("Occupant list: %u non-null / %u slots",w.occupants,w.occupantSlots);
-                    else ImGui::TextColored({1,0.65f,0.3f,1},"Occupant list: UNAVAILABLE");
+                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Occupant list: UNAVAILABLE");
                     if(w.parkedValid)ImGui::Text("Parked list: %u native slots",w.parkedSlots);
-                    else ImGui::TextColored({1,0.65f,0.3f,1},"Parked list: UNAVAILABLE");
+                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Parked list: UNAVAILABLE");
                     ImGui::Text("Vehicle links: Home %u | Assignment %u | Parked %u",w.homeCount,w.assignedCount,w.parkedCount);
                     ImGui::Text("Showing %u of %u readable linked vehicles",w.rowCount,w.matchedCount);
                     for(unsigned i=0;i<w.rowCount;++i) {
@@ -358,9 +365,9 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TextWrapped("%s",v.type);
                         if(v.groundworksMachine) {
                             if(v.nativeJobStateValid)ImGui::Text("Native job state: %d (raw)",v.nativeJobState);
-                            else ImGui::TextColored({1,0.65f,0.3f,1},"Native job state: UNAVAILABLE");
+                            else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Native job state: UNAVAILABLE");
                             if(v.routeValid)ImGui::Text("Route stops: %u | first stop is this facility: %s",v.routeStopCount,v.firstRouteStopIsFacility?"yes":"no");
-                            else ImGui::TextColored({1,0.65f,0.3f,1},"Native route list: UNAVAILABLE");
+                            else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Native route list: UNAVAILABLE");
                         }
                     }
                     ImGui::TextWrapped("Raw job state and route stops are diagnostics, not proof of availability or reservation.");
@@ -396,7 +403,7 @@ void DrawInterface(const Snapshot& s)
             }
             if(ImGui::CollapsingHeader("Native terrain-call probe")) {
                 const auto& t=s.nativeTerrainCall;
-                if(!t.bound) ImGui::TextColored({1,0.65f,0.3f,1},"Native angle-limited terrain-call probe unavailable for this game build.");
+                if(!t.bound) ImGui::TextColored({0.55f,0.25f,0.08f,1},"Native angle-limited terrain-call probe unavailable for this game build.");
                 else {
                     ImGui::Text("Observed EditRaiseLowerAngleLimit calls: %llu",static_cast<unsigned long long>(t.calls));
                     if(t.calls) {
@@ -424,6 +431,66 @@ void DrawInterface(const Snapshot& s)
     if (!open) { panelOpen=false; leftRelease=true; host->log("earthworks  planning panel closed; native left clicks released after button up"); }
 }
 void CleanupTarget() { if (target) { target->Release(); target=nullptr; } }
+void LoadPanelPaper()
+{
+    if(panelPaper || !device) return;
+    wchar_t executable[MAX_PATH]{};
+    const auto length=GetModuleFileNameW(nullptr,executable,MAX_PATH);
+    if(!length || length>=MAX_PATH) return;
+    std::wstring path(executable,length);
+    const auto slash=path.find_last_of(L"\\/");
+    if(slash==std::wstring::npos) return;
+    path.resize(slash+1);
+    path+=L"media_soviet\\editor\\bottommenu_area.png";
+    const auto init=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
+    if(FAILED(init) && init!=RPC_E_CHANGED_MODE) return;
+    const bool uninitialize=SUCCEEDED(init);
+    Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+    Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+    HRESULT hr=CoCreateInstance(CLSID_WICImagingFactory,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&factory));
+    if(SUCCEEDED(hr)) hr=factory->CreateDecoderFromFilename(path.c_str(),nullptr,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
+    if(SUCCEEDED(hr)) hr=decoder->GetFrame(0,&frame);
+    if(SUCCEEDED(hr)) hr=factory->CreateFormatConverter(&converter);
+    if(SUCCEEDED(hr)) hr=converter->Initialize(frame.Get(),GUID_WICPixelFormat32bppRGBA,WICBitmapDitherTypeNone,nullptr,0,WICBitmapPaletteTypeCustom);
+    UINT width=0,height=0;
+    if(SUCCEEDED(hr)) hr=converter->GetSize(&width,&height);
+    std::vector<BYTE> pixels;
+    if(SUCCEEDED(hr) && width && height && static_cast<uint64_t>(width)*height<=16'000'000) {
+        pixels.resize(static_cast<size_t>(width)*height*4);
+        hr=converter->CopyPixels(nullptr,width*4,static_cast<UINT>(pixels.size()),pixels.data());
+    } else if(SUCCEEDED(hr)) hr=E_INVALIDARG;
+    if(SUCCEEDED(hr)) {
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width=width; desc.Height=height; desc.MipLevels=1; desc.ArraySize=1;
+        desc.Format=DXGI_FORMAT_R8G8B8A8_UNORM; desc.SampleDesc.Count=1;
+        desc.Usage=D3D11_USAGE_IMMUTABLE; desc.BindFlags=D3D11_BIND_SHADER_RESOURCE;
+        D3D11_SUBRESOURCE_DATA data{}; data.pSysMem=pixels.data(); data.SysMemPitch=width*4;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        hr=device->CreateTexture2D(&desc,&data,&texture);
+        if(SUCCEEDED(hr)) hr=device->CreateShaderResourceView(texture.Get(),nullptr,&panelPaper);
+    }
+    if(uninitialize) CoUninitialize();
+    if(FAILED(hr)) host->log("earthworks  native parchment texture unavailable; using color fallback");
+}
+void DrawPanelPaper()
+{
+    const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
+    const auto& style=ImGui::GetStyle();
+    const float top=pos.y+ImGui::GetTextLineHeight()+style.FramePadding.y*2.0f;
+    auto* draw=ImGui::GetWindowDrawList();
+    if(!panelPaper) { draw->AddRectFilled({pos.x,top},{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255)); return; }
+    const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
+    const float edge=18.0f/512.0f;
+    const float left=std::min(20.0f,size.x*0.08f),right=left;
+    const float topEdge=std::min(18.0f,(pos.y+size.y-top)*0.08f),bottom=topEdge;
+    const float xs[]={pos.x,pos.x+left,pos.x+size.x-right,pos.x+size.x};
+    const float ys[]={top,top+topEdge,pos.y+size.y-bottom,pos.y+size.y};
+    const float us[]={0.0f,edge,1.0f-edge,1.0f},vs[]={0.0f,edge,1.0f-edge,1.0f};
+    for(int y=0;y<3;++y) for(int x=0;x<3;++x)
+        draw->AddImage(texture,{xs[x],ys[y]},{xs[x+1],ys[y+1]},{us[x],vs[y]},{us[x+1],vs[y+1]});
+}
 bool CreateTarget(IDXGISwapChain* swap)
 {
     ID3D11Texture2D* buffer=nullptr;
@@ -441,7 +508,46 @@ bool Initialize(IDXGISwapChain* swap)
     gui=ImGui::CreateContext(); ImGui::SetCurrentContext(gui);
     auto& io=ImGui::GetIO(); io.IniFilename=nullptr; io.LogFilename=nullptr;
     ImFontConfig font; font.SizePixels=19; io.Fonts->AddFontDefault(&font);
-    ImGui::StyleColorsDark(); ImGui::GetStyle().WindowRounding=7; ImGui::GetStyle().FrameRounding=4;
+    ImGui::StyleColorsLight();
+    auto& style=ImGui::GetStyle();
+    const ImVec4 ink{0.22f,0.16f,0.12f,1.0f},paper{0.91f,0.85f,0.74f,1.0f};
+    const ImVec4 paperDark{0.76f,0.65f,0.49f,1.0f},oxblood{0.40f,0.10f,0.09f,1.0f};
+    const ImVec4 red{0.59f,0.19f,0.15f,1.0f},redLight{0.72f,0.30f,0.23f,1.0f};
+    style.Colors[ImGuiCol_Text]=ink;
+    style.Colors[ImGuiCol_TextDisabled]={0.43f,0.36f,0.28f,1.0f};
+    style.Colors[ImGuiCol_WindowBg]=paper;
+    style.Colors[ImGuiCol_ChildBg]={0.88f,0.81f,0.69f,0.55f};
+    style.Colors[ImGuiCol_Border]={0.36f,0.25f,0.16f,0.85f};
+    style.Colors[ImGuiCol_FrameBg]={0.96f,0.92f,0.83f,1.0f};
+    style.Colors[ImGuiCol_FrameBgHovered]={1.0f,0.97f,0.89f,1.0f};
+    style.Colors[ImGuiCol_FrameBgActive]={0.99f,0.91f,0.76f,1.0f};
+    style.Colors[ImGuiCol_TitleBg]=oxblood;
+    style.Colors[ImGuiCol_TitleBgActive]=red;
+    style.Colors[ImGuiCol_TitleBgCollapsed]=oxblood;
+    style.Colors[ImGuiCol_Button]=paperDark;
+    style.Colors[ImGuiCol_ButtonHovered]=redLight;
+    style.Colors[ImGuiCol_ButtonActive]=red;
+    style.Colors[ImGuiCol_Header]=paperDark;
+    style.Colors[ImGuiCol_HeaderHovered]=redLight;
+    style.Colors[ImGuiCol_HeaderActive]=red;
+    style.Colors[ImGuiCol_Tab]=paperDark;
+    style.Colors[ImGuiCol_TabHovered]=redLight;
+    style.Colors[ImGuiCol_TabSelected]=red;
+    style.Colors[ImGuiCol_TabSelectedOverline]=oxblood;
+    style.Colors[ImGuiCol_TabDimmed]=paperDark;
+    style.Colors[ImGuiCol_TabDimmedSelected]=paper;
+    style.Colors[ImGuiCol_CheckMark]=oxblood;
+    style.Colors[ImGuiCol_SliderGrab]=red;
+    style.Colors[ImGuiCol_SliderGrabActive]=oxblood;
+    style.Colors[ImGuiCol_Separator]={0.45f,0.32f,0.21f,0.55f};
+    style.Colors[ImGuiCol_ScrollbarBg]={0.67f,0.56f,0.42f,0.30f};
+    style.Colors[ImGuiCol_ScrollbarGrab]=paperDark;
+    style.Colors[ImGuiCol_ScrollbarGrabHovered]=redLight;
+    style.Colors[ImGuiCol_ScrollbarGrabActive]=red;
+    style.WindowPadding={14,12}; style.FramePadding={10,5}; style.ItemSpacing={8,7};
+    style.WindowRounding=4; style.FrameRounding=3; style.TabRounding=3; style.GrabRounding=3;
+    style.WindowBorderSize=1; style.FrameBorderSize=1;
+    LoadPanelPaper();
     if (!ImGui_ImplWin32_Init(gameWindow) || !ImGui_ImplDX11_Init(device,context)) return false;
     SetLastError(0);
     originalWndProc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gameWindow,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(WindowProc)));

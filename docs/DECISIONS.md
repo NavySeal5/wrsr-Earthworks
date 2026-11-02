@@ -48,6 +48,7 @@ Updated 2 November 2026. This register separates the user's confirmed intent fro
 | D53 | The purpose-built facility uses the selected middle concept: a compact dispatch office beside an open two-bay equipment canopy, with a visible fuel tank | User selected the middle concept and requested a visible tank, 2 November 2026 |
 | D54 | Organize the player panel into Plan and Projects tabs; facility selection/assignment belongs with project operations | User selected “Plan and Projects tabs (Recommended)”, 2 November 2026 |
 | D55 | The Stage 10 fuel tank is decorative; actual vehicle fuel use and refuelling are deferred to future gameplay integration | User selected “Decorative tank now; fuel use/refuelling later (Recommended)”, 2 November 2026 |
+| D56 | Style the Earthworks UI to match the installed game's parchment menu panels and red/tan controls, with dark readable text | User requested copying the existing game menu/control art style, 2 November 2026; native `bottommenu_area.png` panel texture and existing menu palette provide the reference |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
