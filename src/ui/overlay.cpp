@@ -93,13 +93,14 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam));
-    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; }
+    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
             escapeKeyDown=true;
             if(panelOpen) {
                 escapeOwned=true;
+                escapeCapture=true;
                 if(mapPickCapture) { mapPickCapture=false; pickCancelledByEscape=true; Send(Action::CancelPick); }
                 else { panelOpen=false; panelRectValid=false; keyboardCapture=false; pickCancelledByEscape=false; host->log("earthworks  planning panel closed with Escape"); }
             }
@@ -108,6 +109,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     } else if(message==WM_KEYUP && wParam==VK_ESCAPE) {
         escapeKeyDown=false;
         escapeMessage=escapeOwned;
+        if(escapeOwned) escapeCapture=false;
         escapeOwned=false;
     }
     if (message == WM_MOUSEMOVE) mouseCapture=over;
@@ -591,7 +593,9 @@ bool Initialize(IDXGISwapChain* swap)
     auto& style=ImGui::GetStyle();
     const ImVec4 ink{0.22f,0.16f,0.12f,1.0f},paper{0.91f,0.85f,0.74f,1.0f};
     const ImVec4 paperDark{0.76f,0.65f,0.49f,1.0f},oxblood{0.40f,0.10f,0.09f,1.0f};
-    const ImVec4 red{0.59f,0.19f,0.15f,1.0f},redLight{0.72f,0.30f,0.23f,1.0f};
+    // Keep control text on the fixed dark-ink color; selected/pressed surfaces
+    // stay light enough for it to remain readable.
+    const ImVec4 red{0.82f,0.57f,0.48f,1.0f},redLight{0.89f,0.70f,0.60f,1.0f};
     style.Colors[ImGuiCol_Text]=ink;
     style.Colors[ImGuiCol_TextDisabled]={0.43f,0.36f,0.28f,1.0f};
     style.Colors[ImGuiCol_WindowBg]=paper;
@@ -682,7 +686,7 @@ HRESULT STDMETHODCALLTYPE Present(IDXGISwapChain* swap,UINT interval,UINT flags)
     }
     ++presentDepth;
     try { if (!(flags & DXGI_PRESENT_TEST)) Render(swap); }
-    catch (...) { panelOpen=false; mouseCapture=false; keyboardCapture=false; leftRelease=false; mapPickCapture=false; host->log("earthworks  overlay exception; input released"); }
+    catch (...) { panelOpen=false; mouseCapture=false; keyboardCapture=false; leftRelease=false; mapPickCapture=false; escapeCapture=false; host->log("earthworks  overlay exception; input released"); }
     const auto hr=originalPresent(swap,interval,flags);
     --presentDepth; return hr;
 }

@@ -49,7 +49,7 @@ struct Snapshot {
     char message[160] = "Load a republic to begin.";
 };
 extern const TsmHost* host;
-extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease, mapPickCapture;
+extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease, mapPickCapture, escapeCapture;
 bool LeftTaken();
 bool InstallRuntime();
 void ClearInputLatches();
