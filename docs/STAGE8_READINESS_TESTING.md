@@ -2,7 +2,7 @@
 
 Build: **0.8.0-reservation-probe**. DLL SHA-256: `A68AE45920F37BF95D1A810B8A374070315FA875D2856FFE72E5CB55E29C9756`.
 
-Before the check, close the game and project-local RML. Run `scripts/Stage-Diagnostics.ps1`, then `launch-prototype.cmd`; confirm the loaded plugin reports this build. The agent's staging attempt could not replace the plugin DLL because another process held the file, so staging must be retried after closing anything using it.
+The build is staged in the project-local RML runtime. Close the game and project-local RML if they are open, then run `launch-prototype.cmd`; confirm the loaded plugin reports this build before starting the check.
 
 Purpose: check whether vanilla terrain work can use workers or machines held at the dedicated Earthworks facility. This is a diagnostic only. It does not start an Earthworks project or authorize autonomous terrain edits.
 

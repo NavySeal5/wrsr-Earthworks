@@ -28,17 +28,27 @@ foreach ($file in $lock.runtime_files.PSObject.Properties) {
 }
 $dll = Join-Path $root 'build\windows-x64\bin\EarthworksPlanning.dll'
 if (-not (Test-Path -LiteralPath $dll)) { throw 'Build the plugin before staging it.' }
+$manifestPath = Join-Path $root 'assets\rml\EarthworksPlanning.rml.json'
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$dllHash = (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash.ToLowerInvariant()
+$safeVersion = $manifest.version -replace '[^A-Za-z0-9._-]', '_'
+$stagedDllName = "EarthworksPlanning-$safeVersion-$($dllHash.Substring(0, 8)).dll"
 $plugins = Join-Path $runtime 'rml\plugins'
 New-Item -ItemType Directory -Path $plugins -Force | Out-Null
-$unexpectedPlugins = @(Get-ChildItem -LiteralPath $plugins -Filter '*.dll' | Where-Object { $_.Name -ne 'EarthworksPlanning.dll' })
+$unexpectedPlugins = @(Get-ChildItem -LiteralPath $plugins -Filter '*.dll' | Where-Object {
+    $_.Name -ne 'EarthworksPlanning.dll' -and $_.Name -notlike 'EarthworksPlanning-*.dll'
+})
 if ($unexpectedPlugins.Count -gt 0) { throw 'Unexpected plugins in the isolated diagnostic runtime. Review them before proceeding.' }
-Copy-Item -LiteralPath $dll -Destination (Join-Path $plugins 'EarthworksPlanning.dll') -Force
+$stagedDll = Join-Path $plugins $stagedDllName
+if (-not (Test-Path -LiteralPath $stagedDll)) { Copy-Item -LiteralPath $dll -Destination $stagedDll }
 $symbols = Join-Path $root 'build\windows-x64\bin\EarthworksPlanning.pdb'
 if (Test-Path -LiteralPath $symbols) {
-    Copy-Item -LiteralPath $symbols -Destination (Join-Path $plugins 'EarthworksPlanning.pdb') -Force
+    Copy-Item -LiteralPath $symbols -Destination (Join-Path $plugins ([IO.Path]::ChangeExtension($stagedDllName, '.pdb')))
 }
 
-Copy-Item -LiteralPath (Join-Path $root 'assets\rml\EarthworksPlanning.rml.json') -Destination (Join-Path $plugins 'EarthworksPlanning.rml.json') -Force
+$manifest.dll = $stagedDllName
+$stagedManifest = $manifest | ConvertTo-Json -Depth 16
+[IO.File]::WriteAllText((Join-Path $plugins 'EarthworksPlanning.rml.json'), $stagedManifest, [Text.UTF8Encoding]::new($false))
 $buildingStage = Join-Path $PSScriptRoot 'Stage-EarthworksBuilding.ps1'
 & $buildingStage
 if (-not $?) { throw 'Dedicated Earthworks building content staging failed.' }
