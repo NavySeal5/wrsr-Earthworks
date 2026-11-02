@@ -517,14 +517,14 @@ void DrawPanelPaper(bool headerOnly)
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
     auto* draw=ImGui::GetWindowDrawList();
     if(!panelPaper || !panelPaperWidth || !panelPaperHeight) {
-        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255));
-        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+52.0f},IM_COL32(150,60,55,255));
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255),12.0f);
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+52.0f},IM_COL32(150,60,55,255),12.0f,ImDrawFlags_RoundCornersTop);
         return;
     }
     const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
     const ImVec2 uv0{52.0f/panelPaperWidth,20.0f/panelPaperHeight};
     const ImVec2 uv1{605.0f/panelPaperWidth,(headerOnly?63.0f:698.0f)/panelPaperHeight};
-    draw->AddImage(texture,pos,{pos.x+size.x,pos.y+size.y},uv0,uv1);
+    draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},uv0,uv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersAll);
 }
 bool CreateTarget(IDXGISwapChain* swap)
 {
@@ -542,7 +542,23 @@ bool Initialize(IDXGISwapChain* swap)
     device->GetImmediateContext(&context); gameWindow=desc.OutputWindow;
     gui=ImGui::CreateContext(); ImGui::SetCurrentContext(gui);
     auto& io=ImGui::GetIO(); io.IniFilename=nullptr; io.LogFilename=nullptr;
-    ImFontConfig font; font.SizePixels=19; io.Fonts->AddFontDefault(&font);
+    ImFontConfig fontConfig{};
+    fontConfig.PixelSnapH=true;
+    wchar_t windowsDirectory[MAX_PATH]{};
+    const UINT windowsLength=GetWindowsDirectoryW(windowsDirectory,MAX_PATH);
+    ImFont* gameFont=nullptr;
+    if(windowsLength && windowsLength<MAX_PATH) {
+        std::wstring fontPath(windowsDirectory,windowsLength);
+        fontPath+=L"\\Fonts\\arial.ttf";
+        const int pathLength=WideCharToMultiByte(CP_ACP,0,fontPath.c_str(),-1,nullptr,0,nullptr,nullptr);
+        if(pathLength>0) {
+            std::string ansiPath(static_cast<size_t>(pathLength),'\0');
+            if(WideCharToMultiByte(CP_ACP,0,fontPath.c_str(),-1,ansiPath.data(),pathLength,nullptr,nullptr)>0)
+                gameFont=io.Fonts->AddFontFromFileTTF(ansiPath.c_str(),16.0f,&fontConfig);
+        }
+    }
+    if(!gameFont) { fontConfig.SizePixels=16.0f; gameFont=io.Fonts->AddFontDefault(&fontConfig); }
+    io.FontDefault=gameFont;
     ImGui::StyleColorsLight();
     auto& style=ImGui::GetStyle();
     const ImVec4 ink{0.22f,0.16f,0.12f,1.0f},paper{0.91f,0.85f,0.74f,1.0f};
@@ -580,7 +596,7 @@ bool Initialize(IDXGISwapChain* swap)
     style.Colors[ImGuiCol_ScrollbarGrabHovered]=redLight;
     style.Colors[ImGuiCol_ScrollbarGrabActive]=red;
     style.WindowPadding={14,12}; style.FramePadding={10,5}; style.ItemSpacing={8,7};
-    style.WindowRounding=4; style.FrameRounding=3; style.TabRounding=3; style.GrabRounding=3;
+    style.WindowRounding=12; style.ChildRounding=8; style.FrameRounding=6; style.TabRounding=6; style.GrabRounding=5;
     style.WindowBorderSize=1; style.FrameBorderSize=1;
     LoadPanelPaper();
     if (!ImGui_ImplWin32_Init(gameWindow) || !ImGui_ImplDX11_Init(device,context)) return false;
