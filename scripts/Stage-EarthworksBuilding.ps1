@@ -65,7 +65,7 @@ $emissive=Test-Path -LiteralPath (Join-Path $media "buildings\${donor}_e.mtl")
 if($emissive) { Copy-RewrittenMaterial (Join-Path $media "buildings\${donor}_e.mtl") (Join-Path $item 'material_e.mtl') }
 
 $donorIni=@(Get-Content -LiteralPath (Join-Path $media "buildings_types\$donor.ini") | Where-Object { $_ -notmatch '^\s*\$NAME(?:\s|$)' })
-$custom=@("`$NAME_STR `"$name`"","`$WORKERS_NEEDED 5",'')+$donorIni
+$custom=@("`$NAME_STR `"$name`"","`$WORKERS_NEEDED 20",'')+$donorIni
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'),$custom,[Text.UTF8Encoding]::new($false))
 
 $render=@('$TYPE_WORKSHOP',' MODEL model.nmf',' MATERIAL ../material.mtl')
@@ -84,14 +84,14 @@ $config=@"
 `$VISIBILITY 0
 `$OBJECT_BUILDING $object
 `$ITEM_NAME "$name"
-`$ITEM_DESC "Temporary Earthworks station prototype. 5 worker slots and the native two-station construction-office shell. Test content only."
+`$ITEM_DESC "Temporary Earthworks station prototype. 20 worker slots and the native two-station construction-office shell. Stage 9 test content only."
 `$END
 "@
 [IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'),$config,[Text.UTF8Encoding]::new($false))
-[IO.File]::WriteAllText((Join-Path $item $marker),'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Temporary 5 worker, 2 machine prototype; do not publish.',[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $item $marker),'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Temporary Stage 9 20 worker, 2 machine prototype; do not publish.',[Text.UTF8Encoding]::new($false))
 
 if(-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null; New-Item -ItemType Directory -Path $target | Out-Null }
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 Write-Host "Staged dedicated Earthworks content item $id at $target"
-Write-Host 'Temporary settings: 5 worker places, native construction_office3 shell with two vehicle-station placements.'
+Write-Host 'Temporary Stage 9 settings: 20 worker places, native construction_office3 shell with two vehicle-station placements.'
 Write-Host 'The plugin recognizes this facility by its unique internal asset name. Ordinary construction offices remain unaffected.'

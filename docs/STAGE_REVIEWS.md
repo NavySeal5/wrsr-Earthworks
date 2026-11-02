@@ -27,7 +27,7 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 | 6 — Durable plans | Accepted | Versioned companion-state encoding, atomic file replacement, native save-trigger observation and saved-heightmap SHA-256 matching implemented | User accepted after confirming ordinary save/reload preserves the draft and queued project. Queued grey-wireframe visibility, stale-state protection, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested and are deferred. See [STAGE6_TESTING.md](STAGE6_TESTING.md) |
 | 7 — Office/assignments | Accepted | Build 0.7.3-facility-identity; companion save preserves assignment by building ID and descriptor | User confirmed separate Save As/reload retained project 1's assignment to facility ID 14 and automatic recognition of `9100000012/EarthworksDevelopmentFacility`; screenshot dry-run showed 0 occupants/candidates and no terrain work |
 | 8 — One autonomous project | Accepted | Build 0.9.1 adds a bounded native terrain runner, simulation-time pacing, persisted progress, start/pause/resume/review/cancel controls, and overlap-only pausing for vanilla Raise/Lower brush calls. D39–D45 set prototype rules | User: “everything seems to work”; accepted and authorized progression. Earlier probe confirmed the native terrain call target. This acceptance does not claim unreported edge cases or later balance/integration work |
-| 9 — Multiple projects/operations | Design accepted; implementation next | D46 defines concurrent multi-machine projects, manual priority ordering, priority-first worker allocation, skipping paused/review-blocked work, and rejection of overlapping live projects | User chose the scheduling rules on 2 November 2026; implementation and user-run in-game check pending |
+| 9 — Multiple projects/operations | Ready for user in-game test | Build 0.10.0-stage9-multiproject adds project selection, priority reordering, per-facility concurrent allocation, persistent Waiting status, paused-project reassignment and confirmation-time overlap rejection. Test building has 20 worker places and two machine stations (D49) | Scheduling decisions D46–D49 accepted; x64 build and staged DLL match. User-run in-game checks pending |
 | 10 — Balanced candidate | Planned | Scope/balance open | Pending |
 
 **Stage 6 implementation — accepted with deferred checks**
@@ -300,8 +300,18 @@ A single user statement can accept the current result and authorize progression.
 
 **Stage 9 scheduling decisions — 2 November 2026**
 
-- User selected concurrent projects using available machines, with the option for one project to use multiple machines. The player can reorder priority; facility assignments remain manual under D38.
+- User selected concurrent projects using available machines, with the option for one project to use multiple machines. The player can reorder priority; each project requires explicit Start. Facility assignments remain manual under D38.
 - Allocate facility workers to higher-priority eligible projects first. Skip paused or review-blocked projects so lower-priority eligible work may proceed.
-- Reject confirmation of a project whose footprint overlaps any queued, running or paused project. Completed and cancelled projects do not reserve their old footprint.
-- Each queued project requires explicit Start. A paused project may be reassigned to a different Earthworks facility without losing progress; any existing terrain-review requirement remains in force (D47/D48).
-- D46 records these rules. Implementation is authorized; no Stage 9 code or in-game tests have been completed yet.
+- Reject confirmation of a project whose footprint overlaps any queued, waiting, running or paused project. Completed and cancelled projects do not reserve their old footprint.
+- A paused project may be reassigned to a different Earthworks facility without losing progress; any existing terrain-review requirement remains in force (D47/D48).
+- For Stage 9, the user approved increasing the developer-only facility from 5 to 20 worker places while keeping two machine stations. This is not a release-balance decision (D49).
+- D46–D49 record the chosen rules. No Stage 9 in-game checks have been performed by the agent; follow [Stage 9 instructions](STAGE9_TESTING.md).
+
+**Stage 9 first implementation — 0.10.0-stage9-multiproject, 2 November 2026**
+
+- Added a scrollable project list, selection, move-up/move-down priority controls, grey outlines for live projects, per-project progress/allocation display, confirmation-time overlap rejection and a persisted `Waiting` state. Save schema 4 accepts existing schemas 1–3.
+- Started jobs share each assigned facility's observed worker and parked-machine candidate counts in priority order. Each started job first receives one machine when available; remaining machines and workers go to higher-priority jobs. If there are no machines, workers are assigned to the highest-priority started project under D31. Paused/review-blocked projects are skipped. Paused work can be reassigned without losing progress.
+- Reused the Stage 8 terrain executor. No machine candidate or worker is counted twice among Earthworks projects using the same facility. Candidate counts still do not prove exclusive native vehicle availability/reservation; no fuel, stone, animation, external worker source or balancing integration was added.
+- The regenerated test building has 20 worker places so the user can test two fully staffed machines and concurrent projects at one facility; it retains two machine stations and remains temporary test content.
+- `build.cmd` completed successfully, verifying x64 architecture and all three Tesmio exports. `git diff --check` passed. No tests were run and the game was not launched. Built/staged DLL SHA-256: `c97ad8a5518935d38d812aa50b103c0e580d9d463010dd695383a96a578257e4`.
+- The isolated project-local RML and dedicated facility content were staged; built and staged DLL hashes match. In-game test instructions are in [STAGE9_TESTING.md](STAGE9_TESTING.md).
