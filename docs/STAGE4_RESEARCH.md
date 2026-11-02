@@ -6,7 +6,7 @@ Updated 2 November 2026. This note records source inspection only. No game sessi
 
 - The user accepted the 0.5.2 vehicle filter with: “working great now”. The registered Earthworks facility accepts bulldozers, excavators, dumpers and buses, while the excluded vehicle classes tested by the user were refused. The exact test cases were not itemized.
 - The user's Stage 4a comparison passed except that they could not find vehicle fuel information. The regular construction-office prototype remains selected; the rail-office alternative is deferred.
-- The inspector's vehicle links and parked-list membership are observations, not a native “idle and available to Earthworks” signal. The pinned RepublicMP source describes native depot dispatch as multiple contextual checks. No general reservation API or fuel-field binding is currently verified.
+- The inspector's vehicle links and parked-list membership are observations, not a native “idle and available to Earthworks” signal. Pinned RepublicMP sources show a raw mechanism job-state field (`vehicle+0x698`) and a route-stop vector (`vehicle+0x680`) used by native checks, but the depot route also checks capability, depot/type compatibility, ownership/home and other state. No general reservation API or fuel-field binding is verified.
 - The user wants 10 workers to let one machine reach the speed of player-performed manual terraforming. Partial staffing scales machine throughput proportionally; zero workers stops machines. Workers may contribute without machines. With no machines, worker progress should mirror vanilla manual terrain work from nearby buildings or worker passenger stations. When machines operate, workers only enable/operate them and do not add a separate labor-only output. The station the user recalled is the Labour Hall (also described as the worker pickup hall). Native rate calibration and multi-machine worker allocation remain open.
 
 ## Vehicle script evidence
@@ -55,11 +55,11 @@ This does not prove that the native UI has no other construction workflow for te
 - A reliable test for a machine being free from native jobs and other uses.
 - A safe exclusive reservation mechanism and how it interacts with native orders.
 - The relationship between a dedicated building's parked machine, stored fuel and remote project work.
-- Fuel accounting for the first autonomous version. D09 remains open; fuel must not be silently omitted or charged using a guessed formula.
+- Later fuel and quarried-stone accounting; Stage 8's prototype cost rules are now set by D39 to add no fuel, monetary or material costs.
 
 ## Next technical step
 
-Before Stage 7 office assignment or Stage 8 terrain execution, continue read-only tracing of the pinned executable's native terraforming and construction work paths. Identify whether parsed vehicle skills, resource use and dispatch state can be observed or reused through version-checked interfaces. If no native job interface exists, estimate a minimal Earthworks-owned progress model for the user's review without implementing a rate. If a safe availability/reservation path cannot be established, prepare a small user-run diagnostic iteration rather than implementing a guessed rule. Do not launch the game or run in-game tests on the user's behalf.
+The Stage 8 readiness probe now reports raw vehicle job-state and route-stop readings for bulldozers and excavators. These fields can reveal changes in some native-job cases but do not establish exclusive availability. Continue source-level tracing of native terrain and construction work. The user will run the disposable-save overlap check in [STAGE8_READINESS_TESTING.md](STAGE8_READINESS_TESTING.md); no game session or in-game test is to be run by the agent. A clean result still requires a source-backed reservation design before terrain-writing implementation.
 
 For a user-run native rate comparison, see [Stage 4 productivity instructions](STAGE4E_PRODUCTIVITY_TESTING.md). These instructions do not require a new DLL build.
 

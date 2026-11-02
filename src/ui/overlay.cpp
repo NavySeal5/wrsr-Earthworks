@@ -302,10 +302,16 @@ void DrawInterface(const Snapshot& s)
                 const auto& v=w.vehicles[i];
                 ImGui::Text("ID %u | %s%s%s | %s | category %u",v.id,v.home?"H ":"",v.assigned?"A ":"",v.parked?"P":"",v.groundworksMachine&&v.earthworksAllowed?"machine candidate":"not a machine candidate",v.category);
                 ImGui::TextWrapped("%s",v.type);
+                if(v.groundworksMachine) {
+                    if(v.nativeJobStateValid)ImGui::Text("Native job state: %d (raw)",v.nativeJobState);
+                    else ImGui::TextColored({1,0.65f,0.3f,1},"Native job state: UNAVAILABLE");
+                    if(v.routeValid)ImGui::Text("Route stops: %u | first stop is this facility: %s",v.routeStopCount,v.firstRouteStopIsFacility?"yes":"no");
+                    else ImGui::TextColored({1,0.65f,0.3f,1},"Native route list: UNAVAILABLE");
+                }
                 if(v.positionValid)ImGui::TextDisabled("%.1f m from building origin",v.distance);
                 else ImGui::TextDisabled("Position unavailable");
             }
-            ImGui::TextWrapped("Machine skill rating, fuel, usable availability and reservations: UNVERIFIED. Parked matches are candidates only. Ordinary construction assignments are blocked automatically for the dedicated facility.");
+            ImGui::TextWrapped("Raw job state and route stops are native diagnostics, not proof of availability or reservation. Machine skill rating, fuel and exclusive use remain UNVERIFIED. Parked matches are candidates only. Ordinary construction assignments are blocked automatically for the dedicated facility.");
             ImGui::Text("Blocked ordinary construction assignments this session: %u",w.blockedConstructionAssignments);
         if(w.building.earthworksFacility && s.projectQueued) {
             if(ImGui::Button("Assign this facility now"))Send(Action::AssignProject);

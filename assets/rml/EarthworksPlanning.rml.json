@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning - Durable Plans Prototype",
-  "version": "0.7.3-facility-identity",
+  "version": "0.8.0-reservation-probe",
   "description": "Planning preview with save-bound drafts and queued projects shown as grey wireframes. Terrain execution remains disabled.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

@@ -1,12 +1,16 @@
 # Stage 8 readiness check — native work overlap
 
+Build: **0.8.0-reservation-probe**. DLL SHA-256: `A68AE45920F37BF95D1A810B8A374070315FA875D2856FFE72E5CB55E29C9756`.
+
+Before the check, close the game and project-local RML. Run `scripts/Stage-Diagnostics.ps1`, then `launch-prototype.cmd`; confirm the loaded plugin reports this build. The agent's staging attempt could not replace the plugin DLL because another process held the file, so staging must be retried after closing anything using it.
+
 Purpose: check whether vanilla terrain work can use workers or machines held at the dedicated Earthworks facility. This is a diagnostic only. It does not start an Earthworks project or authorize autonomous terrain edits.
 
 ## Use a disposable save
 
 1. Make a separate copy/save of the test world. Pause the game and leave no active Earthworks project assigned to the facility.
 2. Confirm the Earthworks building has no ordinary construction job. Place one allowed bulldozer or excavator in its machine slots and note the vehicle type/ID if shown. Leave the machine parked and do not issue it another order.
-3. Open Earthworks, use **Find Earthworks facility**, select the intended building and record the inspector's occupant count, parked count, and H/A/P flags for the machine. Take a screenshot.
+3. Open Earthworks, use **Find Earthworks facility**, select the intended building and record the inspector's occupant count, parked count, H/A/P flags, raw native job state, and route-stop count for the machine. Take a screenshot.
 
 ## Check vanilla terrain overlap
 
@@ -16,8 +20,8 @@ Purpose: check whether vanilla terrain work can use workers or machines held at 
 
 ## Report
 
-Send the before/after screenshots and note whether the vehicle moved, lost its parked link, acquired an assignment, or showed fuel use. Also note whether the terrain tool behaved differently with the vehicle present.
+Send the before/after screenshots and note whether the vehicle moved, lost its parked link, acquired an assignment, showed fuel use, or changed its raw job state/route list. Also note whether the terrain tool behaved differently with the vehicle present.
 
-Any observed movement, assignment, or fuel use means the machine cannot be treated as exclusively available during vanilla terrain work without additional interception. No visible change does **not** prove exclusive reservation: the native tool may use the machine without changing these exposed fields. The probe has no verified native availability or reservation signal, so this check can narrow the risk but cannot by itself clear the reservation blocker.
+The pinned native source reads the vehicle job-state field and route-stop list when filtering mechanism candidates. The Earthworks inspector now displays those raw values for bulldozers and excavators. Any observed movement, assignment, job-state change, route change, or fuel use means the machine cannot be treated as exclusively available during vanilla terrain work without additional interception. No visible change does **not** prove exclusive reservation: the native tool may use the machine without changing these exposed fields. This check can narrow the risk but cannot by itself clear the reservation blocker.
 
 Do not run this check in a valuable save or with an active Earthworks operation.

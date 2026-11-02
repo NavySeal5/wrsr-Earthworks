@@ -4,7 +4,7 @@ Updated 2 November 2026. A stage is accepted only when the user confirms the dem
 
 **Current position**
 
-The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist and Stage 4d vehicle allowlist are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains selected. The dedicated facility blocks ordinary jobs on the verified direct assignment route. D31 sets the productivity direction; native rate calibration, multi-machine allocation, machine availability/reservation and fuel remain open. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).
+The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist, Stage 4d vehicle allowlist, Stage 6 persistence and Stage 7 facility assignment are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains selected. The dedicated facility blocks ordinary jobs on the verified direct assignment route. D31 sets the productivity direction; native rate calibration, multi-machine allocation, worker/machine non-duplication and reservation remain open. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).
 
 Latest workflow correction: the user said "Dont do the tests yourself, just provide me with test instructions". All further in-game testing is user-run. Do not resume agent computer-use/game tests. Stage 3's existing agent observations remain historical evidence. Version 0.4.0-worker-probe is compiled; the launch script stages it after the game and project-local RML are closed. The Stage 4 in-game checklist is in STAGE4_TESTING.md. No in-game check of 0.4.0 has been performed by the agent.
 
@@ -25,8 +25,8 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 | 4 — Workforce/machinery feasibility | In progress | 0.5.2 vehicle allowlist accepted; D31 direction and D32 provisional relative rate selected | User: "working great now" after the 0.5.2 correction. The initial formula is documented; the unisolated native sample still does not validate it. Multi-machine allocation, availability/reservation and fuel remain open |
 | 5 — Planning preview | Accepted | 0.2.0-prototype; build/staged/reported DLL hashes match; RML active, 16 tracked hooks, zero hook failures | User: "All checks passed" |
 | 6 — Durable plans | Accepted | Versioned companion-state encoding, atomic file replacement, native save-trigger observation and saved-heightmap SHA-256 matching implemented | User accepted after confirming ordinary save/reload preserves the draft and queued project. Queued grey-wireframe visibility, stale-state protection, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested and are deferred. See [STAGE6_TESTING.md](STAGE6_TESTING.md) |
-| 7 — Office/assignments | In progress | Build 0.7.3-facility-identity matches the full asset path observed in the user's inspector screenshot | Pending user verification of recognition and assignment; see [STAGE7_TESTING.md](STAGE7_TESTING.md) |
-| 8 — One autonomous project | Planned | Not implemented | Pending |
+| 7 — Office/assignments | Accepted | Build 0.7.3-facility-identity; companion save preserves assignment by building ID and descriptor | User confirmed separate Save As/reload retained project 1's assignment to facility ID 14 and automatic recognition of `9100000012/EarthworksDevelopmentFacility`; screenshot dry-run showed 0 occupants/candidates and no terrain work |
+| 8 — One autonomous project | In progress | Prototype rules D39–D42 recorded; pinned source review supports read-only job-state/route diagnostics, implemented in 0.8.0-reservation-probe | Awaiting user-run Stage 8 readiness check; no executor or production terrain writer implemented |
 | 9 — Multiple projects/operations | Planned | Scheduling rules open | Pending |
 | 10 — Balanced candidate | Planned | Scope/balance open | Pending |
 
@@ -39,7 +39,7 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Build: `0.6.1-queued-wireframe`; x64 build succeeded and was staged in the project-local RML runtime. Built and staged DLL SHA-256: `7511A8054DBDB8AFF66C08151937F09E68CE476A8348A3E6250ECFDFA9380903`. No game or automated tests were run by the agent. User checklist: [STAGE6_TESTING.md](STAGE6_TESTING.md).
 - User-run result and acceptance: ordinary save and reload preserved both the editable draft and queued project. The user accepted Stage 6 while deferring stale-state protection. Queued grey-wireframe visibility, Save As, autosave, and corrupt/mismatched companion warning behavior were not reported as tested. These are recorded as unverified; they are not treated as passed.
 
-**Stage 7 implementation — awaiting user in-game review**
+**Stage 7 implementation — accepted by user**
 
 - User authorized continuing to the next stage after accepting Stage 6.
 - User decisions: show distance only without an in-range claim (D37); manually assign a queued plan to the selected facility (D38); every dedicated Earthworks facility instance should be automatically recognized without per-session registration (D36).
@@ -52,7 +52,15 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - UX correction build **0.7.1-assignment-ux** compiles successfully and the build script verifies AMD64 and all three Tesmio exports. DLL SHA-256: `B40529C52863D60D43B7FEE6D699B06638CC4ECFCE74F34BB8FB98C84CBBEE40`.
 - Staging 0.7.1 was attempted while the project-local RML/game process held the previous DLL open; replacing `tools/runtime/rml/rml/plugins/EarthworksPlanning.dll` failed with a file-in-use error. The binary was not replaced; close the game and RML, then rerun `scripts/Stage-Diagnostics.ps1` before testing 0.7.1. No game was launched and no tests were run by the agent.
 - Staging refreshed the project-local RML development preset and generated Workshop item `9100000012`; Steam-subscribed RML configuration is untouched. The game was not launched. No tests were run by the agent.
-- User instructions: [STAGE7_TESTING.md](STAGE7_TESTING.md). Acceptance is pending the user's report.
+- User separate Save As/reload screenshot confirms project 1 remains assigned to facility ID 14, with the exact descriptor recognized automatically. The user then asked "whats next", accepting Stage 7 and authorizing progression. Dry-run showed no occupants or candidate vehicles; no terrain work occurred. See [STAGE7_TESTING.md](STAGE7_TESTING.md).
+
+**Stage 8 readiness probe — 0.8.0-reservation-probe**
+
+- Pinned RepublicMP `determinism/office_guard.cpp` reads `vehicle+0x698` as a mechanism job-state value and `vehicle+0x680` as a route-stop list when checking native candidates. `lockstep/route_tools.cpp` shows depot dispatch also applies an unusable/capability check, depot/type checks, and current home/owner state; these observations do not amount to a general reservation API.
+- Extended the read-only Earthworks inspector to display raw job-state and route-stop readings for bulldozers and excavators. It does not classify them as available or reserve them. User-run comparison steps are in [STAGE8_READINESS_TESTING.md](STAGE8_READINESS_TESTING.md).
+- The user selected no extra costs for this prototype; later fuel and quarried-stone behavior is recorded. Pause/cancel, conflict and progress display rules are recorded in D39–D42.
+- Release x64 build succeeded; the build script verified AMD64 and all three Tesmio exports. DLL SHA-256: `A68AE45920F37BF95D1A810B8A374070315FA875D2856FFE72E5CB55E29C9756`. `git diff --check` passed. No tests were run and the agent did not launch the game.
+- Staging was attempted but Windows refused to replace the project-local plugin DLL because another process held it. The game and RML were not launched by the agent. Close the process holding the DLL and rerun `scripts/Stage-Diagnostics.ps1` before using the user-run test instructions in [STAGE8_READINESS_TESTING.md](STAGE8_READINESS_TESTING.md). In-game acceptance remains pending.
 
 **Stage 7 panel readability update — 0.7.2-wide-panel**
 

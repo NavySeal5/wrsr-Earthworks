@@ -70,6 +70,22 @@ bool Vehicle(Address address,Address building,const Address* parked,unsigned par
     out->groundworksMachine=IsGroundworksMachineType(reinterpret_cast<void*>(type));
     out->home=home==building;out->assigned=assigned==building;
     out->parked=std::binary_search(parked,parked+parkedCount,address);
+    if(out->groundworksMachine) {
+        // Pinned RepublicMP determinism/office_guard.cpp reads these fields
+        // when filtering native mechanism candidates. They are observations,
+        // not a reservation or a complete Earthworks availability predicate.
+        out->nativeJobStateValid=Read(address+0x698,&out->nativeJobState);
+        List route;
+        out->routeValid=PointerList(address+0x680,4096,&route);
+        if(out->routeValid) {
+            out->routeStopCount=route.count;
+            if(route.count) {
+                Address first=0;
+                out->routeValid=Element(route,0,&first);
+                out->firstRouteStopIsFacility=out->routeValid && first==building;
+            }
+        }
+    }
     for(unsigned i=0;i<64;++i) {
         char c=0;if(!Read(type+0x200+i,&c)) return false;
         if(c==0) break;out->type[i]=(c>=32 && c<=126)?c:'?';
@@ -206,8 +222,8 @@ void LogWorkforce()
         view.homeCount,view.assignedCount,view.parkedCount,view.matchedCount,view.rowCount,view.blockedConstructionAssignments,view.status);
     for(unsigned i=0;i<view.rowCount;++i) {
         const auto& r=view.vehicles[i];
-        host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d positionValid=%d distance=%.1f",
-            r.id,r.type,r.category,r.home,r.assigned,r.parked,r.positionValid,r.distance);
+        host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d jobStateValid=%d jobState=%d routeValid=%d routeStops=%u firstRouteIsFacility=%d positionValid=%d distance=%.1f",
+            r.id,r.type,r.category,r.home,r.assigned,r.parked,r.nativeJobStateValid,r.nativeJobState,r.routeValid,r.routeStopCount,r.firstRouteStopIsFacility,r.positionValid,r.distance);
     }
 }
 }

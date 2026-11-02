@@ -14,8 +14,10 @@ struct BuildingReading {
     char assetName[64]{};
 };
 struct VehicleReading {
-    unsigned id=0,category=0;
+    unsigned id=0,category=0,routeStopCount=0;
+    int nativeJobState=-1;
     bool parked=false,home=false,assigned=false,positionValid=false,earthworksAllowed=false,groundworksMachine=false;
+    bool nativeJobStateValid=false,routeValid=false,firstRouteStopIsFacility=false;
     float distance=0;
     char type[65]{};
 };
