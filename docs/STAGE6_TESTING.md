@@ -2,6 +2,8 @@
 
 User-run in-game check for the versioned Earthworks companion state. The agent must not perform these game checks. Do not use a valuable save; make a disposable copy first. Native terrain remains unchanged by this stage.
 
+**Reported so far:** the user confirmed ordinary save/reload preserves the draft and queued project. Stale-state protection is deferred; Save As and autosave have not been reported.
+
 ## Save and reload a draft
 
 1. Start the disposable save with the Stage 6 build. Open Earthworks and create a complete rectangle preview with a distinctive target height.
