@@ -1,6 +1,6 @@
 **Gameplay and UX decision register**
 
-Updated 1 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
+Updated 2 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
 
 **Confirmed decisions**
 
@@ -36,6 +36,7 @@ Updated 1 November 2026. This register separates the user's confirmed intent fro
 | D40 | Pausing preserves project progress. Cancelling leaves terrain already completed in place; no rollback | User selected: "Pause keeps work; cancel leaves current terrain" |
 | D41 | For the prototype, a terrain conflict pauses the project and asks for review. In a future version, construction should be prevented over active Earthworks areas | User: "For now pause and require review. In the future it should not be possible to build over earthworks" |
 | D42 | Show running work with a status and progress bar | User selected "Status and progress bar (Recommended)" |
+| D43 | Native terrain edits pause an active Earthworks project only when the native brush overlaps that project's footprint. Unrelated native terrain work outside the footprint does not pause it | User selected "Pause only when native edits overlap the active project" after the Stage 8 probe confirmed vanilla terrain calls |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
@@ -45,7 +46,7 @@ D17/D18 settle the first prototype's selection, preview, sharp edges and opening
 |---|---|---|---|
 | D05 | Operation representation: dedicated combined building, adapt an existing building, or explicitly linked workplace/yard | Before Stage 7 | Resolved by D25: dedicated building with its own worker and machine slots; capacities and presentation remain open |
 | D06 | Area selection controls/shapes, preview style, elevation units, initial flatten/raise/lower scope and how edges join the terrain | Before expanding Stage 5 scope | Prototype resolved by D17/D18 and accepted via D19: flat rectangle, heights in metres, cut/fill wireframe, sharp edges and button only. Expanded tools remain part of D14 |
-| D07 | Staffing/productivity and machine eligibility: what counts as available; how native assignments and reservations interact | Before Stage 7 | Provisional rate scale resolved by D32; D31 staffing/output rules retained. Actual terrain units per simulation time, exclusive accounting of workers/machines against native work, allocation across multiple machines and reservation remain open for integration/balancing |
+| D07 | Staffing/productivity and machine eligibility: what counts as available; how native assignments and reservations interact | Before Stage 7 | Provisional rate scale resolved by D32; D31 staffing/output rules retained. D43 sets overlap-only pause behavior for vanilla terrain edits. Actual terrain units per simulation time, exclusive accounting of workers/machines against native work, allocation across multiple machines and reservation remain open for integration/balancing |
 | D08 | Operating range: distance rule, partially covered plans, capacity/area limits and player assignment | Before Stage 7 | Open. No radius or slot count approved |
 | D09 | First autonomous-version accounting: fuel, monetary costs, abstract or balanced cut/fill, and any soil/material requirements | Before Stage 8 execution | Stage 8 prototype adds no money, fuel or materials (D39). Future requirement: normal fuel consumption; excavation creates quarried stone and filling consumes it. Detailed rates/balancing remain open |
 | D10 | Work-rate model and visual execution: worker/machine bottleneck, progression pattern, displayed estimates and desired duration | Before Stage 8; tune in Stage 10 | Relative formula remains provisional under D32; actual terrain/time conversion and balance remain open. Stage 8 UI should show status and a progress bar (D42) |
