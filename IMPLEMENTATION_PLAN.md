@@ -197,9 +197,9 @@ Acceptance evidence: assignment, dry-run labels, displayed observations and chos
 
 **13. Stage 8 — first autonomous project**
 
-Implementation: connect the approved project model, terrain adapter, office capacity and save handling. Limit the first demonstration to one operation and one agreed small patch. Progress follows simulation time; no held input or open planning window is required.
+Resolved prototype rules: add no money, fuel or material costs; future accounting should consume normal vehicle fuel, produce quarried stone from excavation and consume it for fill (D39). Pausing retains progress and cancellation leaves already changed terrain in place (D40). An unexpected terrain change pauses the project for player review (D41). Show status and a progress bar (D42). The D32 relative productivity formula remains provisional; calibrate actual terrain/time throughput later.
 
-Before implementation, ask about the proposed throughput formula and visible working pattern, pausing, stopping/cancelling partially completed work, and what the player should do after external terrain changes. Do not implement free rollback, permanent partial work or automatic replanning as an unconfirmed default.
+Implementation: connect the approved project model, a production-safe terrain adapter, Earthworks facility capacity and durable save state. Limit the first demonstration to one operation and one small user-approved patch. Progress follows simulation time; no held input or open planning window is required. Before terrain-writing implementation, establish a safe way to identify and exclusively reserve a usable machine, and define a no-work condition if no machine is safely available. Keep the existing Stage 3 fixture-only writer isolated.
 
 In-game checklist:
 
@@ -208,7 +208,7 @@ In-game checklist:
 3. Remove staffing or machinery and observe the agreed waiting behaviour.
 4. Pause/change game speed and check progress is consistent.
 5. Save while partially complete, reload and continue from that exact saved state.
-6. Test the agreed pause/cancel interaction and a manual-terrain conflict.
+6. Verify pause retains work, cancel leaves completed terrain, and external terrain changes pause the project for review.
 7. Verify final heights, protected boundary, collision and saved result.
 
 Acceptance evidence: first complete player-reviewed autonomous earthworks loop, with correct partial save/resume and no unexplained costs or double-counted machinery. If partial-save synchronization fails, the stage remains open.
@@ -284,4 +284,4 @@ The earlier, ungated plan is preserved for history in [the archived plan](docs/a
 
 Stage 6 is accepted with stale-state protection deferred. Stage 7 is accepted: the user confirmed that a separately saved and reloaded test slot retained queued project 1's assignment to Earthworks facility ID 14, and the inspector again recognized `9100000012/EarthworksDevelopmentFacility`. The dry-run remains read-only; the screenshot showed 0 observed occupants, 0 machine candidates and rate 0.00. Details are in [STAGE7_TESTING.md](docs/STAGE7_TESTING.md).
 
-Stage 8 is the next implementation stage, but autonomous terrain work remains gated on resolving actual native machine availability and exclusive reservation, then agreeing on fuel, cost and soil/material accounting. Before implementation, ask the user about throughput, visible work behaviour, pause/cancel semantics and terrain-change conflicts as described in Stage 8. Do not present Stage 7's candidates or dry-run rate as proof that equipment is available.
+Stage 8 is the next implementation stage. The user resolved its initial accounting and interaction rules in D39–D42. Autonomous terrain work remains gated on a safe production terrain adapter and evidence-backed machine availability/exclusive reservation. Stage 7's candidate counts and dry-run rate do not prove that equipment is available. Fuel and quarried-stone accounting, building prevention over active work, and rate balancing are later requirements, not part of the first prototype.
