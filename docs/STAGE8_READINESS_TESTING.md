@@ -1,8 +1,8 @@
 # Stage 8 readiness check — native work overlap
 
-Build 0.8.0 reservation-probe partial observation is recorded below. The current diagnostic build is **0.8.1-terrain-call-probe**; it adds a read-only counter for native `C3D_TERRAIN::EditRaiseLower` calls and displays the last game caller and brush inputs. It does not write terrain or reserve vehicles.
+Build 0.8.0 reservation-probe and 0.8.1 partial observations are recorded below. The current diagnostic build is **0.8.2-angle-limit-probe**; it adds a read-only counter for the native `C3D_TERRAIN::EditRaiseLowerAngleLimit` import used by the vanilla terrain tool and displays the last game caller and brush inputs. It does not write terrain or reserve vehicles.
 
-Build 0.8.1 is staged in the project-local RML runtime. The staged DLL SHA-256 matches the build: `f01c0899ee3f1aea268f30f284ddfc02f5a49e257f63c788f1912b05e9ea42ec`. The plugin was loaded in-game for the partial check below. Stage 8 readiness is still pending the sustained native-tool observation and source-backed reservation path.
+Build 0.8.1 was staged in the project-local RML runtime and loaded in-game for the earlier partial check. Build 0.8.2 is now staged in the project-local RML runtime. Built and staged DLL SHA-256: `a0186a5864956ceff05606e90bff873207376fa5e414df749eff937f84d7c6ac`. It has not been launched or tested in-game. Stage 8 readiness still requires tracing machine availability/reservation before any executor is added.
 
 Purpose: check whether vanilla terrain work can use workers or machines held at the dedicated Earthworks facility. This is a diagnostic only. It does not start an Earthworks project or authorize autonomous terrain edits.
 
@@ -15,8 +15,16 @@ Purpose: check whether vanilla terrain work can use workers or machines held at 
 ## Check vanilla terrain overlap
 
 4. In the bottom construction toolbar, open **Terrain tools** and choose **Raise terrain**. Set **Build from resources**. On a small, empty patch close to the facility, click and hold for about 10 seconds. Do not select roads, buildings, underground networks, or the Earthworks project area.
-5. Pause. Reopen the Earthworks inspector and compare the same building and vehicle readings. Check the native office/vehicle UI for a changed assignment, parked state, location, or fuel reading if one is visible.
-6. If convenient, repeat once with the vehicle removed from the facility. This comparison can reveal whether the machine changes native terrain-tool behavior; it is not required if the first pass is unclear.
+5. Pause. Reopen the Earthworks inspector and compare the same building and vehicle readings. Check the Stage 8 probe counter, last caller, and recorded brush/angle parameters. Check the native office/vehicle UI for a changed assignment, parked state, location, or fuel reading if one is visible.
+6. Do not repeat with the machine removed for this check; the user already visually observed the excavator being used. A no-machine comparison can be planned later if the corrected trace raises a specific question.
+
+## Focused check for build 0.8.2
+
+1. With the game and project-local RML closed, run `launch-prototype.cmd`. In RML confirm **0.8.2-angle-limit-probe**, then launch the game and open the same disposable test world.
+2. Open Earthworks and expand **Stage 8 | Native terrain-call probe**. It should say the angle-limited probe is available. Record the starting call count.
+3. Select the native **Raise terrain** tool, keep **Build from resources** selected, and hold over a small empty patch near the facility for about 10 seconds. Do not confirm or start an Earthworks project.
+4. Pause and inspect the Stage 8 section. The expected result is an increased `EditRaiseLowerAngleLimit` call count and a last caller inside `SOVIET64.exe`; capture the caller RVA and displayed parameters in a screenshot.
+5. If the probe is unavailable, the counter remains zero, or the game behaves unexpectedly, stop and send a screenshot plus the relevant RML log. Do not save the test world. This check verifies only that the corrected diagnostic observes the native terrain-tool call; it does not prove equipment reservation, fuel use, or autonomous operation.
 
 ## Report
 
@@ -59,4 +67,10 @@ Do not run this check in a valuable save or with an active Earthworks operation.
 
 - The pinned main-executable disassembly shows the terrain-tool dispatcher at `SOVIET64.exe+0x312A1E` calling the brush routine at `SOVIET64.exe+0x3A8A70` (the call is repeated for several terrain modes). At routine entry, the arguments are the world pointer (`RCX`) and an integer mode (`EDX`); there is no explicit vehicle or office argument.
 - The routine reads world/tool state and iterates a pointer vector stored at world offset `+0x11C28`, using object-position/bounds helpers. The vector's concrete type and whether any helper performs mechanism selection, animation, cost, or fuel accounting are not identified yet. This is only a first pass through the entry path, not proof that the routine has no indirect machinery interaction.
-- The next source task is to identify the world vector and trace its relevant helper calls, then relate the observed visual excavator use to any native state/resource updates. Stage 8 is not cleared: fuel and exclusive reservation remain unverified, and the direct writer probe's zero count is unexplained.
+- The next source task is to identify the world vector and trace its relevant helper calls, then relate the observed visual excavator use to any native state/resource updates. Stage 8 is not cleared: fuel and exclusive reservation remain unverified.
+
+## Static trace correction and 0.8.2 probe target
+
+- `dumpbin /imports SOVIET64.exe` maps IAT entry `EXE+0x86D240` to `?EditRaiseLowerAngleLimit@C3D_TERRAIN@@QEAAXVC3DVECTOR3@@MMMM_NM@Z`. The installed `C3DDLL64.dll` exports that symbol at RVA `0xF9380`; its pinned prologue starts `48 8B C4 F3 0F 11 58 20 55 48 81 EC 20 01 00 00 4C 8B 89 10 02 00 00`.
+- This is the export called by the native terrain brush, unlike `EditRaiseLower` at `0xF8E50`, which the 0.8.1 probe watched. The 0.8.1 zero-call result was therefore a probe-target mismatch; it did not show that the UI used a different terrain writer. The 0.8.2 read-only probe validates the export RVA/prologue and the executable's exact IAT slot/target before patching that import, then forwards the original arguments unchanged.
+- The angle-limited export's signature contains terrain, brush position/parameters, a flag and an angle limit, but no explicit office or vehicle argument. The corrected probe can identify the actual caller and brush inputs; it still cannot establish machine selection, fuel use or exclusive availability. The next check should only verify that a vanilla Raise terrain hold increments this counter and records a game caller. Do not interpret the trace as proof of equipment reservation.

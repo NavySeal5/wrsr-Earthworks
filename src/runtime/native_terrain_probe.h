@@ -11,6 +11,7 @@ struct NativeTerrainCallView {
     float x = 0, z = 0;
     float brush[4]{};
     bool flag = false;
+    float angleLimit = 0;
 };
 
 bool BindNativeTerrainCallProbe();

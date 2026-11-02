@@ -350,16 +350,16 @@ void DrawInterface(const Snapshot& s)
     }
     if(ImGui::CollapsingHeader("Stage 8 | Native terrain-call probe")) {
         const auto& t=s.nativeTerrainCall;
-        if(!t.bound) ImGui::TextColored({1,0.65f,0.3f,1},"Native terrain-call probe unavailable for this game build.");
+        if(!t.bound) ImGui::TextColored({1,0.65f,0.3f,1},"Native angle-limited terrain-call probe unavailable for this game build.");
         else {
-            ImGui::Text("Observed native raise/lower calls: %llu",static_cast<unsigned long long>(t.calls));
+            ImGui::Text("Observed EditRaiseLowerAngleLimit calls: %llu",static_cast<unsigned long long>(t.calls));
             if(t.calls) {
                 if(t.callerInGame) ImGui::Text("Last caller: SOVIET64.exe + 0x%llX",static_cast<unsigned long long>(t.caller));
                 else ImGui::Text("Last caller address: 0x%llX",static_cast<unsigned long long>(t.caller));
                 ImGui::Text("Last position X %.2f Z %.2f",t.x,t.z);
-                ImGui::Text("Brush parameters: %.4g, %.4g, %.4g, %.4g | flag %s",t.brush[0],t.brush[1],t.brush[2],t.brush[3],t.flag?"true":"false");
-            } else ImGui::TextDisabled("No native raise/lower calls observed yet.");
-            ImGui::TextWrapped("Read-only probe. It identifies the game caller and brush inputs; it does not identify or reserve machinery, or prove terrain work eligibility.");
+                ImGui::Text("Brush parameters: %.4g, %.4g, %.4g, %.4g | flag %s | angle %.4g",t.brush[0],t.brush[1],t.brush[2],t.brush[3],t.flag?"true":"false",t.angleLimit);
+            } else ImGui::TextDisabled("No angle-limited terrain calls observed yet.");
+            ImGui::TextWrapped("Read-only IAT probe of the native angle-limited terrain-tool call. It records the caller and brush inputs; it does not identify or reserve machinery, or prove terrain work eligibility.");
         }
     }
     ImGui::Separator();
