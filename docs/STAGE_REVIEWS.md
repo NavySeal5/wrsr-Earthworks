@@ -45,7 +45,7 @@ Stage 4's accepted productivity direction is recorded as D31. The user has now a
 - Proposed bounded Stage 7: manually assign one queued plan to the currently registered dedicated facility and show a dry-run of observed staffing and matching parked vehicle candidates. No terrain edits, fuel/material use, reservation or completion estimate.
 - Current probe readings cannot establish that parked vehicles are idle, natively available or exclusively reserved. UI wording must call them candidates. Stage 4 reservation/availability remains a blocker before autonomous execution.
 - The official native references establish different distances for different mechanics: terrain machinery in a depot/Construction Office within 1,000 m, and citizen walking up to 480 m on the fastest paths. Neither establishes this mod's facility range. See [Stage 7 preparation](STAGE7_PREPARATION.md).
-- Waiting for the user to choose the provisional range/coverage display and manual versus automatic project assignment. No Stage 7 feature code has been implemented; no in-game checks have been run by the agent.
+- Waiting for the user to choose the provisional range/coverage display, manual versus automatic project assignment, and whether assignment resets on reload or uses an investigated stable facility link. No Stage 7 feature code has been implemented; no in-game checks have been run by the agent.
 
 Allowed stage statuses: Planned, In progress, Ready for in-game test, Awaiting user review, Changes requested, Accepted. Record a failed technical check explicitly rather than promoting the stage. A stage can be split if feedback would otherwise come too late.
 
