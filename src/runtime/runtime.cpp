@@ -242,7 +242,7 @@ void Process(const Command& command)
     case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
     case Action::RecheckTest: ProcessProbe(ProbeAction::Recheck); break;
     case Action::InspectBuilding:
-        current.mode=PickMode::InspectBuilding;Message("Click near the centre of a building; then choose its origin in Stage 4.");break;
+        current.mode=PickMode::InspectBuilding;Message("Click near the facility on the map, then choose its Earthworks facility result in the inspector.");break;
     case Action::ChooseBuilding:
         if(std::isfinite(command.value) && command.value>=0 && command.value<WorkforceCandidates)
             SelectWorkforceBuilding(static_cast<unsigned>(command.value));

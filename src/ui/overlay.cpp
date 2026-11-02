@@ -227,12 +227,24 @@ void DrawInterface(const Snapshot& s)
     }
     if(s.projectQueued)ImGui::TextColored({0.95f,0.82f,0.35f,1},"Queued project %llu is saved with the native slot. Stage 7 never edits terrain.",s.projectId);
     if(s.projectQueued)ImGui::TextDisabled("Grey wireframe: queued project. Coloured wireframe: editable draft.");
-    if(s.projectQueued) {
+    {
         ImGui::SeparatorText("Stage 7 | Facility dry-run");
-        ImGui::BeginDisabled(!s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
-        if(ImGui::Button("Assign selected facility"))Send(Action::AssignProject);
-        ImGui::EndDisabled();
-        if(s.projectFacilityId) {
+        if(!s.projectQueued) {
+            ImGui::TextWrapped("First plan an area and press Confirm and queue project. Then choose an Earthworks facility here.");
+        } else {
+            if(ImGui::Button("Find Earthworks facility"))Send(Action::InspectBuilding);
+            ImGui::SameLine();
+            ImGui::BeginDisabled(!s.workforce.selected || !s.workforce.buildingValid || !s.workforce.building.earthworksFacility);
+            if(ImGui::Button("Assign selected facility"))Send(Action::AssignProject);
+            ImGui::EndDisabled();
+            if(s.workforce.selected && s.workforce.buildingValid) {
+                if(s.workforce.building.earthworksFacility)
+                    ImGui::Text("Selected Earthworks facility ID %u. Assign it above.",s.workforce.building.id);
+                else
+                    ImGui::TextDisabled("Selected building is not an Earthworks facility.");
+            } else ImGui::TextDisabled("Click Find, click near a facility on the map, then choose its Earthworks facility result below.");
+        }
+        if(s.projectQueued && s.projectFacilityId) {
             ImGui::SameLine();if(ImGui::Button("Clear assignment"))Send(Action::ClearProjectAssignment);
             if(s.assignedFacilityFound) {
                 ImGui::Text("Assigned Earthworks facility ID %u | distance to plan centre %.1f m",s.projectFacilityId,s.projectFacilityDistance);
@@ -249,7 +261,7 @@ void DrawInterface(const Snapshot& s)
                     } else ImGui::TextColored({1,0.65f,0.3f,1},"Staffing/equipment readings incomplete; no capacity summary.");
                 } else ImGui::TextDisabled("Select the assigned facility in the inspector to view its latest read-only counts.");
             } else ImGui::TextColored({1,0.65f,0.3f,1},"Assigned facility ID %u is not present or could not be verified in this world.",s.projectFacilityId);
-        } else ImGui::TextDisabled("No facility assigned. Select an Earthworks facility below, then assign it here.");
+        } else if(s.projectQueued) ImGui::TextDisabled("No facility assigned yet.");
     }
     ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
     ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
@@ -293,7 +305,9 @@ void DrawInterface(const Snapshot& s)
             }
             ImGui::TextWrapped("Machine skill rating, fuel, usable availability and reservations: UNVERIFIED. Parked matches are candidates only. Ordinary construction assignments are blocked automatically for the dedicated facility.");
             ImGui::Text("Blocked ordinary construction assignments this session: %u",w.blockedConstructionAssignments);
-            if(w.building.earthworksFacility && ImGui::Button("Assign this facility to queued project"))Send(Action::AssignProject);
+        if(w.building.earthworksFacility && s.projectQueued) {
+            if(ImGui::Button("Assign this facility now"))Send(Action::AssignProject);
+        }
         }
         if(ImGui::Button("Log inspector snapshot"))Send(Action::LogInspector);
         ImGui::TextWrapped("Readings refresh about twice per second, including while this panel is closed. Close Earthworks to use native building controls, then reopen to compare.");

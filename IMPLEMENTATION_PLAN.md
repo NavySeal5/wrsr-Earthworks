@@ -282,4 +282,4 @@ The earlier, ungated plan is preserved for history in [the archived plan](docs/a
 
 **18. Immediate next action**
 
-Stage 6 is accepted with stale-state protection deferred. Stage 7 build 0.7.0-stage7-dryrun is ready for the user's in-game review; instructions are in [STAGE7_TESTING.md](docs/STAGE7_TESTING.md). It is a dry-run only and cannot imply reserved/available vehicles. Stage 4's actual availability and exclusive reservation remain unresolved and block Stage 8. The user performs all in-game tests; provide instructions and pause for their report rather than testing in game.
+Stage 6 is accepted with stale-state protection deferred. Stage 7 build 0.7.1-assignment-ux is ready for the user's in-game review; instructions are in [STAGE7_TESTING.md](docs/STAGE7_TESTING.md). It is a dry-run only and cannot imply reserved/available vehicles. Stage 4's actual availability and exclusive reservation remain unresolved and block Stage 8. The user performs all in-game tests; provide instructions and pause for their report rather than testing in game.
