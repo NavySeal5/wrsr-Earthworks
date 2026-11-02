@@ -5,6 +5,7 @@
 #include "runtime.h"
 #include "save_store.h"
 #include "vehicle_filter.h"
+#include "native_terrain_probe.h"
 #include "../core/productivity.h"
 #include <algorithm>
 #include <cmath>
@@ -279,6 +280,7 @@ void Tick()
     }
     current.canUndo = history.CanUndo(); current.canRedo = history.CanRedo();
     current.probe = ReadProbeView();
+    current.nativeTerrainCall = ReadNativeTerrainCallProbe();
     if(current.ready)TickWorkforce();
     const auto facilityNow=GetTickCount64();
     if(current.projectQueued && current.projectFacilityId && facilityNow-lastFacilityRefresh>=500) {
@@ -437,6 +439,7 @@ bool InstallRuntime()
     if (!host->installInlineHook(host->exeBase+VehicleSlotRva,reinterpret_cast<void*>(HookedVehicleSlot),reinterpret_cast<void**>(&originalVehicleSlot),vehicleSlotBytes,sizeof(vehicleSlotBytes),"Earthworks vehicle slot filter")) return false;
     host->log("earthworks  bindings installed: 13 input imports, frame, world-load, office assignment, and Earthworks vehicle slot filters");
     BindTerrainProbe();
+    BindNativeTerrainCallProbe();
     return true;
 }
 }

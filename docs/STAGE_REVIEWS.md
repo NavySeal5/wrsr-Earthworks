@@ -258,3 +258,11 @@ Original diagnostic review was superseded by the user's batch instruction throug
 - Authorization to start the next stage:
 
 A single user statement can accept the current result and authorize progression. Record it once; do not turn the process into repeated approval prompts. If the user requests changes, revise and retest the same stage first.
+
+**Stage 8 diagnostic iteration — 0.8.1-terrain-call-probe, 2 November 2026**
+
+- Added an optional, read-only probe at the pinned native `C3D_TERRAIN::EditRaiseLower` export. It activates only when the module RVA and exact 18-byte prologue match; otherwise the plugin continues without the probe. When active, it records call count, game caller address, position, brush inputs and flag, then forwards the original call unchanged. The overlay displays these readings and states that they do not identify or reserve equipment.
+- This is instrumentation only. It does not perform Earthworks work, modify terrain, add costs, or establish machine reservation. Stage 8 readiness remains pending the user's sustained vanilla terrain-tool observation and review of the resulting trace.
+- Release x64 build completed; the three Tesmio exports were verified; no tests were run. DLL SHA-256: `f01c0899ee3f1aea268f30f284ddfc02f5a49e257f63c788f1912b05e9ea42ec`.
+- The build is not staged because the project-local RML session is open. The staging script intentionally refuses to replace a live launcher configuration. Once the user closes the game and project-local RML, `launch-prototype.cmd` stages the build and opens the isolated diagnostic preset.
+- Check instructions: [Stage 8 native work overlap](STAGE8_READINESS_TESTING.md). The user should run the 10-second hold on a disposable save, then report the probe values and any changes in machine readings. No authorization for further agent-controlled gameplay testing is inferred from the earlier one-off check.

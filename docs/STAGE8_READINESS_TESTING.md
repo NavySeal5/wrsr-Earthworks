@@ -1,8 +1,8 @@
 # Stage 8 readiness check — native work overlap
 
-Build: **0.8.0-reservation-probe**. DLL SHA-256: `A68AE45920F37BF95D1A810B8A374070315FA875D2856FFE72E5CB55E29C9756`.
+Build 0.8.0 reservation-probe partial observation is recorded below. The current diagnostic build is **0.8.1-terrain-call-probe**; it adds a read-only counter for native `C3D_TERRAIN::EditRaiseLower` calls and displays the last game caller and brush inputs. It does not write terrain or reserve vehicles.
 
-The build is staged in the project-local RML runtime. Close the game and project-local RML if they are open, then run `launch-prototype.cmd`; confirm the loaded plugin reports this build before starting the check.
+Build 0.8.1 has been compiled but is not yet staged in the project-local RML runtime. Close the game and project-local RML, then run `launch-prototype.cmd`; confirm the loaded plugin reports this build before starting the check. The launcher refuses to replace a live project-local RML configuration.
 
 Purpose: check whether vanilla terrain work can use workers or machines held at the dedicated Earthworks facility. This is a diagnostic only. It does not start an Earthworks project or authorize autonomous terrain edits.
 
@@ -14,7 +14,7 @@ Purpose: check whether vanilla terrain work can use workers or machines held at 
 
 ## Check vanilla terrain overlap
 
-4. Use the native raise/lower terrain tool on a small, empty patch close to the facility for about 10 seconds. Do not select roads, buildings, underground networks, or the Earthworks project area.
+4. In the bottom construction toolbar, open **Terrain tools** and choose **Raise terrain**. Set **Build from resources**. On a small, empty patch close to the facility, click and hold for about 10 seconds. Do not select roads, buildings, underground networks, or the Earthworks project area.
 5. Pause. Reopen the Earthworks inspector and compare the same building and vehicle readings. Check the native office/vehicle UI for a changed assignment, parked state, location, or fuel reading if one is visible.
 6. If convenient, repeat once with the vehicle removed from the facility. This comparison can reveal whether the machine changes native terrain-tool behavior; it is not required if the first pass is unclear.
 
@@ -38,3 +38,5 @@ Do not run this check in a valuable save or with an active Earthworks operation.
 
 - On installed game build 23935965, `C3DDLL64.dll` exports `C3D_TERRAIN::EditRaiseLower` at RVA `0xF8E50`. MSVC `dumpbin` disassembly shows this method calculates the affected heightmap region and applies per-cell terrain edits. It accepts a terrain object, position and brush/height parameters; it does not accept a construction office or vehicle.
 - Therefore the low-level terrain writer alone cannot establish who pays for, enables or performs manual terrain work. Vehicle selection, eligibility and any work-rate/resource accounting must happen in a caller or separate game subsystem. Do not use the Stage 3 direct-call experiment as proof of machine reservation or as the production executor without the missing caller-side safety checks.
+- Build 0.8.1-terrain-call-probe optionally hooks this export only after matching its RVA and 18-byte prologue. It records a call count, the last return address and brush inputs, then forwards the exact arguments to the original function. A mismatch or failed hook leaves the existing diagnostic active. The probe's observations cannot establish vehicle use or reservation; they identify which native game caller reaches the terrain writer during the held operation.
+- Build verification: Release x64 completed successfully and all three Tesmio exports were verified. No tests were run. DLL SHA-256: `f01c0899ee3f1aea268f30f284ddfc02f5a49e257f63c788f1912b05e9ea42ec`. This build has not been staged or run in-game yet.

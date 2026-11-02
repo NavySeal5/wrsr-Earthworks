@@ -2,6 +2,7 @@
 #include "../core/planning.h"
 #include "tesmio_api.h"
 #include "terrain_probe.h"
+#include "native_terrain_probe.h"
 #include "workforce_probe.h"
 #include <atomic>
 #include <cstdint>
@@ -26,6 +27,7 @@ struct Snapshot {
     Plan queuedPlan{};
     Volumes volumes{};
     ProbeView probe{};
+    NativeTerrainCallView nativeTerrainCall{};
     WorkforceView workforce{};
     PickMode mode = PickMode::Corners;
     char message[160] = "Load a republic to begin.";
