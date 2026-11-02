@@ -237,7 +237,7 @@ The user requested a dedicated stage before balancing to improve the Earthworks 
 
 Scope to review before implementation:
 
-- Develop a purpose-built Earthworks facility with its own visual identity, while preserving its dedicated worker/machine slots, accepted vehicle classes and exclusion from ordinary construction jobs.
+- Develop a purpose-built Earthworks facility with its own visual identity, while preserving its dedicated worker/machine slots, accepted vehicle classes and exclusion from ordinary construction jobs. Correct the current test item's inherited 16 parking points to the two machine stations chosen for the Stage 9 test; defer final release capacities to Stage 11.
 - Make the building's purpose, staffing/equipment role and in-game building-panel information understandable at placement and during use.
 - Restructure the Earthworks panel so planning, project queue/actions, facility assignment and project progress are easy to find; keep long explanations from overwhelming the primary workflow.
 - Separate player-facing controls and status from developer diagnostics. Preserve useful diagnostics in a deliberate advanced/collapsible area or developer build if that is the chosen direction.
