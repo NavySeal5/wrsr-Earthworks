@@ -2,7 +2,7 @@
 
 User-run in-game check for the versioned Earthworks companion state. The agent must not perform these game checks. Do not use a valuable save; make a disposable copy first. Native terrain remains unchanged by this stage.
 
-**User acceptance:** ordinary save/reload preserves the draft and queued project. The user accepted Stage 6 and deferred the remaining checks listed below. They are untested, not passed.
+**User acceptance:** ordinary save/reload preserves the draft and queued project. The user accepted Stage 6 and deferred the remaining checks listed below. Queued grey-wireframe visibility was not specifically reported. These checks are untested, not passed.
 
 ## Save and reload a draft
 
