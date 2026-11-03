@@ -630,8 +630,6 @@ void DrawInterface(const Snapshot& s)
 #endif
         ImGui::EndTabBar();
     }
-    ImGui::Separator();
-    ImGui::TextWrapped("Map clicks pass through normally except while selecting a Site or when reopening a Site editor. Planning does not change terrain.");
     if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) {
         panelOpen=false;mapPickCapture=false;areaPickCapture=false;leftRelease=true;panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
     }

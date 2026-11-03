@@ -921,7 +921,7 @@ void Tick()
     if (wasReady && !current.ready) ResetWorld();
     if (!wasReady && current.ready) {
         if(loadMessagePending) loadMessagePending=false;
-        else Message("Click Earthworks, then click two opposite corners.");
+        else current.message[0]=0;
         host->log("earthworks  world ready generation=%llu date=%d/%d cursor=(%.2f,%.2f,%.2f)",
             current.generation,current.day,current.year,current.cursor.x,current.cursor.y,current.cursor.z);
     }
