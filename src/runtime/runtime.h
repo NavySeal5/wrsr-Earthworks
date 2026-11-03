@@ -9,7 +9,7 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SelectProject, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, FocusProject };
+enum class Action { Pick, Select, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SelectProject, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, FocusProject, RemoveProject, RemoveCompletedProjects };
 enum class PickMode { Corners, Sample, None, InspectBuilding };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; };
 struct ProjectBrief {

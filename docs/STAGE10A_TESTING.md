@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.15-stage10a-camera-pan**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.16-stage10a-project-cleanup**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -17,6 +17,7 @@ Build: **0.11.15-stage10a-camera-pan**. This is a user-run in-game review. The a
 3. Add the plan to the project queue. Switch to **Projects** and confirm the new project appears.
 4. Choose a facility on the map. The map click should identify nearby buildings, then the Projects tab should offer recognized Earthworks facilities by distance. Select the intended facility and assign it.
 5. Confirm the Projects queue uses a compact row for each project, with progress and per-row up/down, Start/Pause/Resume/Review, and Cancel controls. Select a different project and use a row action to confirm it affects that row's project, not the previously selected one.
+5a. Once a project is completed, confirm its Work button changes to **Remove**. Remove one completed record, then complete another disposable project and use **Remove completed (N)** above the queue. Confirm active, paused and cancelled projects remain in the list.
 6. Review queued, running, waiting, paused, review-required, completed and cancelled rows. Start or cancel work only in a disposable area if you want to check those actions.
 7. Check error/status messages, long text, window scrolling/resizing, screen edges, and your usual UI scale.
 8. Leave the panel open while using native game controls. Click ordinary map controls and terrain to confirm those left clicks pass through when no terrain-picking action is active.

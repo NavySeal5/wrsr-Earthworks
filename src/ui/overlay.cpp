@@ -375,6 +375,20 @@ void DrawInterface(const Snapshot& s)
             ImGui::EndTabItem();
         }
         if(ImGui::BeginTabItem("Projects")) {
+            size_t completedCount=0;
+            for(size_t i=0;i<s.projectCount;++i)if(s.projects[i].status==ProjectStatus::Completed)++completedCount;
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Project queue");
+            ImGui::SameLine();
+            char clearCompletedLabel[64];
+            sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
+            const auto& style=ImGui::GetStyle();
+            const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
+            ImGui::SetCursorPosX(ImGui::GetWindowWidth()-style.WindowPadding.x-clearButtonWidth);
+            ImGui::BeginDisabled(completedCount==0);
+            if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
+            ImGui::SetItemTooltip("Remove all completed projects from the list");
+            ImGui::EndDisabled();
             if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
             ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
             if(s.projectCount && ImGui::BeginTable("Project rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
@@ -417,8 +431,12 @@ void DrawInterface(const Snapshot& s)
                     if(project.status==ProjectStatus::Queued) {workAction=Action::StartProject;workLabel="Start";workEnabled=project.facilityId!=0;}
                     else if(project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting) {workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                     else if(project.status==ProjectStatus::Paused) {workAction=project.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=project.needsReview?"Review":"Resume";workEnabled=project.facilityId!=0;}
+                    else if(project.status==ProjectStatus::Completed) {workAction=Action::RemoveProject;workLabel="Remove";workEnabled=true;}
                     ImGui::BeginDisabled(!workEnabled);
-                    if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,26}))SendProjectAction(workAction,project.id);
+                    if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,26})) {
+                        if(workAction==Action::RemoveProject)SendProject(workAction,project.id);
+                        else SendProjectAction(workAction,project.id);
+                    }
                     ImGui::EndDisabled();
 
                     ImGui::TableNextColumn();

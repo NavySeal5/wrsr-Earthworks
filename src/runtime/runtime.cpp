@@ -429,6 +429,32 @@ void Process(const Command& command)
         } else Message("Could not move the camera to that project.");
         break;
     }
+    case Action::RemoveProject: {
+        const auto project=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& item) {
+            return item.id==command.projectId&&item.status==ProjectStatus::Completed;
+        });
+        if(project==durableState.projects.end())break;
+        if(selectedProjectId==project->id)selectedProjectId=0;
+        const auto removedId=project->id;
+        durableState.projects.erase(project);
+        RefreshProjectStatus();
+        host->log("earthworks  completed project removed id=%llu",static_cast<unsigned long long>(removedId));
+        Message("Completed project removed from the list.");
+        break;
+    }
+    case Action::RemoveCompletedProjects: {
+        const auto selected=FindProject(selectedProjectId);
+        if(selected&&selected->status==ProjectStatus::Completed)selectedProjectId=0;
+        const auto previousSize=durableState.projects.size();
+        durableState.projects.erase(std::remove_if(durableState.projects.begin(),durableState.projects.end(),[](const SavedProject& item) {
+            return item.status==ProjectStatus::Completed;
+        }),durableState.projects.end());
+        const auto removed=previousSize-durableState.projects.size();
+        RefreshProjectStatus();
+        host->log("earthworks  completed projects cleared count=%zu",removed);
+        char message[80];sprintf_s(message,"Removed %zu completed project(s) from the list.",removed);Message(message);
+        break;
+    }
     case Action::MoveProjectUp:
     case Action::MoveProjectDown: {
         auto it=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& p){return p.id==command.projectId;});
