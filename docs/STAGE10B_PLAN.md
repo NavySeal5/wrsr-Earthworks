@@ -9,8 +9,8 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 ## Intended player workflow
 
 1. Open the Earthworks panel. The Plan tab is gone; the Projects view is the main workflow.
-2. Use a project selector to switch the Earthworks list to the selected named Project. Create, rename, and delete named Projects.
-3. Click **New Earthwork** below the list. It is assigned to the selected Project, then the player selects two opposite terrain corners using the current area-selection behavior.
+2. Use a project selector to switch the Earthworks list to the selected named Project. Create, rename, and delete named Projects. Remember the selected Project after save/reload.
+3. Click **New Earthwork** below the list. It is assigned to the selected Project and receives an editable sequential default name (`Site-1`, `Site-2`, etc.), then the player selects two opposite terrain corners using the current area-selection behavior.
 4. After selecting the site, show a separate editor box beside that site. It contains footprint dimensions/area, sampled terrain height, cut/fill estimates and the target-height control. Angle is a possible future field, not part of this stage's first implementation.
 5. Clicking the earthwork site opens its editor again. The selected site's preview and editor can be used without returning to a separate Plan tab.
 6. Assign one or more Earthworks facilities to the named Project as a whole. A facility belongs to at most one named Project. Its facilities then provide capacity to the Earthworks in that container.
@@ -18,8 +18,8 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 
 ## Implementation scope
 
-- Separate the persisted data model into named Project containers, project-level facility assignments, and Earthwork records. Keep terrain plan, progress, review state and scheduling priority on the Earthwork record; attach one or more facilities to the Project.
-- Update the save companion format with bounded counts, validation, checksum and terrain fingerprint protections. Store named Projects, their facility pools, selected-project state as appropriate, and child Earthworks with their plans and execution state.
+- Separate the persisted data model into named Project containers, project-level facility assignments, and Earthwork records. Keep terrain plan, progress, review state, editable sequential default name (`Site-1`, `Site-2`, etc.) and scheduling priority on the Earthwork record; attach one or more facilities to the Project.
+- Update the save companion format with bounded counts, validation, checksum and terrain fingerprint protections. Store named Projects, their facility pools, the selected-project ID, and child Earthworks with their names, plans and execution state.
 - Use a fresh save for the reorganized schema. The user confirmed that old WIP records do not need migration; do not spend implementation time converting the old flat project list.
 - Keep current terrain execution, rate, overlap, machine/worker allocation, facility rules and no-material/no-fuel behavior unchanged. This stage is organization and interaction only.
 - Keep the accepted game-like parchment/control styling across the redesigned panel and detached editor.
@@ -62,8 +62,8 @@ Check facility assignment at the Project level, facility exclusivity across cont
 - Earthwork row order is local to the selected Project (D75).
 - Bulk completed cleanup affects only the selected Project (D76).
 - Facilities are assigned to named Projects as a whole. One Project may use multiple facilities, and a facility cannot be shared between Projects. Its facility pool supplies the Earthworks in that Project, with existing staffing, machine and priority rules applied within the group (D77).
+- Each Earthwork gets an editable sequential default label (`Site-1`, `Site-2`, etc.) (D78), and the selected Project persists after save/reload (D79).
 
-Individual Earthwork custom names and selected-Project persistence can be settled during the checkpoint that first needs them.
 
 ## Deferred to later work
 

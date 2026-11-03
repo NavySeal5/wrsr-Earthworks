@@ -71,6 +71,8 @@ Updated 3 November 2026. This register separates the user's confirmed intent fro
 | D75 | Move-up/move-down order applies only among Earthworks in the selected named Project | User selected project-local ordering, 3 November 2026 |
 | D76 | The bulk completed-Earthwork cleanup button affects only the selected named Project | User selected selected-project-only cleanup, 3 November 2026 |
 | D77 | Assign one or more Earthworks facilities to a named Project as a whole; do not share a facility between Projects. Apply existing capacity, worker, machine and priority rules among Earthworks inside each Project | User: “Earthworks facilities should be assigned to projects as a whole, then use the existing rules within those projects”; selected multiple facilities per Project and no sharing, 3 November 2026 |
+| D78 | Give each new Earthwork an editable default name using sequential labels such as `Site-1`, `Site-2` | User requested simple default names with rename support, 3 November 2026 |
+| D79 | Persist the currently selected named Project across save/reload | User confirmed selected-project persistence, 3 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
