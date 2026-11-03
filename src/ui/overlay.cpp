@@ -641,7 +641,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     static char renameBuffer[MaxSavedNameBytes+1]{};
     static uint64_t renameTarget=0;
     const Plan& plan=s.editorPlan;
-    const float width=400.0f,height=400.0f+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
+    const float width=400.0f,height=(s.creatingSite?400.0f:440.0f)+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -698,10 +698,24 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
     if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
-    if(!s.creatingSite&&ImGui::Button("Rename Site",{ImGui::GetContentRegionAvail().x,28.0f})) {
-        strncpy_s(renameBuffer,s.selectedSiteName,_TRUNCATE);
-        renameTarget=s.editingSiteId;
-        ImGui::OpenPopup("Rename selected Site");
+    if(!s.creatingSite) {
+        bool renamePressed=false;
+        if(siteRenameIcon) {
+            const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
+            ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
+            renamePressed=ImGui::ImageButton("##RenameSelectedSite",icon,{30,30},{0,0},{1,1},{0,0,0,0});
+            ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+        } else renamePressed=ImGui::Button("R",{30,30});
+        ImGui::SameLine();ImGui::TextUnformatted("Rename Site");
+        if(renamePressed) {
+            strncpy_s(renameBuffer,s.selectedSiteName,_TRUNCATE);
+            renameTarget=s.editingSiteId;
+            ImGui::OpenPopup("Rename selected Site");
+        }
     }
     if(ImGui::BeginPopupModal("Rename selected Site",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
         RememberRect(&popupRect);popupRectValid=true;
@@ -755,6 +769,27 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(finished)ImGui::TextDisabled("Finished Sites cannot be edited.");
         else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Pause this Site before changing its target.");
         else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextWrapped("This Site needs terrain review before work can resume.");
+        if(!finished) {
+            Action workAction=Action::StartProject;
+            const char* workLabel="Start";
+            bool workEnabled=s.assignedFacilityCount!=0;
+            if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting) {
+                workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;
+            } else if(s.projectStatus==ProjectStatus::Paused) {
+                workAction=s.projectNeedsReview?Action::ReviewResumeProject:Action::ResumeProject;
+                workLabel=s.projectNeedsReview?"Review and resume":"Resume";workEnabled=s.assignedFacilityCount!=0;
+            }
+            const float workWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.68f;
+            ImGui::BeginDisabled(!workEnabled);
+            if(ImGui::Button(workLabel,{workWidth,32.0f}))SendProjectAction(workAction,s.editingSiteId);
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            const float cancelWidth=ImGui::GetContentRegionAvail().x;
+            ImGui::BeginDisabled(!(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running
+                ||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
+            if(ImGui::Button("Cancel",{cancelWidth,32.0f}))SendProjectAction(Action::CancelProject,s.editingSiteId);
+            ImGui::EndDisabled();
+        }
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
     }
     ImGui::PopStyleVar();ImGui::PopStyleColor(4);
