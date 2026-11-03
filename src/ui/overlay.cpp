@@ -871,6 +871,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const bool changed=ImGui::InputFloat("Target height (m)",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     ImGui::SameLine();
+    const auto& input=ImGui::GetIO();
+    const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
+    if(ImGui::Button("-",{28.0f,0.0f}))editHeight-=heightStep;
+    ImGui::SameLine();
+    if(ImGui::Button("+",{28.0f,0.0f}))editHeight+=heightStep;
+    ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
         if(s.creatingSite)Send(Action::Target,editHeight);
         else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,editHeight);
