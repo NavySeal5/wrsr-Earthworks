@@ -391,8 +391,9 @@ void DrawInterface(const Snapshot& s)
     static uint64_t deleteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
         if(ImGui::BeginTabItem("Projects and Sites")) {
-            size_t completedCount=0;
-            for(size_t i=0;i<s.projectCount;++i)if(s.projects[i].status==ProjectStatus::Completed)++completedCount;
+            size_t finishedCount=0;
+            for(size_t i=0;i<s.projectCount;++i)
+                if(s.projects[i].status==ProjectStatus::Completed||s.projects[i].status==ProjectStatus::Cancelled)++finishedCount;
             ImGui::AlignTextToFramePadding();ImGui::Text("Project");ImGui::SameLine();
             ImGui::SetNextItemWidth(225);
             const char* selectedProject=s.projectContainerName[0]?s.projectContainerName:"No Project selected";
@@ -415,9 +416,9 @@ void DrawInterface(const Snapshot& s)
                 ImGui::SameLine();
                 char facilitiesLabel[64];sprintf_s(facilitiesLabel,"Facilities (%u)",s.assignedFacilityCount);
                 if(ImGui::Button(facilitiesLabel))showFacilityManager=true;
-                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
+                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove finished (%zu)",finishedCount);
                 const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
-                ImGui::SameLine();ImGui::BeginDisabled(completedCount==0);
+                ImGui::SameLine();ImGui::BeginDisabled(finishedCount==0);
                 if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
                 ImGui::EndDisabled();
             }
@@ -494,10 +495,13 @@ void DrawInterface(const Snapshot& s)
                             if(workAction==Action::RemoveProject)SendProject(workAction,site.id);else SendProjectAction(workAction,site.id);
                         }ImGui::EndDisabled();
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
-                        ImGui::BeginDisabled(!cancellable);
+                        const bool removable=site.status==ProjectStatus::Cancelled;
+                        ImGui::BeginDisabled(!cancellable&&!removable);
                         if(siteCancelIcon) {
-                            if(drawIconButton("##CancelSite",siteCancelIcon))SendProjectAction(Action::CancelProject,site.id);
-                        } else if(ImGui::Button("×",{32,32}))SendProjectAction(Action::CancelProject,site.id);
+                            if(drawIconButton("##CancelSite",siteCancelIcon))
+                                SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
+                        } else if(ImGui::Button("×",{32,32}))
+                            SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();
                         if(siteRenameIcon) {

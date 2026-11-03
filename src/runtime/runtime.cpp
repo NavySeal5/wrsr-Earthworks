@@ -585,7 +585,7 @@ void Process(const Command& command)
         break;
     case Action::RemoveProject: {
         const auto project=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
-            return item.id==command.projectId&&item.status==ProjectStatus::Completed;
+            return item.id==command.projectId&&(item.status==ProjectStatus::Completed||item.status==ProjectStatus::Cancelled);
         });
         if(project==durableState.earthworks.end())break;
         if(selectedProjectId==project->id)selectedProjectId=0;
@@ -593,23 +593,27 @@ void Process(const Command& command)
         durableState.earthworks.erase(project);
         if(editingSiteId==removedId){editingSiteId=0;siteEditorOpen=false;}
         RefreshProjectStatus();
-        host->log("earthworks  completed site removed id=%llu",static_cast<unsigned long long>(removedId));
-        Message("Completed Site removed from the list.");
+        host->log("earthworks  finished site removed id=%llu",static_cast<unsigned long long>(removedId));
+        Message("Finished Site removed from the list.");
         break;
     }
     case Action::RemoveCompletedProjects: {
         const auto selected=FindProject(selectedProjectId);
-        if(selected&&selected->status==ProjectStatus::Completed)selectedProjectId=0;
         const auto projectId=durableState.selectedProjectId;
+        const auto isFinished=[](ProjectStatus status) {return status==ProjectStatus::Completed||status==ProjectStatus::Cancelled;};
+        const bool clearSelection=selected&&selected->projectId==projectId&&isFinished(selected->status);
+        const auto* editing=FindProject(editingSiteId);
+        const bool closeEditor=editing&&editing->projectId==projectId&&isFinished(editing->status);
         const auto previousSize=durableState.earthworks.size();
         durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
-            return item.projectId==projectId&&item.status==ProjectStatus::Completed;
+            return item.projectId==projectId&&isFinished(item.status);
         }),durableState.earthworks.end());
         const auto removed=previousSize-durableState.earthworks.size();
-        if(auto* editing=FindProject(editingSiteId);editing&&editing->projectId==projectId&&editing->status==ProjectStatus::Completed){editingSiteId=0;siteEditorOpen=false;}
+        if(clearSelection)selectedProjectId=0;
+        if(closeEditor){editingSiteId=0;siteEditorOpen=false;}
         RefreshProjectStatus();
-        host->log("earthworks  completed projects cleared count=%zu",removed);
-        char message[80];sprintf_s(message,"Removed %zu completed Site(s) from the list.",removed);Message(message);
+        host->log("earthworks  finished sites cleared count=%zu",removed);
+        char message[80];sprintf_s(message,"Removed %zu finished or cancelled Site(s) from the list.",removed);Message(message);
         break;
     }
     case Action::MoveProjectUp:
