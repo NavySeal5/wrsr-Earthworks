@@ -512,7 +512,6 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
                 ImGui::EndDisabled();
                 ImGui::SeparatorText("Facilities");
-                ImGui::TextWrapped("Assigned facilities contribute capacity to every Site in this Project. A facility can belong to only one Project.");
                 if(!s.assignedFacilityCount)ImGui::TextDisabled("No facilities assigned.");
                 for(unsigned i=0;i<s.assignedFacilityCount;++i) {
                     ImGui::PushID(static_cast<int>(s.assignedFacilityIds[i]));ImGui::Text("Earthworks Development Facility — #%u",s.assignedFacilityIds[i]);ImGui::SameLine();
@@ -534,7 +533,6 @@ void DrawInterface(const Snapshot& s)
                     } else ImGui::TextDisabled("Already assigned here");
                     ImGui::PopID();
                 }
-                ImGui::Separator();ImGui::TextDisabled("Distance is informational; it does not define operating coverage.");
             }
             if(ImGui::BeginPopupModal("Site name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
