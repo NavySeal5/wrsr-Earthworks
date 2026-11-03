@@ -653,24 +653,25 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
     ImVec2 screen{};
     if(!Project(s,anchor,&screen))screen={display.x*0.5f,display.y*0.5f};
-    static uint64_t trackedSite=~uint64_t{0};
-    static ImVec2 editorOffset{26.0f,-95.0f};
+    static uint64_t trackedSite=0;
+    static ImVec2 editorPosition{};
     const uint64_t siteKey=s.creatingSite?~uint64_t{0}:s.editingSiteId;
-    if(siteKey!=trackedSite) {trackedSite=siteKey;editorOffset={26.0f,-95.0f};}
-    float x=screen.x+editorOffset.x;
-    float y=screen.y+editorOffset.y;
-    if(x+width>display.x-12.0f&&editorOffset.x>=0) {editorOffset.x=-width-26.0f;x=screen.x+editorOffset.x;}
-    x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
-    y=std::clamp(y,70.0f,std::max(70.0f,display.y-height-90.0f));
-    RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
-    RECT overlap{};
-    if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
-        editorOffset.x=-width-26.0f;x=screen.x+editorOffset.x;
-        if(x<12.0f) {editorOffset.x=26.0f;x=screen.x+editorOffset.x;}
+    if(siteKey!=trackedSite) {
+        trackedSite=siteKey;
+        float x=screen.x+26.0f,y=screen.y-95.0f;
+        if(x+width>display.x-12.0f)x=screen.x-width-26.0f;
         x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
+        y=std::clamp(y,70.0f,std::max(70.0f,display.y-height-90.0f));
+        RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
+        RECT overlap{};
+        if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
+            x=screen.x-width-26.0f;
+            if(x<12.0f)x=screen.x+26.0f;
+            x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
+        }
+        editorPosition={x,y};
     }
-    editorOffset.x=x-screen.x;editorOffset.y=y-screen.y;
-    ImGui::SetNextWindowPos({x,y},ImGuiCond_Always);
+    ImGui::SetNextWindowPos(editorPosition,ImGuiCond_Always);
     ImGui::SetNextWindowSize({width,height},ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
@@ -682,8 +683,8 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::InvisibleButton("##DragSiteEditorHeader",{size.x-44.0f,44.0f});
     if(ImGui::IsItemActive()&&ImGui::GetIO().MouseDown[0]) {
         const ImVec2 delta=ImGui::GetIO().MouseDelta;
-        editorOffset.x+=delta.x;editorOffset.y+=delta.y;
-        ImGui::SetWindowPos({pos.x+delta.x,pos.y+delta.y});
+        editorPosition.x+=delta.x;editorPosition.y+=delta.y;
+        ImGui::SetWindowPos(editorPosition);
     }
     const auto movedPos=ImGui::GetWindowPos();
     ImGui::GetWindowDrawList()->AddText({movedPos.x+10.0f,movedPos.y+27.0f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),
@@ -763,7 +764,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
     }
     ImGui::PopStyleVar();ImGui::PopStyleColor(4);
-    const auto finalPos=ImGui::GetWindowPos();editorOffset={finalPos.x-screen.x,finalPos.y-screen.y};
+    editorPosition=ImGui::GetWindowPos();
     RememberRect(&editorRect);editorRectValid=true;ImGui::End();
 }
 void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size)
