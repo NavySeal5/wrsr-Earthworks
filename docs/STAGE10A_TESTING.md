@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.13-stage10a-native-cursor**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.14-stage10a-game-cursor-art**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -27,9 +27,9 @@ Build: **0.11.13-stage10a-native-cursor**. This is a user-run in-game review. Th
 13. While Select area is active, press Escape once and confirm picking stops while the panel stays open; press Escape again and confirm the panel closes without opening the game's Escape menu. Repeat with Sample height. Holding Escape should count as one press, not cancel and close at once.
 14. Check selected tabs and pressed/hovered controls: their backgrounds should be lighter, dark text should remain the same color and readable, and text color should not switch with the state.
 15. Hover over the Earthworks panel and use WASD and other usual gameplay shortcuts; movement and game shortcuts should continue. Click panel buttons and tabs, then repeat. Focus the Target height field and type a value; while it is actively being edited, keystrokes should go into the field instead of controlling the game. Click elsewhere in the panel and confirm gameplay keys pass through again.
-16. Move the cursor over the panel and its buttons; confirm Earthworks does not change the cursor shape or add a second cursor.
+16. Move the cursor over the panel and its buttons; confirm the game-styled cursor remains visible without a second Windows arrow.
 17. In Projects, press View on a project that is off-screen. Confirm the camera moves to its footprint centre and retains the current zoom distance and viewing angle. Try a second row to confirm each button targets its own project. This should not change project state or terrain.
-18. Hover and move across the Earthworks panel. Confirm Earthworks does not change, hide, or redraw the cursor; its shape and visibility should come from the game's original cursor handling. Move off and close the panel, confirming the cursor remains consistent.
+18. Hover and move across the Earthworks panel. Confirm the game's beige cursor art is visible over the panel, without a second Windows arrow. Move off and close the panel; confirm the native cursor returns.
 
 ## Expected results
 
@@ -41,7 +41,7 @@ Build: **0.11.13-stage10a-native-cursor**. This is a user-run in-game review. Th
 - Panel text uses the game's Arial UI font defined in `media_soviet/gui/default.ini`, with a default-font fallback if the system Arial file is unavailable.
 - Ordinary left clicks pass through while no map-picking action is armed; Select area and Sample height capture only their intentional terrain clicks.
 - Keyboard input passes through while the panel is hovered or clicked, and is captured only while the Target height field is actively edited.
-- Earthworks does not call SetCursor, change the cursor shape, or draw a cursor. The game's original window procedure handles it.
+- Over the panel, the game cursor art (`media_soviet/editor/cursor.png`) is drawn above the UI; the Windows pointer is suppressed only while overlapping the panel and restored on exit.
 - Each project's View button recentres the camera on that row's project without changing its state or terrain.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 

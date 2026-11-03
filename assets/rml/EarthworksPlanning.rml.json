@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.11.13-stage10a-native-cursor",
+  "version": "0.11.14-stage10a-game-cursor-art",
   "description": "Plan terrain projects, assign Earthworks facilities, and manage project status and priorities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

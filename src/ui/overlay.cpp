@@ -28,6 +28,10 @@ ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
 ID3D11ShaderResourceView* panelPaper = nullptr;
 UINT panelPaperWidth = 0, panelPaperHeight = 0;
+ID3D11ShaderResourceView* gameCursorArt = nullptr;
+UINT gameCursorArtWidth = 0, gameCursorArtHeight = 0;
+HCURSOR cursorToRestore = nullptr;
+bool systemCursorHiddenForPanel = false;
 IDXGISwapChain* gameChain = nullptr;
 ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
@@ -99,7 +103,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam));
-    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; }
+    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
@@ -133,6 +137,29 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyMessage && keyboardCapture) || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
+    if(message==WM_MOUSEMOVE) {
+        const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
+        const bool overPanel=panelOpen&&panelRectValid&&Hit(panelRect,lParam);
+        if(overPanel) {
+            if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
+            SetCursor(nullptr);systemCursorHiddenForPanel=true;
+        } else if(systemCursorHiddenForPanel) {
+            if(GetCursor()==nullptr&&cursorToRestore)SetCursor(cursorToRestore);
+            systemCursorHiddenForPanel=false;cursorToRestore=nullptr;
+        }
+        return result;
+    }
+    if(message==WM_SETCURSOR) {
+        const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
+        POINT point{};
+        if(GetCursorPos(&point)&&ScreenToClient(window,&point)&&panelOpen&&panelRectValid
+            &&Hit(panelRect,MAKELPARAM(point.x,point.y))) {
+            if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
+            SetCursor(nullptr);systemCursorHiddenForPanel=true;return TRUE;
+        }
+        systemCursorHiddenForPanel=false;cursorToRestore=nullptr;
+        return result;
+    }
     return CallWindowProcW(originalWndProc,window,message,wParam,lParam);
 }
 bool Project(const Snapshot& s,Point p,ImVec2* out)
@@ -604,6 +631,67 @@ void DrawPanelPaper(bool headerOnly)
     const ImVec2 uv1{605.0f/panelPaperWidth,(headerOnly?63.0f:698.0f)/panelPaperHeight};
     draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},uv0,uv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersAll);
 }
+void LoadGameCursorArt()
+{
+    if(gameCursorArt || !device) return;
+    wchar_t executable[MAX_PATH]{};
+    const auto length=GetModuleFileNameW(nullptr,executable,MAX_PATH);
+    if(!length || length>=MAX_PATH) return;
+    std::wstring path(executable,length);
+    const auto slash=path.find_last_of(L"\\/");
+    if(slash==std::wstring::npos) return;
+    path.resize(slash+1);path+=L"media_soviet\\editor\\cursor.png";
+    const auto init=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
+    if(FAILED(init)&&init!=RPC_E_CHANGED_MODE) return;
+    const bool uninitialize=SUCCEEDED(init);
+    Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+    Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+    HRESULT hr=CoCreateInstance(CLSID_WICImagingFactory,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&factory));
+    if(SUCCEEDED(hr))hr=factory->CreateDecoderFromFilename(path.c_str(),nullptr,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
+    if(SUCCEEDED(hr))hr=decoder->GetFrame(0,&frame);
+    if(SUCCEEDED(hr))hr=factory->CreateFormatConverter(&converter);
+    if(SUCCEEDED(hr))hr=converter->Initialize(frame.Get(),GUID_WICPixelFormat32bppRGBA,WICBitmapDitherTypeNone,nullptr,0,WICBitmapPaletteTypeCustom);
+    UINT width=0,height=0;
+    if(SUCCEEDED(hr))hr=converter->GetSize(&width,&height);
+    std::vector<BYTE> pixels;
+    if(SUCCEEDED(hr)&&width&&height&&static_cast<uint64_t>(width)*height<=1'000'000) {
+        pixels.resize(static_cast<size_t>(width)*height*4);
+        hr=converter->CopyPixels(nullptr,width*4,static_cast<UINT>(pixels.size()),pixels.data());
+    } else if(SUCCEEDED(hr))hr=E_INVALIDARG;
+    if(SUCCEEDED(hr)) {
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width=width;desc.Height=height;desc.MipLevels=1;desc.ArraySize=1;desc.Format=DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count=1;desc.Usage=D3D11_USAGE_IMMUTABLE;desc.BindFlags=D3D11_BIND_SHADER_RESOURCE;
+        D3D11_SUBRESOURCE_DATA data{};data.pSysMem=pixels.data();data.SysMemPitch=width*4;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        hr=device->CreateTexture2D(&desc,&data,&texture);
+        if(SUCCEEDED(hr))hr=device->CreateShaderResourceView(texture.Get(),nullptr,&gameCursorArt);
+        if(SUCCEEDED(hr)){gameCursorArtWidth=width;gameCursorArtHeight=height;}
+    }
+    if(uninitialize)CoUninitialize();
+    if(FAILED(hr))host->log("earthworks  game cursor art unavailable; native cursor remains unchanged");
+}
+void DrawGameCursorArt()
+{
+    const auto pos=ImGui::GetIO().MousePos;
+    const bool overPanel=panelOpen&&panelRectValid&&std::isfinite(pos.x)&&std::isfinite(pos.y)
+        &&Hit(panelRect,MAKELPARAM(static_cast<int>(pos.x),static_cast<int>(pos.y)));
+    if(!overPanel||GetForegroundWindow()!=gameWindow) {
+        if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);
+        systemCursorHiddenForPanel=false;cursorToRestore=nullptr;return;
+    }
+    if(!gameCursorArt)return;
+    if(!systemCursorHiddenForPanel) {
+        if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
+        SetCursor(nullptr);systemCursorHiddenForPanel=true;
+    }
+    const float width=32.0f,height=width*static_cast<float>(gameCursorArtHeight)/std::max(1u,gameCursorArtWidth);
+    const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(gameCursorArt)));
+    ImGui::GetForegroundDrawList()->AddImage(texture,{pos.x-2.0f,pos.y-2.0f},{pos.x+width-2.0f,pos.y+height-2.0f},
+        ImVec2(0,0),ImVec2(1,1),IM_COL32_WHITE);
+}
 bool CreateTarget(IDXGISwapChain* swap)
 {
     ID3D11Texture2D* buffer=nullptr;
@@ -680,6 +768,7 @@ bool Initialize(IDXGISwapChain* swap)
     style.WindowRounding=12; style.ChildRounding=8; style.FrameRounding=6; style.TabRounding=6; style.GrabRounding=5;
     style.WindowBorderSize=1; style.FrameBorderSize=1;
     LoadPanelPaper();
+    LoadGameCursorArt();
     if (!ImGui_ImplWin32_Init(gameWindow) || !ImGui_ImplDX11_Init(device,context)) return false;
     SetLastError(0);
     originalWndProc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gameWindow,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(WindowProc)));
@@ -706,6 +795,7 @@ void Render(IDXGISwapChain* swap)
 #endif
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
+    DrawGameCursorArt();
     if(snapshot.mode==PickMode::None) pickCancelledByEscape=false;
     mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
     const bool focused=GetForegroundWindow()==gameWindow;
