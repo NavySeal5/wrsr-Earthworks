@@ -1,6 +1,6 @@
 # Stage 11 — first complete UI implementation (formerly Stage 10b)
 
-Build: **0.13.10-stage11-icon-headers**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
+Build: **0.13.11-stage11-empty-action-headers**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
 
 ## Project and Site workflow
 
@@ -14,7 +14,7 @@ Build: **0.13.10-stage11-icon-headers**. Use a fresh test save; previous WIP com
 8. Create and save a second unfinished Site. Start creating another Site with an overlapping footprint. Confirm the editor shows a readable overlap error naming the existing Site and disables **Save Site**. Move the draft to a clear area and confirm the error clears and saving becomes available. Finished/cancelled Sites should not block an area.
 9. Close the Site editor and click the Site footprint to reopen it. Also close the main Earthworks panel and click the footprint; the panel and editor should reopen. Check that the editor follows the Site as you pan/zoom and stays on-screen near map edges.
 10. Drag the editor by its header. Confirm the text is readable against the parchment, the red header band fits the parchment header, the editor keeps following the Site when the camera moves, and the in-game cursor remains visible over the editor.
-11. Confirm the Sites table is narrower, Cancel and Rename use compact game icons in the headers and rows, hovering each header icon shows its full label, the row icons have no extra button frame/effect, the View column is gone, and the remaining controls stay on one line. If convenient, check at a narrower display resolution too.
+11. Confirm the Sites table is narrower, the Cancel and Rename headers are empty, hovering either empty header shows its full label, the row controls use compact game icons without an extra button frame/effect, the View column is gone, and the remaining controls stay on one line. If convenient, check at a narrower display resolution too.
 12. Cancel area selection with Escape. Confirm the next Escape closes the Earthworks panel without opening the game's escape menu. Normal map clicks and WASD should pass through when no selection or sampling mode is armed.
 
 ## Target editing and saved state

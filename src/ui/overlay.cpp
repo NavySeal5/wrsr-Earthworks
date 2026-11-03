@@ -454,16 +454,10 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Priority");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
                     ImGui::TableNextColumn();
-                    if(siteCancelIcon) {
-                        const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteCancelIcon)));
-                        ImGui::Image(icon,{24,24});
-                    } else ImGui::TextUnformatted("×");
+                    ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) {ImGui::BeginTooltip();ImGui::TextUnformatted("Cancel");ImGui::EndTooltip();}
                     ImGui::TableNextColumn();
-                    if(siteRenameIcon) {
-                        const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
-                        ImGui::Image(icon,{24,24});
-                    } else ImGui::TextUnformatted("R");
+                    ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) {ImGui::BeginTooltip();ImGui::TextUnformatted("Rename");ImGui::EndTooltip();}
                     auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture) {
                         if(!texture)return false;
