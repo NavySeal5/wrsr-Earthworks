@@ -265,6 +265,17 @@ void Changed()
         current.revision, current.generation, current.plan.complete ? 1 : 0, current.plan.target,
         static_cast<double>(current.plan.Width())*current.plan.Depth(), current.volumes.cut, current.volumes.fill);
 }
+void DiscardSiteDraft()
+{
+    current.plan=Plan{};
+    history.Reset();
+    current.mode=PickMode::None;
+    creatingSite=false;
+    editingSiteId=0;
+    siteEditorOpen=false;
+    SetDefaultDraftSiteName();
+    Changed();
+}
 void ResetWorld()
 {
     const auto generation = current.generation+1;
@@ -395,9 +406,11 @@ void Process(const Command& command)
         history.Reset();current.plan=Plan{};Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;current.mode=PickMode::Corners;RefreshProjectStatus();
         Message("Select two opposite corners for the Site area.");break;
     case Action::CloseSiteEditor:
-        siteEditorOpen=false;RefreshProjectStatus();break;
+        if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded because its editor was closed.");}
+        else {siteEditorOpen=false;RefreshProjectStatus();}
+        break;
     case Action::CancelSiteDraft:
-        if(creatingSite) {current.plan=Plan{};history.Reset();current.mode=PickMode::None;creatingSite=false;editingSiteId=0;siteEditorOpen=false;SetDefaultDraftSiteName();Changed();Message("New Site draft discarded.");}
+        if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded.");}
         break;
     case Action::Sample:
         current.mode = PickMode::Sample;
