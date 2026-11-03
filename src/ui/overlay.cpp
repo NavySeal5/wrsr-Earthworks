@@ -612,7 +612,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
 {
     if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {editorRectValid=false;return;}
     const Plan& plan=s.editorPlan;
-    const float width=400.0f,height=400.0f;
+    const float width=400.0f,height=400.0f+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -695,7 +695,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(ImGui::Button("Sample target from map",{ImGui::GetContentRegionAvail().x,28}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
     if(s.creatingSite) {
-        ImGui::BeginDisabled(!plan.complete);
+        const bool draftInvalid=s.siteDraftError[0]!=0;
+        if(draftInvalid)ImGui::TextColored({0.67f,0.15f,0.12f,1.0f},"%s",s.siteDraftError);
+        ImGui::BeginDisabled(draftInvalid);
         if(ImGui::Button("Save Site",{ImGui::GetContentRegionAvail().x,32}))Send(Action::ConfirmProject);
         ImGui::EndDisabled();
         if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30}))Send(Action::CancelSiteDraft);

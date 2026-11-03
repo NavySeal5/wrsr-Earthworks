@@ -43,6 +43,7 @@ struct Snapshot {
     bool siteEditorOpen = false, creatingSite = false;
     uint64_t editingSiteId = 0;
     Plan editorPlan{};
+    char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
     std::array<unsigned,MaxProjectFacilities> assignedFacilityIds{};
     std::array<ProjectFacilityBrief,WorkforceCandidates> facilityCandidates{};

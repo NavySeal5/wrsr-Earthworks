@@ -1,6 +1,6 @@
 # Stage 11 — Named projects and in-context Site editing (formerly Stage 10b)
 
-**Status:** First implementation of all Stage 11 UI elements is complete in build 0.13.1-stage11-ui-polish. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
+**Status:** First implementation of all Stage 11 UI elements plus inline New Site validation is complete in build 0.13.2-stage11-site-validation. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
 
 ## Purpose
 
@@ -48,7 +48,7 @@ Remove Plan tab and add **New Site** below the list. Confirm a selected Project 
 
 ### 11.4 — Site-local editor — first version implemented
 
-Show a separate world-anchored editor beside the newly selected site with target height. Clicking the site reopens it. Confirm its position tracks the footprint as the camera pans/zooms, it remains usable near screen edges, it does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
+Show a separate world-anchored editor beside the newly selected site with target height. Clicking the site reopens it. The New Site draft editor shows inline validation and disables Save Site for incomplete/invalid geometry, overlaps with unfinished Sites, a missing Project, or the save Site-count limit. Confirm its position tracks the footprint as the camera pans/zooms, it remains usable near screen edges, it does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
 
 ### 11.5 — Regression and acceptance — pending user review
 

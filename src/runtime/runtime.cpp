@@ -194,6 +194,33 @@ SavedEarthwork* FindProject(uint64_t id)
     for(auto& project:durableState.earthworks)if(project.id==id)return &project;
     return nullptr;
 }
+void UpdateSiteDraftValidation()
+{
+    current.siteDraftError[0]=0;
+    if(!creatingSite)return;
+    auto fail=[](const char* reason){strncpy_s(current.siteDraftError,reason,_TRUNCATE);};
+    if(!FindNamedProject(durableState.selectedProjectId)) {
+        fail("Create or select a Project before saving this Site.");return;
+    }
+    if(!current.plan.complete) {
+        fail(current.plan.first?"Select the opposite corner to complete the Site area.":"Select an area before saving this Site.");return;
+    }
+    if(durableState.earthworks.size()>=MaxSavedEarthworks) {
+        fail("The save has reached its 128 Site limit. Remove finished Sites before adding another.");return;
+    }
+    if(!std::isfinite(current.plan.target)||std::abs(current.plan.target)>=100000.0f) {
+        fail("Enter a finite target height within the supported range.");return;
+    }
+    const auto areaError=CheckProjectArea(current.plan,nullptr,nullptr);
+    if(areaError!=ProjectAreaError::None) {
+        fail(ProjectAreaMessage(areaError));return;
+    }
+    for(const auto& saved:durableState.earthworks)if(ProjectReservesFootprint(saved.status)&&FootprintsOverlap(current.plan,saved.plan)) {
+        char message[192]{};
+        sprintf_s(message,"This Site overlaps %s. Move it or cancel that unfinished Site first.",saved.name.c_str());
+        fail(message);return;
+    }
+}
 void RefreshProjectStatus();
 uint32_t AssignedFacility(const SavedEarthwork& earthwork)
 {
@@ -454,12 +481,8 @@ void Process(const Command& command)
         current.mode = current.plan.complete ? PickMode::None : PickMode::Corners;
         Changed(); Message("Redid the draft edit."); break;
     case Action::ConfirmProject: {
-        if(!current.plan.complete) { Message("Select a complete area before confirming a project."); break; }
-        if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before adding a Site.");break;}
-        if(durableState.earthworks.size()>=MaxSavedEarthworks) {Message("Earthwork history reached 128 sites. Use a new save for another site list.");break;}
-        for(const auto& saved:durableState.earthworks)if(ProjectReservesFootprint(saved.status)&&FootprintsOverlap(current.plan,saved.plan)) {
-        Message("Site overlaps another queued or active Site. Choose another area or cancel the other Site first.");return;
-        }
+        UpdateSiteDraftValidation();
+        if(current.siteDraftError[0]) {Message(current.siteDraftError);break;}
         SavedEarthwork project;
         project.id=1;
         for(const auto& saved:durableState.earthworks)project.id=std::max(project.id,saved.id+1);
@@ -921,6 +944,7 @@ void Tick()
         lastFacilityRefresh=facilityNow;RefreshProjectStatus();
     }
     current.workforce=ReadWorkforce();
+    UpdateSiteDraftValidation();
     { std::lock_guard<std::mutex> lock(dataMutex); published = current; }
 }
 void HookedLate(__int64 world)
