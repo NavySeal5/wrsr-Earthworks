@@ -330,7 +330,7 @@ bool CursorOnEditingSite(const Snapshot& s)
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display);
 void DrawPanelPaper(bool headerOnly);
-void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size);
+void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size,bool headerOnly);
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
@@ -661,7 +661,8 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     static char renameBuffer[MaxSavedNameBytes+1]{};
     static char draftNameBuffer[MaxSavedNameBytes+1]{};
     static bool draftNameWasActive=false;
-    static uint64_t renameTarget=0;
+    static bool renameEditing=false,editorMinimized=false;
+    static uint64_t renameEditingSite=0;
     if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {
         editorRectValid=false;
         if(!s.siteEditorOpen)editorWasDragged=false;
@@ -670,8 +671,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     if(s.creatingSite&&!draftNameWasActive)strncpy_s(draftNameBuffer,s.siteDraftName,_TRUNCATE);
     draftNameWasActive=s.creatingSite;
+    if(!s.creatingSite&&renameEditingSite!=s.editingSiteId) {renameEditingSite=s.editingSiteId;renameEditing=false;}
     const Plan& plan=s.editorPlan;
-    const float width=400.0f,height=(s.creatingSite?400.0f:440.0f)+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
+    const float width=400.0f,fullHeight=(s.creatingSite?400.0f:440.0f)+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -682,11 +684,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const uint64_t siteKey=s.creatingSite?~uint64_t{0}:s.editingSiteId;
     if(siteKey!=trackedSite) {
         trackedSite=siteKey;
+        editorMinimized=false;
         float x=screen.x+26.0f,y=screen.y-95.0f;
         if(x+width>display.x-12.0f)x=screen.x-width-26.0f;
         x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
-        y=std::clamp(y,70.0f,std::max(70.0f,display.y-height-90.0f));
-        RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
+        y=std::clamp(y,70.0f,std::max(70.0f,display.y-fullHeight-90.0f));
+        RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+fullHeight)};
         RECT overlap{};
         if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
             x=screen.x-width-26.0f;
@@ -695,6 +698,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         editorPosition={x,y};
     }
+    const float height=editorMinimized?52.0f:fullHeight;
     ImGui::SetNextWindowPos(editorPosition,ImGuiCond_Always);
     ImGui::SetNextWindowSize({width,height},ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
@@ -702,9 +706,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::Begin("##EarthworksSiteEditor",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
     ImGui::PopStyleVar();ImGui::PopStyleColor();
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
-    DrawSiteEditorPaper(pos,size);
+    DrawSiteEditorPaper(pos,size,editorMinimized);
     ImGui::SetCursorScreenPos({pos.x+2.0f,pos.y+2.0f});
-    ImGui::InvisibleButton("##DragSiteEditorHeader",{size.x-44.0f,44.0f});
+    ImGui::InvisibleButton("##DragSiteEditorHeader",{size.x-80.0f,44.0f});
     if(ImGui::IsItemActive()&&ImGui::GetIO().MouseDown[0]) {
         const ImVec2 delta=ImGui::GetIO().MouseDelta;
         if(delta.x!=0.0f||delta.y!=0.0f)editorWasDragged=true;
@@ -723,19 +727,41 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::PushStyleColor(ImGuiCol_Button,{0.66f,0.29f,0.25f,1});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.76f,0.36f,0.32f,1});
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.57f,0.22f,0.19f,1});
+    ImGui::SetCursorScreenPos({movedPos.x+size.x-72.0f,movedPos.y+11.0f});
+    if(ImGui::Button("-",{26,26}))editorMinimized=!editorMinimized;
     ImGui::SetCursorScreenPos({movedPos.x+size.x-38.0f,movedPos.y+11.0f});
     if(ImGui::Button("X",{26,26}))Send(Action::CloseSiteEditor);
     ImGui::PopStyleColor(4);
+    if(editorMinimized) {
+        ImGui::PopStyleVar();ImGui::PopStyleColor(4);
+        editorPosition=ImGui::GetWindowPos();
+        RememberRect(&editorRect);editorRectValid=true;ImGui::End();
+        return;
+    }
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
-    ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
-    if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
     if(s.creatingSite) {
+        ImGui::TextUnformatted("New Site draft");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if(ImGui::InputText("Site name",draftNameBuffer,sizeof(draftNameBuffer)))
             SendProjectText(Action::SetDraftSiteName,0,draftNameBuffer);
         nameTextEditing|=ImGui::IsItemActive();
-    }
-    if(!s.creatingSite) {
+    } else if(renameEditing) {
+        ImGui::SetNextItemWidth(155.0f);
+        const bool enterPressed=ImGui::InputText("##EditingSiteName",renameBuffer,sizeof(renameBuffer),ImGuiInputTextFlags_EnterReturnsTrue);
+        nameTextEditing|=ImGui::IsItemActive();
+        ImGui::SameLine();
+        const bool saveRename=ImGui::Button("Save",{48,26})||enterPressed;
+        ImGui::SameLine();
+        const bool cancelRename=ImGui::Button("Cancel",{54,26});
+        ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));
+        if(saveRename) {
+            SendProjectText(Action::RenameSite,s.editingSiteId,renameBuffer);
+            renameEditing=false;
+        }
+        if(cancelRename)renameEditing=false;
+    } else {
+        ImGui::TextUnformatted(s.selectedSiteName);
+        ImGui::SameLine();
         bool renamePressed=false;
         if(siteRenameIcon) {
             const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
@@ -744,29 +770,14 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
-            renamePressed=ImGui::ImageButton("##RenameSelectedSite",icon,{30,30},{0,0},{1,1},{0,0,0,0});
+            renamePressed=ImGui::ImageButton("##RenameSelectedSite",icon,{24,24},{0,0},{1,1},{0,0,0,0});
             ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
-        } else renamePressed=ImGui::Button("R",{30,30});
-        ImGui::SameLine();ImGui::TextUnformatted("Rename Site");
+        } else renamePressed=ImGui::Button("R",{24,24});
+        ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));
         if(renamePressed) {
             strncpy_s(renameBuffer,s.selectedSiteName,_TRUNCATE);
-            renameTarget=s.editingSiteId;
-            ImGui::OpenPopup("Rename selected Site");
+            renameEditing=true;
         }
-    }
-    if(ImGui::BeginPopupModal("Rename selected Site",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
-        RememberRect(&popupRect);popupRectValid=true;
-        ImGui::Text("Rename Site");
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::InputText("Name",renameBuffer,sizeof(renameBuffer));
-        nameTextEditing|=ImGui::IsItemActive();
-        if(ImGui::Button("Save")) {
-            SendProjectText(Action::RenameSite,renameTarget,renameBuffer);
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
     }
     ImGui::Separator();
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),static_cast<double>(plan.Width())*plan.Depth());
@@ -833,21 +844,25 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     editorPosition=ImGui::GetWindowPos();
     RememberRect(&editorRect);editorRectValid=true;ImGui::End();
 }
-void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size)
+void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size,bool headerOnly)
 {
     auto* draw=ImGui::GetWindowDrawList();
     if(!panelPaper||!panelPaperWidth||!panelPaperHeight) {
-        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255),12.0f);
-        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+52.0f},IM_COL32(150,60,55,255),12.0f,ImDrawFlags_RoundCornersTop);
+        if(!headerOnly)draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255),12.0f);
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(150,60,55,255),12.0f,
+            headerOnly?ImDrawFlags_RoundCornersAll:ImDrawFlags_RoundCornersTop);
         return;
     }
     const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
-    const ImVec2 bodyUv0{52.0f/panelPaperWidth,63.0f/panelPaperHeight};
-    const ImVec2 bodyUv1{605.0f/panelPaperWidth,698.0f/panelPaperHeight};
     const ImVec2 headerUv0{52.0f/panelPaperWidth,20.0f/panelPaperHeight};
     const ImVec2 headerUv1{605.0f/panelPaperWidth,63.0f/panelPaperHeight};
-    draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},bodyUv0,bodyUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersBottom);
-    draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+52.0f},headerUv0,headerUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersTop);
+    if(headerOnly)draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},headerUv0,headerUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersAll);
+    else {
+        const ImVec2 bodyUv0{52.0f/panelPaperWidth,63.0f/panelPaperHeight};
+        const ImVec2 bodyUv1{605.0f/panelPaperWidth,698.0f/panelPaperHeight};
+        draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},bodyUv0,bodyUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersBottom);
+        draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+52.0f},headerUv0,headerUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersTop);
+    }
 }
 void CleanupTarget() { if (target) { target->Release(); target=nullptr; } }
 void LoadPanelPaper()
