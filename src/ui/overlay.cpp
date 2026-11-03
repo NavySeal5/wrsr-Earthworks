@@ -479,7 +479,7 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();
                         char label[80];sprintf_s(label,"%s  |  %s",site.name,ProjectStatusName(site.status));
                         if(ImGui::Selectable(label,s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
-                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);ImGui::ProgressBar(site.progress,{0,28},progressLabel);
+                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
                         ImGui::TableNextColumn();
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
                         ImGui::BeginDisabled(!movable);if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);ImGui::EndDisabled();
