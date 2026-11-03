@@ -872,7 +872,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::TextUnformatted("Target height (m)");
     ImGui::SameLine();
     const auto& input=ImGui::GetIO();
-    const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
+    const float heightStep=input.KeyCtrl?100.0f:(input.KeyShift?10.0f:1.0f);
     auto applyHeight=[&](float height) {
         if(s.creatingSite)Send(Action::Target,height);
         else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,height);
@@ -885,7 +885,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SameLine();
     if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f})) {editHeight+=heightStep;applyHeight(editHeight);}
     ImGui::SameLine();
-    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Ctrl for 10 m, or Ctrl+Shift for 100 m.",{22.0f,22.0f});
+    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Shift for 10 m, or Ctrl for 100 m.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
         applyHeight(editHeight);
