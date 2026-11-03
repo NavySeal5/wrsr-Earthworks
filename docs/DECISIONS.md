@@ -79,6 +79,7 @@ Updated 4 November 2026. This register separates the user's confirmed intent fro
 | D83 | Require a Site to be paused before changing its target; editing a paused Site marks it for terrain review before resuming | User chose “Require Pause first” for active Site target edits, 3 November 2026; superseded by D85 |
 | D84 | Allow creating a named Project while a Site draft is open; select the new Project immediately and save the open draft into it | User specified this workflow, 4 November 2026 |
 | D85 | Editing the target height of a running or waiting Site automatically pauses it; applying a changed target requires terrain review before resuming | User specified automatic pause on target editing, 4 November 2026; supersedes D83 |
+| D86 | In the assigned-facility section, show live worker and eligible-machine counts per facility when readings are reliable; show unavailable rather than a misleading zero when they cannot be read | User selected this for Stage 12, 4 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 

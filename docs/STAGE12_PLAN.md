@@ -55,7 +55,7 @@ Inspect an empty facility, then staff it and park representative allowed vehicle
 
 1. Update automatic facility recognition from the development asset name to the released item's unique descriptor. Confirm every placed instance is detected without per-session registration; ordinary construction offices remain unaffected.
 2. Connect the item to the existing facility-management area in the Earthworks Projects view. Preserve the user's direction: facility management remains below **New Site**, shows only facilities assigned to the selected Project with add/remove controls, and contains no flavor text.
-3. Show useful player-facing facility information only where readings are reliable. Candidate row information: facility name/identity, available worker count, eligible parked machine counts, and missing/unreadable status. Do not expose technical inspector fields. Confirm before implementing any extra status or per-machine information beyond this scope.
+3. Show facility name/identity, live worker count, eligible parked machine counts, and missing/unreadable status in the assigned-facility section, but only when readings are reliable. If a reading is unavailable, label it unavailable rather than displaying a misleading zero. Do not expose technical inspector fields or add per-machine detail without confirmation.
 4. Preserve project ownership rules: multiple facilities per Project, no facility shared between Projects, explicit add/remove, reassignment only after removal, and saved assignments bound to stable building identity. A missing facility must remain visible as unavailable or clearly explain why capacity is absent; never silently assign a different building.
 5. Verify scheduler capacity aggregation with two facilities assigned to one Project, facility exclusivity across Projects, worker/machine counts and concurrent Sites. Verify removing/demolishing a facility follows existing missing-facility handling and preserves project progress.
 6. Add player UI only for demonstrated integration state. Keep developer inspector and terrain probes out of the player build.
@@ -79,5 +79,5 @@ Final worker capacity, staffing/productivity balance, facility range, build/main
 
 - Review the 12.1 visual proposal, especially building orientation/access and visible scale, before model production.
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
-- For 12.3, confirm whether the existing assigned-facility list should show live worker and eligible-machine counts per facility. Recommendation: show these counts only if the native reads are reliable; otherwise show a clear unavailable state instead of misleading zeroes.
+- For 12.3, show live worker and eligible-machine counts per assigned facility when reliable readings are available; show a clear unavailable state instead of misleading zeroes (D86).
 - Do not set final worker capacity or throughput in Stage 12; make those decisions during Stage 13 balance review.
