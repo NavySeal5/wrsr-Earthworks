@@ -872,19 +872,22 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
     const auto& input=ImGui::GetIO();
     const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
-    if(ImGui::Button("-##DecreaseTargetHeight",{24.0f,0.0f}))editHeight-=heightStep;
+    auto applyHeight=[&](float height) {
+        if(s.creatingSite)Send(Action::Target,height);
+        else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,height);
+    };
+    if(ImGui::Button("-##DecreaseTargetHeight",{24.0f,0.0f})) {editHeight-=heightStep;applyHeight(editHeight);}
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80.0f);
     const bool changed=ImGui::InputFloat("##TargetHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     ImGui::SameLine();
-    if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f}))editHeight+=heightStep;
+    if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f})) {editHeight+=heightStep;applyHeight(editHeight);}
     ImGui::SameLine();
     GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Ctrl for 10 m, or Ctrl+Shift for 100 m.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
-        if(s.creatingSite)Send(Action::Target,editHeight);
-        else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,editHeight);
+        applyHeight(editHeight);
     }
     ImGui::PopStyleVar();
     ImGui::EndDisabled();
