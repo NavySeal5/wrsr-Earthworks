@@ -864,7 +864,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(seenEditorRevision!=s.revision||seenEditorSite!=s.editingSiteId) {
         editHeight=plan.target;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
     }
-    const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused));
+    const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::BeginDisabled(!editable);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
@@ -882,6 +882,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetNextItemWidth(80.0f);
     const bool changed=ImGui::InputFloat("##TargetHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
+    static uint64_t pauseRequestedForHeightEdit=0;
+    const bool siteIsWorking=s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting;
+    if(!s.creatingSite&&targetHeightEditing&&siteIsWorking&&pauseRequestedForHeightEdit!=s.editingSiteId) {
+        SendProjectAction(Action::PauseProject,s.editingSiteId);
+        pauseRequestedForHeightEdit=s.editingSiteId;
+    } else if(s.creatingSite||!siteIsWorking)pauseRequestedForHeightEdit=0;
     ImGui::SameLine();
     if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f})) {editHeight+=heightStep;applyHeight(editHeight);}
     ImGui::SameLine();
@@ -918,7 +924,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     } else {
         const bool finished=s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled;
         if(finished)ImGui::TextDisabled("Finished Sites cannot be edited.");
-        else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Pause this Site before changing its target.");
+        else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Editing the target will pause this Site; review terrain before resuming.");
         else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextWrapped("This Site needs terrain review before work can resume.");
         if(!finished) {
             Action workAction=Action::StartProject;

@@ -74,6 +74,7 @@ Updated 3 November 2026. This register separates the user's confirmed intent fro
 | D78 | Give each new Earthwork an editable default name using sequential labels such as `Site-1`, `Site-2` | User requested simple default names with rename support, 3 November 2026 |
 | D79 | Persist the currently selected named Project across save/reload | User confirmed selected-project persistence, 3 November 2026 |
 | D80 | Allow creating a named Project while a Site draft is open; select the new Project immediately and save the open draft into it | User specified this workflow, 4 November 2026 |
+| D81 | Editing the target height of a running or waiting Site automatically pauses it; applying a changed target requires terrain review before resuming | User specified automatic pause on target editing, 4 November 2026 |
 | D80 | Use the inline Project controls layout from mockup A: selector with adjacent New, Rename and Delete actions | User selected option A, 3 November 2026 |
 | D81 | In player-facing text, call each individual terrain work item a “Site”; a Project contains multiple Sites | User clarified the terminology for the Stage 10b reorganization, 3 November 2026 |
 | D82 | Make the Sites window wide enough that each row's controls fit on one horizontal line | User requested the panel be widened so row controls do not wrap, 3 November 2026 |

@@ -421,9 +421,14 @@ void Process(const Command& command)
         if(creatingSite)current.mode=PickMode::Sample;
         else if(auto* site=FindProject(editingSiteId);site&&site->projectId==durableState.selectedProjectId
             &&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled
-            &&site->status!=ProjectStatus::Running&&site->status!=ProjectStatus::Waiting)current.mode=PickMode::SampleSiteTarget;
+            ) {
+            const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
+            if(pausedForEdit)site->status=ProjectStatus::Paused;
+            current.mode=PickMode::SampleSiteTarget;
+            if(pausedForEdit)RefreshProjectStatus();
+        }
         else {Message("Select an editable Site before sampling its target height.");break;}
-        Message("Click the ground to sample a target height.");break;
+        Message("Click the ground to sample a target height. An active Site is paused while you edit it.");break;
     case Action::CancelPick:
         if(current.mode==PickMode::Sample) Message("Height sampling cancelled.");
         else if(current.mode==PickMode::SampleSiteTarget) Message("Site target sampling cancelled.");
@@ -455,7 +460,7 @@ void Process(const Command& command)
             if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {
                 current.mode=PickMode::None;Message("The selected Site can no longer be edited.");break;
             }
-            if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting) {current.mode=PickMode::None;Message("Pause this Site before changing its target.");break;}
+            if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
             site->plan.target=p.y;current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
             RefreshProjectStatus();Message(site->needsReview?"Target sampled. Review this Site before resuming.":"Target sampled; terrain remains unchanged.");
@@ -488,10 +493,11 @@ void Process(const Command& command)
             Message("That Site target could not be updated.");break;
         }
         if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {Message("Finished Sites cannot be edited.");break;}
-        if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting) {Message("Pause this Site before changing its target.");break;}
+        const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
+        if(pausedForEdit)site->status=ProjectStatus::Paused;
         if(site->status==ProjectStatus::Paused)site->needsReview=true;
         site->plan.target=command.value;editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;
-        RefreshProjectStatus();Message(site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
+        RefreshProjectStatus();Message(pausedForEdit?"Site paused and target updated. Review terrain before resuming.":site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
     }
     case Action::Clear:
         history.Commit(current.plan); current.plan = Plan{}; current.mode = PickMode::None;
