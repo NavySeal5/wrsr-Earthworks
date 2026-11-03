@@ -35,6 +35,8 @@ ID3D11ShaderResourceView* gameCursorArt = nullptr;
 UINT gameCursorArtWidth = 0, gameCursorArtHeight = 0;
 ID3D11ShaderResourceView* siteCancelIcon = nullptr;
 ID3D11ShaderResourceView* siteRenameIcon = nullptr;
+ID3D11ShaderResourceView* projectNewIcon = nullptr;
+ID3D11ShaderResourceView* projectDeleteIcon = nullptr;
 HCURSOR cursorToRestore = nullptr;
 bool systemCursorHiddenForPanel = false;
 IDXGISwapChain* gameChain = nullptr;
@@ -98,6 +100,19 @@ const char* ProjectStatusName(ProjectStatus status)
 bool ProjectCanMove(ProjectStatus status)
 {
     return status==ProjectStatus::Queued||status==ProjectStatus::Running||status==ProjectStatus::Waiting||status==ProjectStatus::Paused;
+}
+bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback)
+{
+    if(!texture)return ImGui::Button(fallback,{30,30});
+    const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
+    const bool pressed=ImGui::ImageButton(id,image,{30,30},{0,0},{1,1},{0,0,0,0});
+    ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+    return pressed;
 }
 bool Hit(const RECT& rect, LPARAM point)
 {
@@ -410,9 +425,6 @@ void DrawInterface(const Snapshot& s)
     static uint64_t deleteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
         if(ImGui::BeginTabItem("Projects and Sites")) {
-            size_t finishedCount=0;
-            for(size_t i=0;i<s.projectCount;++i)
-                if(s.projects[i].status==ProjectStatus::Completed||s.projects[i].status==ProjectStatus::Cancelled)++finishedCount;
             ImGui::AlignTextToFramePadding();ImGui::Text("Project");ImGui::SameLine();
             ImGui::SetNextItemWidth(225);
             const char* selectedProject=s.projectContainerName[0]?s.projectContainerName:"No Project selected";
@@ -424,18 +436,21 @@ void DrawInterface(const Snapshot& s)
                 }
                 ImGui::EndCombo();
             }
-            ImGui::Spacing();
-            if(ImGui::Button("New")) {nameBuffer[0]=0;renameAction=Action::CreateNamedProject;renameTarget=0;ImGui::OpenPopup("Project name");}
-            ImGui::SameLine();ImGui::BeginDisabled(!s.selectedNamedProjectId);
-            if(ImGui::Button("Rename")) {strncpy_s(nameBuffer,s.projectContainerName,_TRUNCATE);renameAction=Action::RenameNamedProject;renameTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Project name");}
             ImGui::SameLine();
-            if(ImGui::Button("Delete")) {deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");}
+            if(GameIconButton("##NewProject",projectNewIcon,"New")) {
+                nameBuffer[0]=0;renameAction=Action::CreateNamedProject;renameTarget=0;ImGui::OpenPopup("Project name");
+            }
+            ImGui::SameLine();ImGui::BeginDisabled(!s.selectedNamedProjectId);
+            if(GameIconButton("##RenameProject",siteRenameIcon,"Rename")) {
+                strncpy_s(nameBuffer,s.projectContainerName,_TRUNCATE);renameAction=Action::RenameNamedProject;
+                renameTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Project name");
+            }
+            ImGui::SameLine();
+            if(GameIconButton("##DeleteProject",projectDeleteIcon,"Delete")) {
+                deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");
+            }
             ImGui::EndDisabled();
-            char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove finished (%zu)",finishedCount);
-            const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
-            ImGui::SameLine();ImGui::BeginDisabled(finishedCount==0);
-            if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
-            ImGui::EndDisabled();
+            ImGui::Spacing();
 
             if(ImGui::BeginPopupModal("Project name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
@@ -969,6 +984,8 @@ void LoadSiteRowIcons()
 {
     LoadGameUiIcon(L"button_cancel.png",&siteCancelIcon);
     LoadGameUiIcon(L"button_rename.png",&siteRenameIcon);
+    LoadGameUiIcon(L"button_plus.png",&projectNewIcon);
+    LoadGameUiIcon(L"trash.png",&projectDeleteIcon);
 }
 void LoadGameCursorArt()
 {
