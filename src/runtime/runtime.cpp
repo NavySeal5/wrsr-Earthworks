@@ -124,7 +124,9 @@ ProjectAreaError CheckProjectArea(const Plan& plan,TerrainGrid* gridOut,GridRect
     const bool gridValid=ReadTerrainGrid(terrain,&grid);
     if(gridOut)*gridOut=grid;
     if(!gridValid)return ProjectAreaError::GridInvalid;
-    if(!plan.complete || !SnapInside(plan,grid,rectOut)) {
+    GridRect localRect{};
+    GridRect* checkedRect=rectOut?rectOut:&localRect;
+    if(!plan.complete || !SnapInside(plan,grid,checkedRect)) {
         const float x0=(std::min(plan.a.x,plan.b.x)-grid.originX)/grid.stepX;
         const float x1=(std::max(plan.a.x,plan.b.x)-grid.originX)/grid.stepX;
         const float z0=(std::min(plan.a.z,plan.b.z)-grid.originZ)/grid.stepZ;
@@ -134,7 +136,7 @@ ProjectAreaError CheckProjectArea(const Plan& plan,TerrainGrid* gridOut,GridRect
             return ProjectAreaError::OutsideHeightmap;
         return ProjectAreaError::TooSmall;
     }
-    const int count=rectOut->Count();
+    const int count=checkedRect->Count();
     if(count<=0)return ProjectAreaError::TooSmall;
     if(count>40000)return ProjectAreaError::TooLarge;
     return ProjectAreaError::None;

@@ -1,12 +1,12 @@
 # Stage 11 — first complete UI implementation (formerly Stage 10b)
 
-Build: **0.13.3-stage11-compact-panel**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
+Build: **0.13.4-stage11-site-selection-hotfix**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
 
 ## Project and Site workflow
 
 1. Start the project-local RML profile with `launch-prototype.cmd`, load a fresh test world and open Earthworks. Confirm there is no Plan tab.
 2. Create two named Projects, switch between them, and verify the Sites list filters to the selected Project. Rename each Project and a Site.
-3. Select a Project and click **New Site** below the list. Click two opposite terrain corners. The selection should finish with no terrain edit and open a separate Site editor beside the footprint.
+3. Select a Project and click **New Site** below the list. Click two opposite terrain corners. The selection should finish without a crash or terrain edit and open a separate Site editor beside the footprint.
 4. Check the editor's footprint dimensions, sampled ground mean, cut/fill estimates and target height. Enter a height and apply it; use **Sample target from map** to sample another point. The preview should update while the terrain stays unchanged.
 5. Click **Save Site**. Confirm the Site enters the selected Project with a sequential `Site-N` name. Save Site is only planning; terrain work requires a row's explicit Start action.
 6. Create and save a second unfinished Site. Start creating another Site with an overlapping footprint. Confirm the editor shows a readable overlap error naming the existing Site and disables **Save Site**. Move the draft to a clear area and confirm the error clears and saving becomes available. Finished/cancelled Sites should not block an area.
