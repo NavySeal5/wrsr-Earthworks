@@ -1,4 +1,4 @@
-# Stage 10c — Named projects and in-context earthwork editing
+# Stage 10b — Named projects and in-context earthwork editing
 
 **Status:** Planned; the data and scheduling direction is recorded. Begin after the preceding Stage 10 reviews.
 
@@ -34,29 +34,29 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 
 Each checkpoint ends with a user-run in-game review. Do not move to the next checkpoint until the user confirms the behavior or requests adjustments.
 
-### 10c.1 — Data model and fresh-save storage
+### 10b.1 — Data model and fresh-save storage
 
 Implement named Project and Earthwork records in a new companion schema while preserving execution behavior. No schema-4 migration is required. On a fresh save, test project creation, Earthwork status/progress, facility links, and save/reload. Confirm planning/storage changes do not alter terrain.
 
-### 10c.2 — Named-project management
+### 10b.2 — Named-project management
 
 Add the selector, create, rename, delete and facility assignment controls. Switching the selected Project filters the list without changing Earthwork state or scheduler state. Assign and remove multiple facilities at the Project level; reject assigning a facility already owned by another Project. Test with several Projects containing mixed Earthwork states, then save/reload. Deletion must be blocked while unfinished Earthworks are inside the container; ended records can be removed with their container.
 
-### 10c.3 — Create Earthwork from the Projects view
+### 10b.3 — Create Earthwork from the Projects view
 
 Remove Plan tab and add **New Earthwork** below the list. Confirm a selected Project is required, the new site is assigned to it, the two-corner selection works, and normal map interaction returns when selection finishes or is cancelled. Confirm planning alone never edits terrain.
 
-### 10c.4 — Site-local editor
+### 10b.4 — Site-local editor
 
 Show a separate world-anchored editor beside the newly selected site with target height. Clicking the site reopens it. Confirm its position tracks the footprint as the camera pans/zooms, it remains usable near screen edges, it does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
 
-### 10c.5 — Regression and acceptance
+### 10b.5 — Regression and acceptance
 
-Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Earthworks from the selected Project only. Stage 10c is accepted only after user review.
+Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Earthworks from the selected Project only. Stage 10b is accepted only after user review.
 
 ## Confirmed rules and remaining decision
 
-- Existing saves do not need migration (D72); Stage 10c tests use fresh saves. The new companion format only needs to read its own new schema.
+- Existing saves do not need migration (D72); Stage 10b tests use fresh saves. The new companion format only needs to read its own new schema.
 - Deletion is blocked if a container includes unfinished Earthworks (D73).
 - The editor is world-anchored beside the site (D74).
 - Earthwork row order is local to the selected Project (D75).
