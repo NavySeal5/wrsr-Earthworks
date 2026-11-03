@@ -97,7 +97,7 @@ D17/D18 settle the first prototype's selection, preview, sharp edges and opening
 | D13 | Multiple-project rules: sequential/shared work, priorities, blocked jobs, auto-assignment, overlap and reassignment | Before Stage 9 | Resolved for Stage 9 by D38 and D46–D48 |
 | D14 | Candidate scope/balance: final rates, capacities/radius, tool set, practical limits, completion feedback and intended gameplay settings | Before Stage 12 | Open. Revisit earlier choices using real in-game results |
 | D15 | Public release/distribution and any cloud or other-mod promises | After candidate review | Open. Packaging a local candidate does not authorize publishing |
-| D51 | Stage 11 implementation details: building footprint/dimensions, exterior design details, native building-panel copy/icons, and exact panel layout | During Stage 11 review before dependent implementation | The two-bay canopy + office concept is set by D53. Keep the vehicle tank decorative per D55. Do not change accepted capacity, vehicle, assignment or project rules |
+| D51 | Stage 12 implementation details: building footprint/dimensions, exterior design details, native building-panel copy/icons, and exact panel layout | At the relevant Stage 12 review checkpoint | The two-bay canopy + office concept is set by D53. Keep the vehicle tank decorative per D55. Do not change accepted vehicle, assignment or project rules; final capacities remain Stage 13 balance work |
 
 The earlier values of 20 workers, four machines, 1,000 metres and 5 cm remain unapproved examples. Terrain completion tolerance also depends on measured native precision; present any visible precision/shape tradeoff before adopting it.
 

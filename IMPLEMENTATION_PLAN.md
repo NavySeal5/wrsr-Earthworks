@@ -268,22 +268,11 @@ Acceptance evidence: the user confirms the end-to-end Project/Site workflow and 
 
 **17. Stage 12 — purpose-built Earthworks facility**
 
-The user selected the open two-bay canopy plus dispatch office concept and requested a visible fuel tank. The tank is decorative only in this stage; fuel use and refuelling remain future gameplay work. Correct the current test item's inherited 16 parking points to exactly two, matching the user's selected Stage 9 fixture; final release capacities remain for Stage 13. Preserve the user-approved 20-worker temporary test setting, eligible vehicle classes, automatic facility recognition, and exclusion from ordinary construction work.
-
-Implementation proposal: author a compact bespoke low-poly model, prepare its mesh/material through the game's ModelViewer pipeline, generate the dedicated building item and preview icon, and retain construction-office workplace/vehicle behavior underneath. The building should communicate worker dispatch and two equipment bays without suggesting implemented fuel storage services.
-
-In-game checklist:
-
-1. Find/place the building and check its name, thumbnail, footprint, orientation, connections and two vehicle bays.
-2. Confirm the visible fuel tank reads as part of the facility but does not create or promise a refuelling interface.
-3. Confirm worker arrivals, accepted vehicle classes, two-vehicle capacity and that ordinary construction jobs remain blocked.
-4. Check the native building panel, construction appearance and save/reload in the existing fixture.
-
-Acceptance evidence: the user confirms the building's appearance and native behavior in game. Any mismatch in footprint, station count, staff display or vehicle behavior is corrected before Stage 12 acceptance.
+Stage 12 is divided into the user's three requested parts: (12.1) design/model and placeable item, (12.2) the building's native UI, and (12.3) integration between facility readings/management and the Projects workflow. Each part ends with a user-run in-game review before proceeding. The selected concept remains an open two-bay equipment canopy beside a compact dispatch office, with a visible decorative-only fuel tank. The test item must have exactly two vehicle parking positions; its previous 16 positions were inherited accidentally from a native donor. A 20-worker value may be used as a labelled test setting, but final workforce capacity and throughput remain Stage 13 decisions. Preserve the existing vehicle allowlist, automatic recognition, no ordinary construction jobs, and Project ownership rules. Detailed checkpoints and acceptance criteria are in [Stage 12 plan](docs/STAGE12_PLAN.md).
 
 **18. Stage 13 — balance and candidate package**
 
-After Stage 10 is accepted, review rates, office capacity/radius, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
+After Stage 12 is accepted, review rates, final worker capacity, office range, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
 
 Implementation: tune the accepted behaviour, finish necessary presentation, set measured performance limits, and prepare an installable candidate with source/notices and clear compatibility notes. Public uploading is not part of this stage.
 
