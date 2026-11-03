@@ -1,5 +1,7 @@
 # Stage 10a — player UI review
 
+**Superseded by the current Stage 11 UI.** The Project/Site redesign removed the Plan tab, merged project/site work into the Projects and Sites view, added the separate Site editor, changed the target-height controls and added explicitly requested icon tooltips. Use [the current Stage 11 acceptance checklist](STAGE10B_FIRST_UI_TESTING.md) for review; this file is retained as historical guidance for the earlier layout.
+
 Build: **0.11.18-stage10a-view-disabled**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup

@@ -1,6 +1,6 @@
 # Stage 11 — Named projects and in-context Site editing (formerly Stage 10b)
 
-**Status:** First implementation of all Stage 11 UI elements plus inline New Site validation is complete in build 0.13.2-stage11-site-validation. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
+**Status:** Stage 11 is accepted by the user as functionally complete. The checklist in [STAGE10B_FIRST_UI_TESTING.md](STAGE10B_FIRST_UI_TESTING.md) now serves as optional regression guidance for follow-up changes, rather than a gate to UI acceptance.
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 1. Open the Earthworks panel. The Plan tab is gone; the Projects view is the main workflow.
 2. Use a project selector to switch the Sites list to the selected named Project. Use adjacent inline New, Rename and Delete controls for Projects. Rename individual Sites as well. Remember the selected Project after save/reload.
 3. Click **New Site** below the list. It is assigned to the selected Project and receives an editable sequential default name (`Site-1`, `Site-2`, etc.), then the player selects two opposite terrain corners using the current area-selection behavior.
-4. After selecting the site, show a separate editor box beside that site. It contains footprint dimensions/area, sampled terrain height, cut/fill estimates and the target-height control. Angle is a possible future field, not part of this stage's first implementation.
+4. After selecting the site, show a separate editor box beside that site. Its initial position is chosen relative to the Site, then it stays fixed in screen coordinates as the camera pans/zooms. If the player drags it, it remains at that screen position until explicitly closed. It contains footprint dimensions/area, sampled terrain height, cut/fill estimates and the target-height control. Angle is a possible future field, not part of this stage's first implementation.
 5. Clicking the earthwork site opens its editor again. The selected site's preview and editor can be used without returning to a separate Plan tab.
 6. Assign one or more Earthworks facilities to the named Project as a whole. A facility belongs to at most one named Project. Its facilities then provide capacity to the Sites in that container.
 7. Manage each Site with the existing row workflow: within-Project priority ordering, start/pause/review/resume, cancel, disabled camera View, and removal after completion. Make the Sites window wide enough for row controls to fit on one horizontal line (D82). The list shows only Sites in the selected Project.
@@ -48,9 +48,9 @@ Remove Plan tab and add **New Site** below the list. Confirm a selected Project 
 
 ### 11.4 — Site-local editor — first version implemented
 
-Show a separate world-anchored editor beside the newly selected site with target height. Clicking the site reopens it. The New Site draft editor shows inline validation and disables Save Site for incomplete/invalid geometry, overlaps with unfinished Sites, a missing Project, or the save Site-count limit. Confirm its position tracks the footprint as the camera pans/zooms, it remains usable near screen edges, it does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
+Show a separate editor beside the newly selected site with target height. The editor's initial placement is relative to the Site; it then stays in screen coordinates while the camera pans/zooms. After a manual drag it stays at the chosen screen position until explicitly closed. Clicking the site reopens it. The New Site draft editor shows inline validation and disables Save Site for incomplete/invalid geometry, overlaps with unfinished Sites, a missing Project, or the save Site-count limit. Confirm it remains usable near screen edges, does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
 
-### 11.5 — Regression and acceptance — pending user review
+### 11.5 — Optional regression checks
 
 Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, disabled camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Sites from the selected Project only. Stage 11 is accepted only after user review.
 
