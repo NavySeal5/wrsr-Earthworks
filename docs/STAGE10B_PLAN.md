@@ -1,6 +1,6 @@
 # Stage 10b — Named projects and in-context earthwork editing
 
-**Status:** Planned; the data and scheduling direction is recorded. Begin after the preceding Stage 10 reviews.
+**Status:** In progress; checkpoint 10b.2 is ready for user review. Stage 10b.1 schema acceptance remains unverified.
 
 ## Purpose
 

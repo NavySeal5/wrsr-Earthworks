@@ -46,6 +46,7 @@ bool escapeKeyDown = false;
 bool escapeOwned = false;
 bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
+bool nameTextEditing = false;
 #ifdef EARTHWORKS_DEVELOPER_UI
 bool showProbe=true;
 #endif
@@ -58,6 +59,12 @@ void Send(Action action, float value = 0)
     Enqueue({action,value,frameGeneration});
 }
 void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
+void SendProjectText(Action action,uint64_t projectId,const char* text)
+{
+    Command command{};command.action=action;command.generation=frameGeneration;command.projectId=projectId;
+    if(text)strncpy_s(command.text,text,_TRUNCATE);
+    Enqueue(command);
+}
 void SendProjectAction(Action action,uint64_t projectId)
 {
     SendProject(Action::SelectProject,projectId);
@@ -278,6 +285,7 @@ void DrawPanelPaper(bool headerOnly);
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
+    nameTextEditing = false;
     frameGeneration=s.generation;
     if (!s.ready) { panelOpen=false; panelRectValid=false; buttonRect={}; return; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
@@ -302,14 +310,14 @@ void DrawInterface(const Snapshot& s)
     }
     RememberRect(&buttonRect); ImGui::End();
     if (!panelOpen) { panelRectValid=false; return; }
-    const float panelWidth=std::min(660.0f,std::max(480.0f,display.x-20.0f));
+    const float panelWidth=std::min(920.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
     if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
     else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
     else ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints({480,44},{std::min(1000.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
+    ImGui::SetNextWindowSizeConstraints({480,44},{std::min(1100.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
@@ -320,7 +328,7 @@ void DrawInterface(const Snapshot& s)
     auto* panelDraw=ImGui::GetWindowDrawList();
     const auto panelPos=ImGui::GetWindowPos(),panelSize=ImGui::GetWindowSize();
     DrawPanelPaper(collapsedThisFrame);
-    panelDraw->AddText({panelPos.x+11.0f,panelPos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Terrain projects");
+    panelDraw->AddText({panelPos.x+11.0f,panelPos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Sites");
     ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
     ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
@@ -350,6 +358,11 @@ void DrawInterface(const Snapshot& s)
     static float height=0;
     static uint64_t seenRevision=~uint64_t{0},seenWorld=~uint64_t{0};
     if (seenRevision!=s.revision || seenWorld!=s.generation) { height=s.plan.target; seenRevision=s.revision; seenWorld=s.generation; }
+    static bool showFacilityManager=false;
+    static char nameBuffer[MaxSavedNameBytes+1]{};
+    static Action renameAction=Action::RenameNamedProject;
+    static uint64_t renameTarget=0;
+    static uint64_t deleteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
         if(ImGui::BeginTabItem("Plan")) {
             if (ImGui::Button("Select area")) Send(Action::Select);
@@ -366,7 +379,7 @@ void DrawInterface(const Snapshot& s)
                 ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",s.volumes.cut);
                 ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",s.volumes.fill);
                 ImGui::TextWrapped("Sharp edges. The preview is visible through terrain. Volume figures are sampled estimates.");
-                if(ImGui::Button("Add project to queue"))Send(Action::ConfirmProject);
+                if(ImGui::Button("Add Site to selected Project"))Send(Action::ConfirmProject);
             } else ImGui::TextDisabled("Select an area to preview the planned terrain.");
             ImGui::Separator();
             ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
@@ -374,123 +387,126 @@ void DrawInterface(const Snapshot& s)
             ImGui::SameLine(); if (ImGui::Button("Clear plan")) Send(Action::Clear);
             ImGui::EndTabItem();
         }
-        if(ImGui::BeginTabItem("Projects")) {
+        if(ImGui::BeginTabItem("Sites")) {
             size_t completedCount=0;
             for(size_t i=0;i<s.projectCount;++i)if(s.projects[i].status==ProjectStatus::Completed)++completedCount;
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text("Project queue");
-            ImGui::SameLine();
-            ImGui::TextDisabled("%s",s.projectContainerName);
-            ImGui::SameLine();
-            char clearCompletedLabel[64];
-            sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
-            const auto& style=ImGui::GetStyle();
-            const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
-            ImGui::SetCursorPosX(ImGui::GetWindowWidth()-style.WindowPadding.x-clearButtonWidth);
-            ImGui::BeginDisabled(completedCount==0);
-            if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
-            ImGui::EndDisabled();
-            if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
-            ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
-            if(s.projectCount && ImGui::BeginTable("Project rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                ImGui::TableSetupColumn("Earthwork",ImGuiTableColumnFlags_WidthStretch,2.7f);
-                ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.1f);
-                ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.35f);
-                ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.15f);
-                ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthStretch,1.0f);
-                ImGui::TableSetupColumn("View",ImGuiTableColumnFlags_WidthStretch,0.9f);
-                ImGui::TableHeadersRow();
-                for(size_t i=0;i<s.projectCount;++i) {
-                    const auto& project=s.projects[i];
-                    ImGui::PushID(static_cast<int>(project.id));
-                    ImGui::TableNextRow(ImGuiTableRowFlags_None,34.0f);
-                    ImGui::TableNextColumn();
-                    char label[80];
-                    sprintf_s(label,"%s  |  %s",project.name,ProjectStatusName(project.status));
-                    if(ImGui::Selectable(label,s.projectId==project.id,ImGuiSelectableFlags_None,{0,28}))SendProject(Action::SelectProject,project.id);
-
-                    ImGui::TableNextColumn();
-                    char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",project.progress*100.0f);
-                    ImGui::ProgressBar(project.progress,{0,24},progressLabel);
-
-                    ImGui::TableNextColumn();
-                    const bool movable=ProjectCanMove(project.status);
-                    const float priorityWidth=ImGui::GetContentRegionAvail().x;
-                    const float moveButtonWidth=(priorityWidth-ImGui::GetStyle().ItemSpacing.x)*0.5f;
-                    ImGui::BeginDisabled(!movable);
-                    if(ImGui::Button("↑",{moveButtonWidth,26}))SendProject(Action::MoveProjectUp,project.id);
-                    ImGui::SameLine(0,ImGui::GetStyle().ItemSpacing.x);
-                    if(ImGui::Button("↓",{moveButtonWidth,26}))SendProject(Action::MoveProjectDown,project.id);
-                    ImGui::EndDisabled();
-
-                    ImGui::TableNextColumn();
-                    Action workAction=Action::StartProject;
-                    const char* workLabel="Done";
-                    bool workEnabled=false;
-                    if(project.status==ProjectStatus::Queued) {workAction=Action::StartProject;workLabel="Start";workEnabled=project.facilityId!=0;}
-                    else if(project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting) {workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
-                    else if(project.status==ProjectStatus::Paused) {workAction=project.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=project.needsReview?"Review":"Resume";workEnabled=project.facilityId!=0;}
-                    else if(project.status==ProjectStatus::Completed) {workAction=Action::RemoveProject;workLabel="Remove";workEnabled=true;}
-                    ImGui::BeginDisabled(!workEnabled);
-                    if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,26})) {
-                        if(workAction==Action::RemoveProject)SendProject(workAction,project.id);
-                        else SendProjectAction(workAction,project.id);
-                    }
-                    ImGui::EndDisabled();
-
-                    ImGui::TableNextColumn();
-                    const bool cancellable=project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused;
-                    ImGui::BeginDisabled(!cancellable);
-                    if(ImGui::Button("Cancel",{ImGui::GetContentRegionAvail().x,26}))SendProjectAction(Action::CancelProject,project.id);
-                    ImGui::EndDisabled();
-
-                    ImGui::TableNextColumn();
-                    // TODO: Investigate the native game's camera-centering action before re-enabling View.
-                    ImGui::BeginDisabled(true);
-                    ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26});
-                    ImGui::EndDisabled();
-                    ImGui::PopID();
+            ImGui::AlignTextToFramePadding();ImGui::Text("Project");ImGui::SameLine();
+            ImGui::SetNextItemWidth(225);
+            const char* selectedProject=s.projectContainerName[0]?s.projectContainerName:"No Project selected";
+            if(ImGui::BeginCombo("##Project selector",selectedProject)) {
+                for(size_t i=0;i<s.namedProjectCount;++i) {
+                    const auto& named=s.namedProjects[i];const bool selected=named.id==s.selectedNamedProjectId;
+                    if(ImGui::Selectable(named.name,selected))SendProject(Action::SelectNamedProject,named.id);
+                    if(selected)ImGui::SetItemDefaultFocus();
                 }
-                ImGui::EndTable();
+                ImGui::EndCombo();
             }
-            ImGui::EndChild();
-            if(s.projectTotal>s.projectCount)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Showing %zu of %zu projects.",s.projectCount,s.projectTotal);
-            if(s.projectQueued) {
-                ImGui::SeparatorText("Selected project");
-                ImGui::Text("Project %llu  |  %s",static_cast<unsigned long long>(s.projectId),ProjectStatusName(s.projectStatus));
-                if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
-                if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview) {
-                    ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
-                    if(!s.assignedFacilityFound)ImGui::TextDisabled("Assign this project to an Earthworks facility first.");
-                }
-                if(s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled)ImGui::TextDisabled("This project is finished; its area can be planned again.");
-                ImGui::SeparatorText("Facility");
-                if(ImGui::Button("Choose facility on map"))Send(Action::InspectBuilding);
-                if(s.workforce.candidateCount) {
-                    bool foundEarthworks=false;
-                    ImGui::TextDisabled("Choose a nearby Earthworks facility:");
-                    for(unsigned i=0;i<s.workforce.candidateCount;++i) {
-                        const auto& candidate=s.workforce.candidates[i];
-                        if(!candidate.earthworksFacility)continue;
-                        foundEarthworks=true;ImGui::PushID(static_cast<int>(i));
-                        char facilityLabel[80];sprintf_s(facilityLabel,"Select facility (%.0f m away)",candidate.distance);
-                        if(ImGui::Button(facilityLabel))Send(Action::ChooseBuilding,static_cast<float>(i));
+            ImGui::SameLine();
+            if(ImGui::Button("New")) {nameBuffer[0]=0;renameAction=Action::CreateNamedProject;renameTarget=0;ImGui::OpenPopup("Project name");}
+            ImGui::SameLine();ImGui::BeginDisabled(!s.selectedNamedProjectId);
+            if(ImGui::Button("Rename")) {strncpy_s(nameBuffer,s.projectContainerName,_TRUNCATE);renameAction=Action::RenameNamedProject;renameTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Project name");}
+            ImGui::SameLine();
+            if(ImGui::Button("Delete")) {deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");}
+            ImGui::EndDisabled();
+
+            if(ImGui::BeginPopupModal("Project name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text(renameAction==Action::CreateNamedProject?"Create Project":"Rename Project");
+                ImGui::SetNextItemWidth(300);ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));nameTextEditing|=ImGui::IsItemActive();
+                if(ImGui::Button("Save")) {SendProjectText(renameAction,renameTarget,nameBuffer);ImGui::CloseCurrentPopup();}
+                ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+            if(ImGui::BeginPopupModal("Delete Project",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::TextWrapped("Delete this Project and its completed or cancelled Site records? Unfinished Sites must be finished or cancelled first.");
+                if(ImGui::Button("Delete")) {SendProject(Action::DeleteNamedProject,deleteTarget);ImGui::CloseCurrentPopup();}
+                ImGui::SameLine();if(ImGui::Button("Keep Project"))ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+
+            if(!showFacilityManager) {
+                ImGui::SameLine();
+                char facilitiesLabel[64];sprintf_s(facilitiesLabel,"Facilities (%u)",s.assignedFacilityCount);
+                if(ImGui::Button(facilitiesLabel))showFacilityManager=true;
+                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
+                const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
+                ImGui::SameLine();ImGui::BeginDisabled(completedCount==0);
+                if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
+                ImGui::EndDisabled();
+                if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
+                else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet. Create an area in the Plan tab.");
+                ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
+                if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                    ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
+                    ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.15f);
+                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.1f);
+                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.1f);
+                    ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthStretch,1.0f);
+                    ImGui::TableSetupColumn("Rename",ImGuiTableColumnFlags_WidthStretch,1.0f);
+                    ImGui::TableSetupColumn("View",ImGuiTableColumnFlags_WidthStretch,0.9f);
+                    ImGui::TableHeadersRow();
+                    for(size_t i=0;i<s.projectCount;++i) {
+                        const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
+                        ImGui::TableNextRow(ImGuiTableRowFlags_None,48.0f);
+                        ImGui::TableNextColumn();
+                        char label[80];sprintf_s(label,"%s  |  %s",site.name,ProjectStatusName(site.status));
+                        if(ImGui::Selectable(label,s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
+                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);ImGui::ProgressBar(site.progress,{0,28},progressLabel);
+                        ImGui::TableNextColumn();
+                        const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
+                        ImGui::BeginDisabled(!movable);if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);ImGui::EndDisabled();
+                        ImGui::TableNextColumn();Action workAction=Action::StartProject;const char* workLabel="Done";bool workEnabled=false;
+                        if(site.status==ProjectStatus::Queued){workAction=Action::StartProject;workLabel="Start";workEnabled=s.assignedFacilityCount!=0;}
+                        else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
+                        else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
+                        else if(site.status==ProjectStatus::Completed){workAction=Action::RemoveProject;workLabel="Remove";workEnabled=true;}
+                        ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32})) {
+                            if(workAction==Action::RemoveProject)SendProject(workAction,site.id);else SendProjectAction(workAction,site.id);
+                        }ImGui::EndDisabled();
+                        ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
+                        ImGui::BeginDisabled(!cancellable);if(ImGui::Button("Cancel",{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(Action::CancelProject,site.id);ImGui::EndDisabled();
+                        ImGui::TableNextColumn();if(ImGui::Button("Rename",{ImGui::GetContentRegionAvail().x,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
+                        ImGui::TableNextColumn();ImGui::BeginDisabled(true);ImGui::Button("View",{ImGui::GetContentRegionAvail().x,32});ImGui::EndDisabled();
                         ImGui::PopID();
                     }
-                    if(!foundEarthworks)ImGui::TextColored({0.55f,0.25f,0.08f,1},"No Earthworks facility found nearby. Click closer to its centre.");
-                } else if(s.workforce.selected&&s.workforce.buildingValid) {
-                    if(s.workforce.building.earthworksFacility)ImGui::Text("Selected Earthworks facility %u.",s.workforce.building.id);
-                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Selected building is not an Earthworks facility.");
-                } else ImGui::TextDisabled("Click near your facility after choosing this action.");
-                const bool canAssign=s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused;
-                ImGui::BeginDisabled(!canAssign||!s.workforce.selected||!s.workforce.buildingValid||!s.workforce.building.earthworksFacility);
-                if(ImGui::Button(s.projectFacilityId?"Assign / reassign":"Assign selected facility"))Send(Action::AssignProject);
-                ImGui::EndDisabled();
-                if(s.projectFacilityId) {
-                    ImGui::SameLine();ImGui::BeginDisabled(s.projectStatus!=ProjectStatus::Queued);if(ImGui::Button("Clear"))Send(Action::ClearProjectAssignment);ImGui::EndDisabled();
-                    if(s.assignedFacilityFound)ImGui::Text("Assigned facility %u  |  %.1f m from project centre",s.projectFacilityId,s.projectFacilityDistance);
-                    else ImGui::TextColored({0.55f,0.25f,0.08f,1},"Assigned facility %u is missing or unreadable.",s.projectFacilityId);
-                } else ImGui::TextDisabled("No facility assigned.");
+                    ImGui::EndTable();
+                }
+                ImGui::EndChild();
+                if(s.projectQueued) {
+                    ImGui::SeparatorText("Selected Site");ImGui::Text("%s  |  %s",s.selectedSiteName,ProjectStatusName(s.projectStatus));
+                    if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
+                    if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
+                    ImGui::Text("Project facilities: %u",s.assignedFacilityCount);
+                }
+            } else {
+                ImGui::SeparatorText("Facilities | Project");ImGui::SameLine();ImGui::Text("%s",s.projectContainerName);
+                if(ImGui::Button("Back to Sites"))showFacilityManager=false;
+                ImGui::TextWrapped("Assigned facilities contribute capacity to every Site in this Project. A facility can belong to only one Project.");
+                ImGui::SeparatorText("Assigned to this Project");
+                if(!s.assignedFacilityCount)ImGui::TextDisabled("No facilities assigned.");
+                for(unsigned i=0;i<s.assignedFacilityCount;++i) {
+                    ImGui::PushID(static_cast<int>(s.assignedFacilityIds[i]));ImGui::Text("Earthworks Development Facility — #%u",s.assignedFacilityIds[i]);ImGui::SameLine();
+                    if(ImGui::Button("Remove"))SendProject(Action::RemoveProjectFacility,s.assignedFacilityIds[i]);ImGui::PopID();
+                }
+                ImGui::SeparatorText("Find facilities");
+                if(ImGui::Button("Choose facility on map"))Send(Action::InspectBuilding);
+                if(s.mode==PickMode::InspectBuilding)ImGui::TextDisabled("Click near a facility on the map; keep this panel open.");
+                for(unsigned i=0;i<s.facilityCandidateCount;++i) {
+                    const auto& candidate=s.facilityCandidates[i];ImGui::PushID(static_cast<int>(candidate.id));
+                    ImGui::Text("Earthworks Development Facility — #%u  |  %.0f m away",candidate.id,candidate.distance);ImGui::SameLine();
+                    if(candidate.assignedProjectId&&candidate.assignedProjectId!=s.selectedNamedProjectId) {
+                        ImGui::BeginDisabled(true);ImGui::Button("Unavailable");ImGui::EndDisabled();
+                        ImGui::TextDisabled("Already assigned to %s",candidate.assignedProjectName);
+                    } else if(std::find(s.assignedFacilityIds.begin(),s.assignedFacilityIds.begin()+s.assignedFacilityCount,candidate.id)==s.assignedFacilityIds.begin()+s.assignedFacilityCount) {
+                        if(ImGui::Button("＋ Add"))SendProject(Action::AddProjectFacility,candidate.id);
+                    } else ImGui::TextDisabled("Already assigned here");
+                    ImGui::PopID();
+                }
+                ImGui::Separator();ImGui::TextDisabled("Distance is informational; it does not define operating coverage.");
+            }
+            if(ImGui::BeginPopupModal("Site name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Rename Site");ImGui::SetNextItemWidth(300);ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));nameTextEditing|=ImGui::IsItemActive();
+                if(ImGui::Button("Save")) {SendProjectText(Action::RenameSite,renameTarget,nameBuffer);ImGui::CloseCurrentPopup();}
+                ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();ImGui::EndPopup();
             }
             ImGui::EndTabItem();
         }
@@ -817,7 +833,7 @@ void Render(IDXGISwapChain* swap)
     mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
-    keyboardCapture=focused && io.WantTextInput && targetHeightEditing && panelOpen;
+    keyboardCapture=focused && io.WantTextInput && (targetHeightEditing||nameTextEditing) && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
     // Leave cursor shape and visibility entirely to the game window procedure.
     ImGui::GetIO().MouseDrawCursor=false;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(EarthworksPlanning VERSION 0.12.0 LANGUAGES CXX)
+project(EarthworksPlanning VERSION 0.12.1 LANGUAGES CXX)
 option(EARTHWORKS_TRACE_FAULT "Enable temporary native fault tracing during investigation" OFF)
 option(EARTHWORKS_DEVELOPER_UI "Include technical inspector and terrain-probe UI" OFF)
 

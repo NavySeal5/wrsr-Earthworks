@@ -105,7 +105,7 @@ bool ValidName(const std::string& value)
 
 bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
 {
-    if (!bytes || state.schema != StateSchemaVersion || state.projects.empty() || state.projects.size() > MaxSavedProjects
+    if (!bytes || state.schema != StateSchemaVersion || state.projects.size() > MaxSavedProjects
         || state.earthworks.size() > MaxSavedEarthworks || !ValidPlan(state.draft) || !state.nextSiteNumber) return false;
     std::vector<uint8_t> payload;
     payload.reserve(MaxFileSize-HeaderSize);
@@ -127,11 +127,11 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
         for(uint32_t facility:p.facilityIds)Put32(payload,facility);
     }
     auto selected=std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==state.selectedProjectId;});
-    if(selected==state.projects.end())return false;
+    if((state.projects.empty()&&state.selectedProjectId!=0)||(!state.projects.empty()&&selected==state.projects.end()))return false;
     Put32(payload,static_cast<uint32_t>(state.earthworks.size()));
     for(size_t i=0;i<state.earthworks.size();++i) {
         const auto& e=state.earthworks[i];
-        if(!e.id||!ValidName(e.name)||selected==state.projects.end()||
+        if(!e.id||!ValidName(e.name)||
             std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==state.projects.end()
             ||static_cast<uint8_t>(e.status)>static_cast<uint8_t>(ProjectStatus::Waiting)||!ValidPlan(e.plan)||!e.plan.complete
             ||!std::isfinite(e.progress)||e.progress<0||e.progress>1||!std::isfinite(e.workRemainderM3)||e.workRemainderM3<0)return false;
@@ -159,7 +159,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     DurableState parsed; parsed.schema=version;
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !GetPlan(r,&parsed.draft)) return false;
     if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;
-    uint32_t count=0;if(!r.U32(&count)||!count||count>MaxSavedProjects)return false;
+    uint32_t count=0;if(!r.U32(&count)||count>MaxSavedProjects)return false;
     for(uint32_t i=0;i<count;++i) {
         SavedProject p;uint32_t facilities=0;
         if(!r.U64(&p.id)||!p.id||!r.String(&p.name)||!r.U32(&facilities)||facilities>MaxProjectFacilities)return false;
@@ -172,7 +172,8 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
         }
         parsed.projects.push_back(std::move(p));
     }
-    if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==parsed.selectedProjectId;})==parsed.projects.end())return false;
+    if((parsed.projects.empty()&&parsed.selectedProjectId!=0)||(!parsed.projects.empty()
+        &&std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==parsed.selectedProjectId;})==parsed.projects.end()))return false;
     if(!r.U32(&count)||count>MaxSavedEarthworks)return false;
     for(uint32_t i=0;i<count;++i) {
         SavedEarthwork e;uint8_t status=0,review=0;

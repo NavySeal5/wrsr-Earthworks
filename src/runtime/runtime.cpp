@@ -9,6 +9,7 @@
 #include "../core/terrain_grid.h"
 #include "../core/productivity.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <deque>
@@ -197,6 +198,26 @@ uint32_t AssignedFacility(const SavedEarthwork& earthwork)
     const auto* project=FindNamedProject(earthwork.projectId);
     return project&&!project->facilityIds.empty()?project->facilityIds.front():0;
 }
+bool FindAssignedFacility(const SavedEarthwork& earthwork,uint32_t* id,BuildingReading* reading)
+{
+    const auto* project=FindNamedProject(earthwork.projectId);
+    if(!project)return false;
+    for(const auto facilityId:project->facilityIds) {
+        BuildingReading candidate{};
+        if(FindEarthworksFacility(facilityId,&candidate)) {
+            if(id)*id=facilityId;
+            if(reading)*reading=candidate;
+            return true;
+        }
+    }
+    return false;
+}
+const SavedProject* FacilityOwner(uint32_t facilityId)
+{
+    for(const auto& project:durableState.projects)
+        if(std::find(project.facilityIds.begin(),project.facilityIds.end(),facilityId)!=project.facilityIds.end())return &project;
+    return nullptr;
+}
 void Changed()
 {
     durableState.draft = current.plan;
@@ -213,10 +234,10 @@ void ResetWorld()
     durableState = DurableState{}; selectedProjectId=0; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
-    RefreshProjectStatus();
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
     ProbeWorldBoundary();
     ResetWorkforce();
+    RefreshProjectStatus();
     std::lock_guard<std::mutex> lock(dataMutex);
     commands.clear(); published = current;
     host->log("earthworks  world boundary; discarded session preview, generation=%llu", generation);
@@ -224,12 +245,29 @@ void ResetWorld()
 void RefreshProjectStatus()
 {
     const auto* selectedContainer=FindNamedProject(durableState.selectedProjectId);
+    current.selectedNamedProjectId=durableState.selectedProjectId;
     current.projectContainerName[0]=0;
     if(selectedContainer)strncpy_s(current.projectContainerName,selectedContainer->name.c_str(),_TRUNCATE);
-    current.projectTotal=durableState.earthworks.size();
-    current.projectCount=std::min(durableState.earthworks.size(),MaxVisibleProjects);
-    for(size_t i=0;i<current.projectCount;++i) {
-        const auto& source=durableState.earthworks[i];auto& target=current.projects[i];
+    current.namedProjectCount=std::min(durableState.projects.size(),MaxSavedProjects);
+    for(size_t i=0;i<current.namedProjectCount;++i) {
+        const auto& source=durableState.projects[i];auto& target=current.namedProjects[i];
+        target.id=source.id;strncpy_s(target.name,source.name.c_str(),_TRUNCATE);target.facilityCount=static_cast<unsigned>(source.facilityIds.size());
+    }
+    current.assignedFacilityIds.fill(0);
+    current.assignedFacilityCount=selectedContainer?static_cast<unsigned>(std::min(selectedContainer->facilityIds.size(),MaxProjectFacilities)):0;
+    for(unsigned i=0;i<current.assignedFacilityCount;++i)current.assignedFacilityIds[i]=selectedContainer->facilityIds[i];
+    const auto workforce=ReadWorkforce();current.facilityCandidateCount=0;
+    for(unsigned i=0;i<workforce.candidateCount&&current.facilityCandidateCount<WorkforceCandidates;++i) {
+        const auto& candidate=workforce.candidates[i];if(!candidate.earthworksFacility)continue;
+        auto& target=current.facilityCandidates[current.facilityCandidateCount++];target=ProjectFacilityBrief{};
+        target.id=candidate.id;target.distance=candidate.distance;
+        if(const auto* owner=FacilityOwner(candidate.id)) {
+            target.assignedProjectId=owner->id;strncpy_s(target.assignedProjectName,owner->name.c_str(),_TRUNCATE);
+        }
+    }
+    current.projectCount=0;
+    for(const auto& source:durableState.earthworks)if(source.projectId==durableState.selectedProjectId&&current.projectCount<MaxVisibleProjects) {
+        auto& target=current.projects[current.projectCount++];
         target.id=source.id;target.status=source.status;target.facilityId=AssignedFacility(source);
         strncpy_s(target.name,source.name.c_str(),_TRUNCATE);
         target.allocatedWorkers=source.status==ProjectStatus::Running?source.allocatedWorkers:0;
@@ -237,22 +275,25 @@ void RefreshProjectStatus()
         target.progress=source.progress;target.needsReview=source.needsReview;
         target.a=source.plan.a;target.b=source.plan.b;target.target=source.plan.target;
     }
+    current.projectTotal=current.projectCount;
     current.projectQueued=false;current.projectId=0;
     current.projectFacilityId=0;
     current.assignedFacilityFound=false;
     current.projectStatus=ProjectStatus::Draft;
     current.projectNeedsReview=false;
     current.projectProgress=0;
+    current.selectedSiteName[0]=0;
     current.projectFacilityDistance=0;
     current.queuedPlan=Plan{};
     auto selected=durableState.earthworks.end();
     if(selectedProjectId)selected=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[](const SavedEarthwork& p){return p.id==selectedProjectId;});
     if(selected==durableState.earthworks.end()) {
-        selected=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[](const SavedEarthwork& p){return p.status==ProjectStatus::Queued||p.status==ProjectStatus::Running||p.status==ProjectStatus::Waiting||p.status==ProjectStatus::Paused;});
-        if(selected==durableState.earthworks.end()&&!durableState.earthworks.empty())selected=durableState.earthworks.begin();
+        selected=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& p){return p.projectId==durableState.selectedProjectId&&(p.status==ProjectStatus::Queued||p.status==ProjectStatus::Running||p.status==ProjectStatus::Waiting||p.status==ProjectStatus::Paused);});
+        if(selected==durableState.earthworks.end())selected=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& p){return p.projectId==durableState.selectedProjectId;});
     }
-    if(selected!=durableState.earthworks.end()) {
+    if(selected!=durableState.earthworks.end()&&selected->projectId==durableState.selectedProjectId) {
         selectedProjectId=selected->id;current.projectQueued=true;current.projectId=selected->id;current.queuedPlan=selected->plan;
+        strncpy_s(current.selectedSiteName,selected->name.c_str(),_TRUNCATE);
         current.projectStatus=selected->status;current.projectNeedsReview=selected->needsReview;current.projectProgress=selected->progress;
         current.projectFacilityId=AssignedFacility(*selected);
         if(current.projectFacilityId) {
@@ -305,7 +346,7 @@ void Process(const Command& command)
     case Action::Pick: {
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
-            FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;
+            FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;RefreshProjectStatus();
             Message("Select your Earthworks facility in the Projects tab, then assign it to the selected project.");break;
         }
         Point p = current.cursor;
@@ -346,9 +387,10 @@ void Process(const Command& command)
         Changed(); Message("Redid the draft edit."); break;
     case Action::ConfirmProject: {
         if(!current.plan.complete) { Message("Select a complete area before confirming a project."); break; }
+        if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before adding a Site.");break;}
         if(durableState.earthworks.size()>=MaxSavedEarthworks) {Message("Earthwork history reached 128 sites. Use a new save for another site list.");break;}
         for(const auto& saved:durableState.earthworks)if(ProjectReservesFootprint(saved.status)&&FootprintsOverlap(current.plan,saved.plan)) {
-            Message("Project overlaps a queued or active footprint. Choose another area or cancel the other project first.");return;
+        Message("Site overlaps another queued or active Site. Choose another area or cancel the other Site first.");return;
         }
         SavedEarthwork project;
         project.id=1;
@@ -370,6 +412,75 @@ void Process(const Command& command)
         Message("Earthwork site queued in the selected project.");
         break;
     }
+    case Action::SelectNamedProject:
+        if(FindNamedProject(command.projectId)) {
+            durableState.selectedProjectId=command.projectId;selectedProjectId=0;RefreshProjectStatus();
+            Message("Project selected. Its Sites are shown below.");
+        }
+        break;
+    case Action::CreateNamedProject: {
+        std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
+        while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
+        if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Project name of 1 to 48 characters.");break;}
+        bool duplicate=false;for(const auto& item:durableState.projects)if(_stricmp(item.name.c_str(),name.c_str())==0)duplicate=true;
+        if(duplicate) {Message("A Project with that name already exists.");break;}
+        if(durableState.projects.size()>=MaxSavedProjects) {Message("Project limit reached.");break;}
+        SavedProject project;project.id=1;for(const auto& item:durableState.projects)project.id=std::max(project.id,item.id+1);
+        project.name=std::move(name);durableState.projects.push_back(std::move(project));durableState.selectedProjectId=durableState.projects.back().id;
+        selectedProjectId=0;RefreshProjectStatus();Message("Project created.");break;
+    }
+    case Action::RenameNamedProject: {
+        auto* project=FindNamedProject(command.projectId);if(!project)break;
+        std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
+        while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
+        if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Project name of 1 to 48 characters.");break;}
+        bool duplicate=false;for(const auto& item:durableState.projects)if(item.id!=project->id&&_stricmp(item.name.c_str(),name.c_str())==0)duplicate=true;
+        if(duplicate) {Message("A Project with that name already exists.");break;}
+        project->name=std::move(name);RefreshProjectStatus();Message("Project renamed.");break;
+    }
+    case Action::DeleteNamedProject: {
+        const auto project=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& item){return item.id==command.projectId;});
+        if(project==durableState.projects.end())break;
+        const bool unfinished=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
+            return site.projectId==project->id&&(site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused);
+        });
+        if(unfinished) {Message("This Project still contains unfinished Sites and cannot be deleted.");break;}
+        const auto deletedId=project->id;
+        durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site){return site.projectId==deletedId;}),durableState.earthworks.end());
+        durableState.projects.erase(project);
+        if(durableState.selectedProjectId==deletedId)durableState.selectedProjectId=durableState.projects.empty()?0:durableState.projects.front().id;
+        selectedProjectId=0;RefreshProjectStatus();Message("Project and its finished Site records were deleted.");break;
+    }
+    case Action::RenameSite: {
+        auto* site=FindProject(command.projectId);if(!site||site->projectId!=durableState.selectedProjectId)break;
+        std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
+        while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
+        if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Site name of 1 to 48 characters.");break;}
+        bool duplicate=false;for(const auto& item:durableState.earthworks)if(item.projectId==site->projectId&&item.id!=site->id&&_stricmp(item.name.c_str(),name.c_str())==0)duplicate=true;
+        if(duplicate) {Message("A Site with that name already exists in this Project.");break;}
+        site->name=std::move(name);RefreshProjectStatus();Message("Site renamed.");break;
+    }
+    case Action::AddProjectFacility: {
+        auto* project=FindNamedProject(durableState.selectedProjectId);if(!project)break;
+        const auto id=static_cast<uint32_t>(command.projectId);BuildingReading facility{};
+        if(!id||!FindEarthworksFacility(id,&facility)) {Message("That Earthworks facility is no longer available.");break;}
+        const auto* owner=FacilityOwner(id);
+        if(owner&&owner->id!=project->id) {Message("That facility is already assigned to another Project.");break;}
+        if(std::find(project->facilityIds.begin(),project->facilityIds.end(),id)!=project->facilityIds.end())break;
+        if(project->facilityIds.size()>=MaxProjectFacilities) {Message("This Project has reached its facility limit.");break;}
+        project->facilityIds.push_back(id);RefreshProjectStatus();Message("Facility added to this Project.");break;
+    }
+    case Action::RemoveProjectFacility: {
+        auto* project=FindNamedProject(durableState.selectedProjectId);if(!project)break;
+        const bool active=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
+            return site.projectId==project->id&&(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting);
+        });
+        if(active) {Message("Pause active Sites before changing this Project's facilities.");break;}
+        const auto id=static_cast<uint32_t>(command.projectId);
+        const auto it=std::find(project->facilityIds.begin(),project->facilityIds.end(),id);
+        if(it!=project->facilityIds.end())project->facilityIds.erase(it);
+        RefreshProjectStatus();Message("Facility removed from this Project.");break;
+    }
     case Action::SelectProject:
         if(FindProject(command.projectId)){selectedProjectId=command.projectId;RefreshProjectStatus();}
         break;
@@ -382,21 +493,22 @@ void Process(const Command& command)
         const auto removedId=project->id;
         durableState.earthworks.erase(project);
         RefreshProjectStatus();
-        host->log("earthworks  completed project removed id=%llu",static_cast<unsigned long long>(removedId));
-        Message("Completed project removed from the list.");
+        host->log("earthworks  completed site removed id=%llu",static_cast<unsigned long long>(removedId));
+        Message("Completed Site removed from the list.");
         break;
     }
     case Action::RemoveCompletedProjects: {
         const auto selected=FindProject(selectedProjectId);
         if(selected&&selected->status==ProjectStatus::Completed)selectedProjectId=0;
+        const auto projectId=durableState.selectedProjectId;
         const auto previousSize=durableState.earthworks.size();
-        durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[](const SavedEarthwork& item) {
-            return item.status==ProjectStatus::Completed;
+        durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
+            return item.projectId==projectId&&item.status==ProjectStatus::Completed;
         }),durableState.earthworks.end());
         const auto removed=previousSize-durableState.earthworks.size();
         RefreshProjectStatus();
         host->log("earthworks  completed projects cleared count=%zu",removed);
-        char message[80];sprintf_s(message,"Removed %zu completed project(s) from the list.",removed);Message(message);
+        char message[80];sprintf_s(message,"Removed %zu completed Site(s) from the list.",removed);Message(message);
         break;
     }
     case Action::MoveProjectUp:
@@ -405,14 +517,14 @@ void Process(const Command& command)
         if(it==durableState.earthworks.end()||!ProjectReservesFootprint(it->status))break;
         if(command.action==Action::MoveProjectUp) {
             auto prior=it;bool found=false;
-            while(prior!=durableState.earthworks.begin()){--prior;if(ProjectReservesFootprint(prior->status)){found=true;break;}}
+            while(prior!=durableState.earthworks.begin()){--prior;if(prior->projectId==it->projectId&&ProjectReservesFootprint(prior->status)){found=true;break;}}
             if(found)std::iter_swap(it,prior);
         } else {
             auto next=it;bool found=false;
-            while(++next!=durableState.earthworks.end())if(ProjectReservesFootprint(next->status)){found=true;break;}
+            while(++next!=durableState.earthworks.end())if(next->projectId==it->projectId&&ProjectReservesFootprint(next->status)){found=true;break;}
             if(found)std::iter_swap(it,next);
         }
-        RefreshProjectStatus();Message("Project priority order updated.");break;
+        RefreshProjectStatus();Message("Site priority order updated.");break;
     }
     case Action::AssignProject: {
         if(!current.projectQueued) { Message("Select a project before assigning a facility."); break; }
@@ -440,12 +552,11 @@ void Process(const Command& command)
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
-            BuildingReading facility{};WorkforceView workforce{};
+            BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
                 Message("Native terrain writer is unavailable for this game build. Project remains queued.");break;
             }
-            const auto facilityId=AssignedFacility(project);
-            if(!facilityId || !FindEarthworksFacility(facilityId,&facility)) {
+            if(!FindAssignedFacility(project,&facilityId,&facility)) {
                 Message("Assigned Earthworks facility is missing or unreadable.");break;
             }
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
@@ -470,30 +581,28 @@ void Process(const Command& command)
             }
             project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
             lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
-            RefreshProjectStatus();Message("Project started. It works when its priority receives facility capacity.");break;
+            RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
         }
         break;
     case Action::PauseProject:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && (project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting)) {
-            project.status=ProjectStatus::Paused;RefreshProjectStatus();Message("Project paused. Current terrain and progress are kept.");break;
+            project.status=ProjectStatus::Paused;RefreshProjectStatus();Message("Site paused. Current terrain and progress are kept.");break;
         }
         break;
     case Action::ResumeProject:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
-            BuildingReading facility{};
-            const auto facilityId=AssignedFacility(project);
-            if(!facilityId||!FindEarthworksFacility(facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility first.");break;}
+            BuildingReading facility{};uint32_t facilityId=0;
+            if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility first.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
             project.status=ProjectStatus::Running;lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
-            RefreshProjectStatus();Message("Project resumed.");break;
+            RefreshProjectStatus();Message("Site resumed.");break;
         }
         break;
     case Action::ReviewResumeProject:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
-            BuildingReading facility{};
-            const auto facilityId=AssignedFacility(project);
-            if(!facilityId||!FindEarthworksFacility(facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility before reviewing it.");break;}
+            BuildingReading facility{};uint32_t facilityId=0;
+            if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility before reviewing it.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
             if(!SamplePlan(&project.plan)) {Message("Could not read the project footprint. It remains paused for review.");break;}
@@ -506,7 +615,7 @@ void Process(const Command& command)
         for(auto& project:durableState.earthworks)if(project.id==current.projectId &&
             (project.status==ProjectStatus::Queued || project.status==ProjectStatus::Running || project.status==ProjectStatus::Waiting || project.status==ProjectStatus::Paused)) {
             project.status=ProjectStatus::Cancelled;project.needsReview=false;RefreshProjectStatus();
-            Message("Project cancelled. Terrain already changed is kept.");break;
+            Message("Site cancelled. Terrain already changed is kept.");break;
         }
         break;
     case Action::CaptureTest: ProcessProbe(ProbeAction::Capture); break;
@@ -516,8 +625,9 @@ void Process(const Command& command)
     case Action::InspectBuilding:
         current.mode=PickMode::InspectBuilding;Message("Click near your Earthworks facility on the map. Select it in the Projects tab.");break;
     case Action::ChooseBuilding:
-        if(std::isfinite(command.value) && command.value>=0 && command.value<WorkforceCandidates)
-            SelectWorkforceBuilding(static_cast<unsigned>(command.value));
+        if(std::isfinite(command.value) && command.value>=0 && command.value<WorkforceCandidates) {
+            SelectWorkforceBuilding(static_cast<unsigned>(command.value));RefreshProjectStatus();
+        }
         break;
     case Action::ClearInspector: ResetWorkforce();current.mode=PickMode::None;break;
     case Action::LogInspector: LogWorkforce();break;
@@ -607,7 +717,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
             const auto point=grid.At(x,z);float value=0;
             if(!ReadHeight(point.x,point.z,&value) || std::abs(project->plan.target-value)>precision*1.1) {complete=false;break;}
         }
-        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;RefreshProjectStatus();Message("Earthworks project completed.");}
+        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;RefreshProjectStatus();Message("Earthworks Site completed.");}
         else if(edited)current.projectProgress=project->progress;
     } else if(edited)current.projectProgress=project->progress;
 }
@@ -620,61 +730,73 @@ void TickProjectRunner()
     if(!std::isfinite(elapsed)||elapsed<=0)return;
     const double simulationElapsed=std::min(elapsed,1.0);
     struct Allocation { SavedEarthwork* project=nullptr;double rate=0;unsigned workers=0,machines=0; };
-    std::vector<unsigned> processedFacilities;
+    std::vector<uint64_t> processedProjects;
     std::vector<Allocation> allocations;
     bool schedulerStateChanged=false;
     allocations.reserve(durableState.earthworks.size());
     for(auto& first:durableState.earthworks) {
         if(first.status!=ProjectStatus::Running&&first.status!=ProjectStatus::Waiting)continue;
-        const auto firstFacility=AssignedFacility(first);
-        if(!firstFacility) {
-            first.status=ProjectStatus::Paused;first.needsReview=false;schedulerStateChanged=true;
+        if(std::find(processedProjects.begin(),processedProjects.end(),first.projectId)!=processedProjects.end())continue;
+        processedProjects.push_back(first.projectId);
+        const auto* namedProject=FindNamedProject(first.projectId);
+        std::vector<SavedEarthwork*> jobs;
+        for(auto& site:durableState.earthworks)
+            if(site.projectId==first.projectId&&(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting))jobs.push_back(&site);
+        if(!namedProject||namedProject->facilityIds.empty()) {
+            for(auto* job:jobs) {
+                job->status=ProjectStatus::Paused;job->needsReview=false;schedulerStateChanged=true;
+            }
             Message("Started project has no facility assignment. Assign a facility before resuming.");continue;
         }
-        if(std::find(processedFacilities.begin(),processedFacilities.end(),firstFacility)!=processedFacilities.end())continue;
-        const unsigned facilityId=firstFacility;processedFacilities.push_back(facilityId);
-        std::vector<SavedEarthwork*> jobs;
-        for(auto& project:durableState.earthworks)
-            if(AssignedFacility(project)==facilityId&&(project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting))jobs.push_back(&project);
-        WorkforceView workforce{};
-        if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
-            ||!workforce.occupantsValid||!workforce.parkedValid||!workforce.vehiclesValid) {
+        unsigned workersAvailable=0,machinesAvailable=0;bool facilityReadFailed=false;
+        for(const auto facilityId:namedProject->facilityIds) {
+            WorkforceView workforce{};
+            if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
+                ||!workforce.occupantsValid||!workforce.parkedValid||!workforce.vehiclesValid) {
+                facilityReadFailed=true;break;
+            }
+            workersAvailable=std::min(65536u,workersAvailable+std::min(workforce.occupants,65536u));
+            machinesAvailable=std::min(static_cast<unsigned>(MaxSavedEarthworks),
+                machinesAvailable+std::min(workforce.eligibleMachineCandidates,static_cast<unsigned>(MaxSavedEarthworks)));
+        }
+        if(facilityReadFailed) {
             for(auto* job:jobs){job->status=ProjectStatus::Paused;job->needsReview=true;schedulerStateChanged=true;}
-            Message("Facility workforce or vehicle reading failed. Its projects are paused for review.");continue;
+            Message("A Project facility workforce or vehicle reading failed. Its Sites are paused for review.");continue;
         }
-        int workersLeft=static_cast<int>(std::min(workforce.occupants,65536u));
-        unsigned machinesLeft=std::min(workforce.eligibleMachineCandidates,static_cast<unsigned>(MaxSavedEarthworks));
-        std::vector<Allocation> facilityAllocations;
-        facilityAllocations.reserve(jobs.size());
-        for(auto* job:jobs)facilityAllocations.push_back({job,0,0,0});
+        if(jobs.empty())continue;
+        int workersLeft=static_cast<int>(workersAvailable);
+        unsigned machinesLeft=machinesAvailable;
+        std::vector<Allocation> projectAllocations;
+        projectAllocations.reserve(jobs.size());
+        for(auto* job:jobs)projectAllocations.push_back({job,0,0,0});
         if(machinesLeft&&workersLeft>0) {
-            // Give each started project one machine in priority order first,
-            // then allocate additional machines to higher-priority projects.
-            for(auto& allocation:facilityAllocations)if(machinesLeft&&workersLeft>0) {
+            // Pool capacity from every facility assigned to this Project. Give
+            // one machine to each eligible Site in priority order, then give
+            // remaining capacity to earlier Sites, matching the Stage 9 rules.
+            for(auto& allocation:projectAllocations)if(machinesLeft&&workersLeft>0) {
                 const int staff=std::min(workersLeft,10);workersLeft-=staff;--machinesLeft;
                 allocation.rate+=MachineRate(staff,ReferenceGroundworksRating);
                 allocation.workers+=static_cast<unsigned>(staff);++allocation.machines;
             }
-            for(auto& allocation:facilityAllocations)while(machinesLeft&&workersLeft>0) {
+            for(auto& allocation:projectAllocations)while(machinesLeft&&workersLeft>0) {
                 const int staff=std::min(workersLeft,10);workersLeft-=staff;--machinesLeft;
                 allocation.rate+=MachineRate(staff,ReferenceGroundworksRating);
                 allocation.workers+=static_cast<unsigned>(staff);++allocation.machines;
             }
-        } else if(!machinesLeft&&workersLeft>0&&!facilityAllocations.empty()) {
-            // Worker-only effort shares this pool with the highest-priority
-            // started project; unused workers never get counted twice.
-            facilityAllocations.front().rate=WorkerOnlyRate(workersLeft);
-            facilityAllocations.front().workers=static_cast<unsigned>(workersLeft);
+        } else if(!machinesLeft&&workersLeft>0) {
+            // Worker-only effort shares the Project's pool with its highest-priority active Site.
+            projectAllocations.front().rate=WorkerOnlyRate(workersLeft);
+            projectAllocations.front().workers=static_cast<unsigned>(workersLeft);
         }
-        for(auto& allocation:facilityAllocations) {
+        for(auto& allocation:projectAllocations) {
             auto* job=allocation.project;
             job->allocatedWorkers=allocation.workers;job->allocatedMachines=allocation.machines;
             const auto next=allocation.rate>0?ProjectStatus::Running:ProjectStatus::Waiting;
             if(job->status!=next) {
-                job->status=next;
-                schedulerStateChanged=true;
-                host->log("earthworks  project=%llu scheduler state=%s facility=%u rate=%.3f",
-                    static_cast<unsigned long long>(job->id),next==ProjectStatus::Running?"running":"waiting",facilityId,allocation.rate);
+                job->status=next;schedulerStateChanged=true;
+                host->log("earthworks  site=%llu scheduler state=%s project=%llu facilities=%zu rate=%.3f",
+                    static_cast<unsigned long long>(job->id),next==ProjectStatus::Running?"running":"waiting",
+                    static_cast<unsigned long long>(job->projectId),namedProject->facilityIds.size(),allocation.rate);
             }
             allocations.push_back(allocation);
         }
