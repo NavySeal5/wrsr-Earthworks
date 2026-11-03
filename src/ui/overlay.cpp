@@ -141,7 +141,9 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (popupRectValid && Hit(popupRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
-    if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
+    if(message==WM_KEYDOWN && wParam==VK_ESCAPE && keyboardCapture) {
+        escapeMessage=true;
+    } else if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
             escapeKeyDown=true;
             if(panelOpen) {
@@ -154,7 +156,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         escapeMessage=escapeOwned;
     } else if(message==WM_KEYUP && wParam==VK_ESCAPE) {
         escapeKeyDown=false;
-        escapeMessage=escapeOwned;
+        escapeMessage=escapeOwned||keyboardCapture;
         if(escapeOwned) escapeCapture=false;
         escapeOwned=false;
     }
@@ -177,8 +179,10 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (message == WM_LBUTTONUP) leftRelease = false;
     const bool otherMouse = message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK
         || message == WM_MBUTTONDOWN || message == WM_MBUTTONUP || message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL;
-    const bool keyMessage = message == WM_KEYDOWN || message == WM_CHAR || message == WM_SYSKEYDOWN;
-    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyMessage && keyboardCapture) || escapeMessage;
+    const bool keyboardMessage=message==WM_KEYDOWN||message==WM_KEYUP||message==WM_CHAR||message==WM_SYSKEYDOWN
+        ||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_DEADCHAR||message==WM_SYSDEADCHAR
+        ||message==WM_UNICHAR||message==WM_IME_STARTCOMPOSITION||message==WM_IME_COMPOSITION||message==WM_IME_ENDCOMPOSITION;
+    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyboardMessage && keyboardCapture) || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
@@ -1165,7 +1169,7 @@ void Render(IDXGISwapChain* swap)
     mapPickCapture=areaPickCapture||(!pickCancelledByEscape&&sitePick);
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
-    keyboardCapture=focused && io.WantTextInput && (targetHeightEditing||nameTextEditing) && panelOpen;
+    keyboardCapture=focused && (targetHeightEditing||nameTextEditing) && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
     // Leave cursor shape and visibility entirely to the game window procedure.
     ImGui::GetIO().MouseDrawCursor=false;
