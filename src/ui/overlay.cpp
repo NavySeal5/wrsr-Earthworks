@@ -120,6 +120,11 @@ bool Hit(const RECT& rect, LPARAM point)
     return PtInRect(&rect,p) != FALSE;
 }
 bool CursorOnEditingSite(const Snapshot& s);
+bool KeyboardShortcutPassesThrough(UINT message,WPARAM key)
+{
+    if(message==WM_SYSKEYDOWN||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_SYSDEADCHAR)return true;
+    return key==VK_ESCAPE||(key>=VK_F1&&key<=VK_F24)||key==VK_PAUSE||key==VK_SNAPSHOT;
+}
 bool WorldHit(LPARAM point)
 {
     RECT client{}; GetClientRect(gameWindow,&client);
@@ -141,9 +146,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (popupRectValid && Hit(popupRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
-    if(message==WM_KEYDOWN && wParam==VK_ESCAPE && keyboardCapture) {
-        escapeMessage=true;
-    } else if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
+    if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
             escapeKeyDown=true;
             if(panelOpen) {
@@ -182,7 +185,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool keyboardMessage=message==WM_KEYDOWN||message==WM_KEYUP||message==WM_CHAR||message==WM_SYSKEYDOWN
         ||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_DEADCHAR||message==WM_SYSDEADCHAR
         ||message==WM_UNICHAR||message==WM_IME_STARTCOMPOSITION||message==WM_IME_COMPOSITION||message==WM_IME_ENDCOMPOSITION;
-    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyboardMessage && keyboardCapture) || escapeMessage;
+    const bool suppressTypedShortcut=keyboardMessage&&keyboardCapture&&!KeyboardShortcutPassesThrough(message,wParam);
+    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || suppressTypedShortcut || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
