@@ -439,6 +439,7 @@ void DrawInterface(const Snapshot& s)
             if(!showFacilityManager) {
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
+                bool openSiteRenamePopup=false;
                 ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
                 if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.5f);
@@ -488,13 +489,14 @@ void DrawInterface(const Snapshot& s)
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();
                         if(siteRenameIcon) {
-                            if(drawIconButton("##RenameSite",siteRenameIcon)) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
-                        } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
+                            if(drawIconButton("##RenameSite",siteRenameIcon)) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
+                        } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         ImGui::PopID();
                     }
                     ImGui::EndTable();
                 }
                 ImGui::EndChild();
+                if(openSiteRenamePopup)ImGui::OpenPopup("Site name");
                 ImGui::BeginDisabled(!s.selectedNamedProjectId);
                 const char* draftAction=(s.creatingSite||s.plan.first)?"Continue draft":"New Site";
                 if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);

@@ -1,11 +1,11 @@
 # Stage 11 — first complete UI implementation (formerly Stage 10b)
 
-Build: **0.13.8-stage11-dialog-cursor**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
+Build: **0.13.9-stage11-site-rename-fix**. Use a fresh test save; previous WIP companion data is not migrated. The agent compiled and staged this build but did not launch the game or perform gameplay checks.
 
 ## Project and Site workflow
 
 1. Start the project-local RML profile with `launch-prototype.cmd`, load a fresh test world and open Earthworks. Confirm there is no Plan tab.
-2. Create two named Projects, switch between them, and verify the Sites list filters to the selected Project. Rename each Project and a Site.
+2. Create two named Projects, switch between them, and verify the Sites list filters to the selected Project. Rename each Project and use a Site row's R/name icon to open the Site rename dialog, then save the new name.
 3. Confirm the New, Rename, Delete, Facilities and Remove completed controls appear on their own row below the Project selector, and that the panel is narrower than the previous build.
 4. Open the New Project dialog and confirm the game cursor stays drawn above the dialog, including when it extends outside the main panel.
 5. Select a Project and click **New Site** below the list. Click two opposite terrain corners. The selection should finish without a crash or terrain edit and open a separate Site editor beside the footprint.
