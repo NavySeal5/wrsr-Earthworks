@@ -387,7 +387,6 @@ void DrawInterface(const Snapshot& s)
             ImGui::SetCursorPosX(ImGui::GetWindowWidth()-style.WindowPadding.x-clearButtonWidth);
             ImGui::BeginDisabled(completedCount==0);
             if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
-            ImGui::SetItemTooltip("Remove all completed projects from the list");
             ImGui::EndDisabled();
             if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
             ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
@@ -418,10 +417,8 @@ void DrawInterface(const Snapshot& s)
                     const float moveButtonWidth=(priorityWidth-ImGui::GetStyle().ItemSpacing.x)*0.5f;
                     ImGui::BeginDisabled(!movable);
                     if(ImGui::Button("↑",{moveButtonWidth,26}))SendProject(Action::MoveProjectUp,project.id);
-                    ImGui::SetItemTooltip("Move project up");
                     ImGui::SameLine(0,ImGui::GetStyle().ItemSpacing.x);
                     if(ImGui::Button("↓",{moveButtonWidth,26}))SendProject(Action::MoveProjectDown,project.id);
-                    ImGui::SetItemTooltip("Move project down");
                     ImGui::EndDisabled();
 
                     ImGui::TableNextColumn();
@@ -448,7 +445,6 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();
                     ImGui::BeginDisabled(!s.cameraFocusAvailable);
                     if(ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26}))SendProject(Action::FocusProject,project.id);
-                    ImGui::SetItemTooltip("Move the camera smoothly to this project's centre while keeping the current view angle and distance");
                     ImGui::EndDisabled();
                     ImGui::PopID();
                 }
