@@ -828,6 +828,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         if(cancelRename)renameEditing=false;
     } else {
+        ImGui::SetWindowFontScale(1.35f);
         ImGui::TextUnformatted(s.selectedSiteName);
         ImGui::SameLine();
         bool renamePressed=false;
@@ -849,6 +850,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             strncpy_s(renameBuffer,s.selectedSiteName,_TRUNCATE);
             renameEditing=true;
         }
+        ImGui::SetWindowFontScale(1.0f);
     }
     ImGui::Separator();
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),static_cast<double>(plan.Width())*plan.Depth());
