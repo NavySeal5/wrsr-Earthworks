@@ -558,7 +558,6 @@ void Process(const Command& command)
         }
         break;
     case Action::CreateNamedProject: {
-        if(creatingSite) {Message("Save or discard the current Site draft before creating another Project.");break;}
         std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
         while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
         if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Project name of 1 to 48 characters.");break;}
@@ -567,7 +566,10 @@ void Process(const Command& command)
         if(durableState.projects.size()>=MaxSavedProjects) {Message("Project limit reached.");break;}
         SavedProject project;project.id=1;for(const auto& item:durableState.projects)project.id=std::max(project.id,item.id+1);
         project.name=std::move(name);durableState.projects.push_back(std::move(project));durableState.selectedProjectId=durableState.projects.back().id;
-        selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();Message("Project created.");break;
+        if(!creatingSite) {selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;}
+        RefreshProjectStatus();
+        Message(creatingSite?"Project created and selected; the current Site draft will be saved in it.":"Project created.");
+        break;
     }
     case Action::RenameNamedProject: {
         auto* project=FindNamedProject(command.projectId);if(!project)break;
