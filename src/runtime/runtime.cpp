@@ -1070,6 +1070,7 @@ KeyFn keyDown,keyPress;
 ButtonFn buttonDown,buttonPress;
 AxisFn axis;
 VecFn relative;
+std::atomic<bool> loggedCapturedKeyProbe{false},loggedCapturedBindingProbe{false};
 #define BOOL_HOOK(name,original,block) bool name(void* self) { const bool value=original(self); return (block) ? false:value; }
 BOOL_HOOK(HLeftPress,leftPress,LeftTaken())
 BOOL_HOOK(HLeftAOff,leftAOff,LeftTaken())
@@ -1079,10 +1080,10 @@ BOOL_HOOK(HRightAOff,rightAOff,mouseCapture.load())
 BOOL_HOOK(HRightDown,rightDown,mouseCapture.load())
 BOOL_HOOK(HMiddleDown,middleDown,mouseCapture.load())
 #undef BOOL_HOOK
-bool HKeyDown(void* self,int key) { const bool value=keyDown(self,key); return keyboardCapture || escapeCapture ? false:value; }
-bool HKeyPress(void* self,int key) { const bool value=keyPress(self,key); return keyboardCapture || escapeCapture ? false:value; }
-bool HButtonDown(void* self,char* binding) { const bool value=buttonDown(self,binding); return keyboardCapture || escapeCapture ? false:value; }
-bool HButtonPress(void* self,char* binding) { const bool value=buttonPress(self,binding); return keyboardCapture || escapeCapture ? false:value; }
+bool HKeyDown(void* self,int key) { const bool value=keyDown(self,key); if(keyboardCapture&&value&&!loggedCapturedKeyProbe.exchange(true))host->log("earthworks  captured key-down probe: native key=%d",key); return keyboardCapture || escapeCapture ? false:value; }
+bool HKeyPress(void* self,int key) { const bool value=keyPress(self,key); if(keyboardCapture&&value&&!loggedCapturedKeyProbe.exchange(true))host->log("earthworks  captured key-press probe: native key=%d",key); return keyboardCapture || escapeCapture ? false:value; }
+bool HButtonDown(void* self,char* binding) { const bool value=buttonDown(self,binding); if(keyboardCapture&&value&&!loggedCapturedBindingProbe.exchange(true))host->log("earthworks  captured binding-down probe: %s",binding?binding:"(null)"); return keyboardCapture || escapeCapture ? false:value; }
+bool HButtonPress(void* self,char* binding) { const bool value=buttonPress(self,binding); if(keyboardCapture&&value&&!loggedCapturedBindingProbe.exchange(true))host->log("earthworks  captured binding-press probe: %s",binding?binding:"(null)"); return keyboardCapture || escapeCapture ? false:value; }
 float HAxis(void* self,char* binding,int* out,float a,float b) { const float value=axis(self,binding,out,a,b); return keyboardCapture || escapeCapture ? 0:value; }
 float* HRelative(void* self,float* out) { auto* value=relative(self,out); if (mouseCapture) out[0]=out[1]=out[2]=0; return value; }
 struct Import { const char* symbol; void* detour; void** original; };
