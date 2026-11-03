@@ -384,7 +384,6 @@ void DrawInterface(const Snapshot& s)
     ImGui::TextWrapped("Manage Sites in the selected Project. Select a Site on the map to edit it.");
     ImGui::Separator();
     ImGui::TextWrapped("%s",s.message);
-    static bool showFacilityManager=false;
     static char nameBuffer[MaxSavedNameBytes+1]{};
     static Action renameAction=Action::RenameNamedProject;
     static uint64_t renameTarget=0;
@@ -412,16 +411,11 @@ void DrawInterface(const Snapshot& s)
             ImGui::SameLine();
             if(ImGui::Button("Delete")) {deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");}
             ImGui::EndDisabled();
-            if(!showFacilityManager) {
-                ImGui::SameLine();
-                char facilitiesLabel[64];sprintf_s(facilitiesLabel,"Facilities (%u)",s.assignedFacilityCount);
-                if(ImGui::Button(facilitiesLabel))showFacilityManager=true;
-                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove finished (%zu)",finishedCount);
-                const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
-                ImGui::SameLine();ImGui::BeginDisabled(finishedCount==0);
-                if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
-                ImGui::EndDisabled();
-            }
+            char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove finished (%zu)",finishedCount);
+            const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
+            ImGui::SameLine();ImGui::BeginDisabled(finishedCount==0);
+            if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
+            ImGui::EndDisabled();
 
             if(ImGui::BeginPopupModal("Project name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
@@ -439,7 +433,7 @@ void DrawInterface(const Snapshot& s)
                 ImGui::EndPopup();
             }
 
-            if(!showFacilityManager) {
+            {
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 bool openSiteRenamePopup=false;
@@ -517,24 +511,17 @@ void DrawInterface(const Snapshot& s)
                 const char* draftAction=(s.creatingSite||s.plan.first)?"Continue draft":"New Site";
                 if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
                 ImGui::EndDisabled();
-                if(s.mode==PickMode::Corners)ImGui::TextDisabled("Click two opposite corners on the ground to define the new Site.");
-                if(s.projectQueued&&!s.creatingSite) {
-                    ImGui::SeparatorText("Selected Site");ImGui::Text("%s  |  %s",s.selectedSiteName,ProjectStatusName(s.projectStatus));
-                    if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
-                    if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
-                }
-            } else {
-                ImGui::SeparatorText("Facilities | Project");ImGui::SameLine();ImGui::Text("%s",s.projectContainerName);
-                if(ImGui::Button("Back to Sites"))showFacilityManager=false;
+                ImGui::SeparatorText("Facilities");
                 ImGui::TextWrapped("Assigned facilities contribute capacity to every Site in this Project. A facility can belong to only one Project.");
-                ImGui::SeparatorText("Assigned to this Project");
                 if(!s.assignedFacilityCount)ImGui::TextDisabled("No facilities assigned.");
                 for(unsigned i=0;i<s.assignedFacilityCount;++i) {
                     ImGui::PushID(static_cast<int>(s.assignedFacilityIds[i]));ImGui::Text("Earthworks Development Facility — #%u",s.assignedFacilityIds[i]);ImGui::SameLine();
                     if(ImGui::Button("Remove"))SendProject(Action::RemoveProjectFacility,s.assignedFacilityIds[i]);ImGui::PopID();
                 }
-                ImGui::SeparatorText("Find facilities");
+                ImGui::SeparatorText("Available facilities");
+                ImGui::BeginDisabled(!s.selectedNamedProjectId);
                 if(ImGui::Button("Choose facility on map"))Send(Action::InspectBuilding);
+                ImGui::EndDisabled();
                 if(s.mode==PickMode::InspectBuilding)ImGui::TextDisabled("Click near a facility on the map; keep this panel open.");
                 for(unsigned i=0;i<s.facilityCandidateCount;++i) {
                     const auto& candidate=s.facilityCandidates[i];ImGui::PushID(static_cast<int>(candidate.id));
