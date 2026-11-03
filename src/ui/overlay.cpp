@@ -333,14 +333,14 @@ void DrawInterface(const Snapshot& s)
     }
     RememberRect(&buttonRect); ImGui::End();
     if (!panelOpen) { panelRectValid=false;editorRectValid=false; return; }
-    const float panelWidth=std::min(920.0f,std::max(480.0f,display.x-20.0f));
+    const float panelWidth=std::min(760.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
     if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
     else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
     else ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints({480,44},{std::min(1100.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
+    ImGui::SetNextWindowSizeConstraints({std::min(680.0f,std::max(480.0f,display.x-20.0f)),44},{std::min(900.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
