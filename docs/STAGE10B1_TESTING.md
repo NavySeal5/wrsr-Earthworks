@@ -1,4 +1,4 @@
-# Stage 10b.1 — named Project and Earthwork storage
+# Stage 10b.1 — named Project and Site storage
 
 Build: **0.12.0-stage10b1-named-storage**. The agent compiled and staged the plugin but did not launch the game or test a save. Use a new test save: the previous WIP companion schema is intentionally not migrated.
 
@@ -12,7 +12,7 @@ Build: **0.12.0-stage10b1-named-storage**. The agent compiled and staged the plu
 ## Checkpoint
 
 1. Open Earthworks and switch to **Projects**. Confirm the selected container is **Project 1**.
-2. Create and confirm two non-overlapping Earthworks. Confirm the list labels them **Site-1** and **Site-2** and shows their queued status.
+2. Create and confirm two non-overlapping Sites. Confirm the list labels them **Site-1** and **Site-2** and shows their queued status.
 3. Assign the Earthworks facility to one queued site. Confirm the assignment is shown for Earthworks in that same container. Start a disposable site if you want to include a running status and progress in the save check.
 4. Save normally, exit to the menu, and reload the same save. Confirm the site names, plans, statuses/progress and facility assignment are restored, and the terrain is unchanged by planning or loading.
 5. Confirm the project container still reads **Project 1**. Once this checkpoint is accepted, add another site and confirm the next default is **Site-3**.
@@ -21,7 +21,7 @@ Build: **0.12.0-stage10b1-named-storage**. The agent compiled and staged the plu
 ## Expected results
 
 - A fresh world has one named container, **Project 1**.
-- Confirmed sites receive sequential names (`Site-1`, `Site-2`, …); name editing arrives in checkpoint 10b.2.
+- Confirmed Sites receive sequential names (`Site-1`, `Site-2`, …); name editing arrives in checkpoint 10b.2.
 - The selected named Project ID, site records, project-level facility links and work state are stored in schema 5.
 - Save/reload preserves plans and work state without changing terrain.
 - Prior schema data is not migrated. Use a fresh save for this checkpoint.
