@@ -143,6 +143,10 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     auto* previous = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
+    // The render pass normally updates keyboardCapture after drawing the
+    // widgets. Set it here too, before the game can poll C3D_INPUT for this
+    // key, to cover the first key typed immediately after focusing a field.
+    if(panelOpen && ImGui::GetIO().WantTextInput) keyboardCapture=true;
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (popupRectValid && Hit(popupRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
