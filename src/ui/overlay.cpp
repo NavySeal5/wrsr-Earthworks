@@ -769,7 +769,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*(2.0f/3.0f));
         if(ImGui::InputText("Site name",draftNameBuffer,sizeof(draftNameBuffer)))
             SendProjectText(Action::SetDraftSiteName,0,draftNameBuffer);
         nameTextEditing|=ImGui::IsItemActive();
