@@ -49,6 +49,7 @@ bool editorRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
 float expandedPanelHeight = 640.0f;
+std::atomic<bool> editorWasDragged{false};
 bool escapeKeyDown = false;
 bool escapeOwned = false;
 bool pickCancelledByEscape = false;
@@ -102,6 +103,7 @@ bool Hit(const RECT& rect, LPARAM point)
     const POINT p = {GET_X_LPARAM(point),GET_Y_LPARAM(point)};
     return PtInRect(&rect,p) != FALSE;
 }
+bool CursorOnEditingSite(const Snapshot& s);
 bool WorldHit(LPARAM point)
 {
     RECT client{}; GetClientRect(gameWindow,&client);
@@ -142,6 +144,14 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     }
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
+    if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
+        const auto snapshot=ReadSnapshot();
+        if(snapshot.siteEditorOpen&&!snapshot.creatingSite&&snapshot.mode==PickMode::None) {
+            const bool insidePanel=(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam));
+            const bool insideEditor=Hit(editorRect,lParam);
+            if(!insidePanel&&!insideEditor&&!CursorOnEditingSite(snapshot))Send(Action::CloseSiteEditor);
+        }
+    }
     const bool mapPick = mapPickCapture && !over && WorldHit(lParam);
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     if (message == WM_LBUTTONDOWN && leftOwned) {
@@ -304,6 +314,17 @@ bool CursorOnVisibleSite(const Snapshot& s)
         const auto& site=s.projects[i];
         if(s.cursor.x>=std::min(site.a.x,site.b.x)&&s.cursor.x<=std::max(site.a.x,site.b.x)
             &&s.cursor.z>=std::min(site.a.z,site.b.z)&&s.cursor.z<=std::max(site.a.z,site.b.z))return true;
+    }
+    return false;
+}
+bool CursorOnEditingSite(const Snapshot& s)
+{
+    if(!s.cursorValid||!s.editingSiteId)return false;
+    for(size_t i=0;i<s.projectCount;++i) {
+        const auto& site=s.projects[i];
+        if(site.id==s.editingSiteId)
+            return s.cursor.x>=std::min(site.a.x,site.b.x)&&s.cursor.x<=std::max(site.a.x,site.b.x)
+                &&s.cursor.z>=std::min(site.a.z,site.b.z)&&s.cursor.z<=std::max(site.a.z,site.b.z);
     }
     return false;
 }
@@ -637,7 +658,11 @@ void DrawInterface(const Snapshot& s)
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display)
 {
-    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {editorRectValid=false;return;}
+    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {
+        editorRectValid=false;
+        if(!s.siteEditorOpen)editorWasDragged=false;
+        return;
+    }
     static char renameBuffer[MaxSavedNameBytes+1]{};
     static uint64_t renameTarget=0;
     const Plan& plan=s.editorPlan;
@@ -677,6 +702,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::InvisibleButton("##DragSiteEditorHeader",{size.x-44.0f,44.0f});
     if(ImGui::IsItemActive()&&ImGui::GetIO().MouseDown[0]) {
         const ImVec2 delta=ImGui::GetIO().MouseDelta;
+        if(delta.x!=0.0f||delta.y!=0.0f)editorWasDragged=true;
         editorPosition.x+=delta.x;editorPosition.y+=delta.y;
         ImGui::SetWindowPos(editorPosition);
     }
