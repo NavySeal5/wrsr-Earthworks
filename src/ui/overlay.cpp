@@ -37,6 +37,7 @@ ID3D11ShaderResourceView* siteCancelIcon = nullptr;
 ID3D11ShaderResourceView* siteRenameIcon = nullptr;
 ID3D11ShaderResourceView* projectNewIcon = nullptr;
 ID3D11ShaderResourceView* projectDeleteIcon = nullptr;
+ID3D11ShaderResourceView* targetHeightInfoIcon = nullptr;
 HCURSOR cursorToRestore = nullptr;
 bool systemCursorHiddenForPanel = false;
 IDXGISwapChain* gameChain = nullptr;
@@ -112,9 +113,8 @@ void NativeTooltip(const char* text)
     ImGui::BeginTooltip();ImGui::TextUnformatted(text);ImGui::EndTooltip();
     ImGui::PopStyleColor(3);ImGui::PopStyleVar(3);
 }
-bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback,const char* tooltip)
+bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback,const char* tooltip,ImVec2 size={30,30})
 {
-    constexpr ImVec2 size{30,30};
     const auto pos=ImGui::GetCursorScreenPos();
     const bool hovered=ImGui::IsMouseHoveringRect(pos,{pos.x+size.x,pos.y+size.y},true);
     bool pressed=false;
@@ -865,17 +865,22 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         editHeight=plan.target;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
     }
     const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::BeginDisabled(!editable);
-    ImGui::SetNextItemWidth(130);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
-    const bool changed=ImGui::InputFloat("Target height (m)",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
-    targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
+    ImGui::TextUnformatted("Target height (m)");
     ImGui::SameLine();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
     const auto& input=ImGui::GetIO();
     const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
-    if(ImGui::Button("-##DecreaseTargetHeight",{28.0f,0.0f}))editHeight-=heightStep;
+    if(ImGui::Button("-##DecreaseTargetHeight",{24.0f,0.0f}))editHeight-=heightStep;
     ImGui::SameLine();
-    if(ImGui::Button("+##IncreaseTargetHeight",{28.0f,0.0f}))editHeight+=heightStep;
+    ImGui::SetNextItemWidth(80.0f);
+    const bool changed=ImGui::InputFloat("##TargetHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
+    targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
+    ImGui::SameLine();
+    if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f}))editHeight+=heightStep;
+    ImGui::SameLine();
+    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Ctrl for 10 m, or Ctrl+Shift for 100 m.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
         if(s.creatingSite)Send(Action::Target,editHeight);
@@ -883,6 +888,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::PopStyleVar();
     ImGui::EndDisabled();
+    ImGui::PopStyleVar();
     ImGui::BeginDisabled(!editable);
     if(ImGui::Button("Sample target from map",{ImGui::GetContentRegionAvail().x,28}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
@@ -1051,6 +1057,7 @@ void LoadSiteRowIcons()
     LoadGameUiIcon(L"button_rename.png",&siteRenameIcon);
     LoadGameUiIcon(L"button_plus.png",&projectNewIcon);
     LoadGameUiIcon(L"trash.png",&projectDeleteIcon);
+    LoadGameUiIcon(L"infoicon.png",&targetHeightInfoIcon);
 }
 void LoadGameCursorArt()
 {
