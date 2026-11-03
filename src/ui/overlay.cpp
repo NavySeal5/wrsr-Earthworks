@@ -39,9 +39,10 @@ ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
 WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
-RECT buttonRect{}, panelRect{};
+RECT buttonRect{}, panelRect{}, popupRect{};
 RECT editorRect{};
 bool panelRectValid = false;
+bool popupRectValid = false;
 bool editorRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
@@ -118,7 +119,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     auto* previous = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
-    const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
+    const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (popupRectValid && Hit(popupRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -155,7 +156,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
-        const bool overPanel=panelOpen&&((panelRectValid&&Hit(panelRect,lParam))||(editorRectValid&&Hit(editorRect,lParam)));
+        const bool overPanel=panelOpen&&((panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam)));
         if(overPanel) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;
@@ -169,7 +170,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
         POINT point{};
         if(GetCursorPos(&point)&&ScreenToClient(window,&point)&&panelOpen
-            &&((panelRectValid&&Hit(panelRect,MAKELPARAM(point.x,point.y)))||(editorRectValid&&Hit(editorRect,MAKELPARAM(point.x,point.y))))) {
+            &&((panelRectValid&&Hit(panelRect,MAKELPARAM(point.x,point.y)))||(popupRectValid&&Hit(popupRect,MAKELPARAM(point.x,point.y)))||(editorRectValid&&Hit(editorRect,MAKELPARAM(point.x,point.y))))) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;return TRUE;
         }
@@ -311,8 +312,9 @@ void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
     nameTextEditing = false;
+    popupRectValid=false;
     frameGeneration=s.generation;
-    if (!s.ready) { panelOpen=false; panelRectValid=false; buttonRect={}; return; }
+    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; buttonRect={}; return; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
         const auto p=s.workforce.building.position;
         const auto colour=IM_COL32(255,100,255,255);
@@ -334,7 +336,7 @@ void DrawInterface(const Snapshot& s)
         host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");
     }
     RememberRect(&buttonRect); ImGui::End();
-    if (!panelOpen) { panelRectValid=false;editorRectValid=false; return; }
+    if (!panelOpen) { panelRectValid=false;popupRectValid=false;editorRectValid=false; return; }
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
@@ -419,6 +421,7 @@ void DrawInterface(const Snapshot& s)
             }
 
             if(ImGui::BeginPopupModal("Project name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                RememberRect(&popupRect);popupRectValid=true;
                 ImGui::Text(renameAction==Action::CreateNamedProject?"Create Project":"Rename Project");
                 ImGui::SetNextItemWidth(300);ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));nameTextEditing|=ImGui::IsItemActive();
                 if(ImGui::Button("Save")) {SendProjectText(renameAction,renameTarget,nameBuffer);ImGui::CloseCurrentPopup();}
@@ -426,6 +429,7 @@ void DrawInterface(const Snapshot& s)
                 ImGui::EndPopup();
             }
             if(ImGui::BeginPopupModal("Delete Project",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                RememberRect(&popupRect);popupRectValid=true;
                 ImGui::TextWrapped("Delete this Project and its completed or cancelled Site records? Unfinished Sites must be finished or cancelled first.");
                 if(ImGui::Button("Delete")) {SendProject(Action::DeleteNamedProject,deleteTarget);ImGui::CloseCurrentPopup();}
                 ImGui::SameLine();if(ImGui::Button("Keep Project"))ImGui::CloseCurrentPopup();
@@ -528,6 +532,7 @@ void DrawInterface(const Snapshot& s)
                 ImGui::Separator();ImGui::TextDisabled("Distance is informational; it does not define operating coverage.");
             }
             if(ImGui::BeginPopupModal("Site name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                RememberRect(&popupRect);popupRectValid=true;
                 ImGui::Text("Rename Site");ImGui::SetNextItemWidth(300);ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));nameTextEditing|=ImGui::IsItemActive();
                 if(ImGui::Button("Save")) {SendProjectText(Action::RenameSite,renameTarget,nameBuffer);ImGui::CloseCurrentPopup();}
                 ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();ImGui::EndPopup();
@@ -904,7 +909,7 @@ void DrawGameCursorArt()
     const bool finite=std::isfinite(pos.x)&&std::isfinite(pos.y);
     const auto point=finite?MAKELPARAM(static_cast<int>(pos.x),static_cast<int>(pos.y)):LPARAM{};
     const bool overPanel=finite
-        &&((panelOpen&&panelRectValid&&Hit(panelRect,point))||(editorRectValid&&Hit(editorRect,point)));
+        &&((panelOpen&&panelRectValid&&Hit(panelRect,point))||(panelOpen&&popupRectValid&&Hit(popupRect,point))||(editorRectValid&&Hit(editorRect,point)));
     if(!overPanel||GetForegroundWindow()!=gameWindow) {
         if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);
         systemCursorHiddenForPanel=false;cursorToRestore=nullptr;return;
