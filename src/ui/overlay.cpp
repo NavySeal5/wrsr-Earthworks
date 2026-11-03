@@ -550,7 +550,11 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();
                         char label[80];sprintf_s(label,"%s  |  %s",site.name,ProjectStatusName(site.status));
                         centerCellItem(38.0f);
-                        if(ImGui::Selectable(label,s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
+                        if(ImGui::Selectable("##SelectSiteRow",s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
+                        const auto siteLabelMin=ImGui::GetItemRectMin();
+                        const auto siteLabelMax=ImGui::GetItemRectMax();
+                        const float siteLabelY=siteLabelMin.y+(siteLabelMax.y-siteLabelMin.y-ImGui::GetTextLineHeight())*0.5f;
+                        ImGui::GetWindowDrawList()->AddText({siteLabelMin.x+4.0f,siteLabelY},ImGui::GetColorU32(ImGuiCol_Text),label);
                         ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);centerCellItem(28.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
                         ImGui::TableNextColumn();
                         centerCellItem(32.0f);
