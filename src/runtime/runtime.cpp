@@ -2,6 +2,7 @@
 // Native binding addresses, input interception and camera layout adapted from
 // RepublicMP (E3418), commit 630775724abd5e3346eb59f9c66e2873128d74a4.
 #include <windows.h>
+#include <unknwn.h>
 #include "runtime.h"
 #include "save_store.h"
 #include "vehicle_filter.h"
@@ -1071,6 +1072,97 @@ ButtonFn buttonDown,buttonPress;
 AxisFn axis;
 VecFn relative;
 std::atomic<bool> loggedCapturedKeyProbe{false},loggedCapturedBindingProbe{false};
+std::atomic<bool> loggedDirectInputKeyboardHook{false};
+using DirectInput8CreateFn = HRESULT (WINAPI*)(HINSTANCE,DWORD,REFIID,LPVOID*,LPUNKNOWN);
+using DirectInputCreateDeviceFn = HRESULT (STDMETHODCALLTYPE*)(void*,const GUID*,void**,IUnknown*);
+using DirectInputGetDeviceStateFn = HRESULT (STDMETHODCALLTYPE*)(void*,DWORD,LPVOID);
+using DirectInputGetDeviceDataFn = HRESULT (STDMETHODCALLTYPE*)(void*,DWORD,void*,DWORD*,DWORD);
+DirectInput8CreateFn directInput8Create=nullptr;
+DirectInputCreateDeviceFn directInputCreateDevice=nullptr;
+DirectInputGetDeviceStateFn directInputGetDeviceState=nullptr;
+DirectInputGetDeviceDataFn directInputGetDeviceData=nullptr;
+constexpr size_t DirectInput8CreateDeviceSlot=3;
+constexpr size_t DirectInputDeviceStateSlot=9;
+constexpr size_t DirectInputDeviceDataSlot=10;
+constexpr size_t DirectInput8VtableCount=11;
+constexpr size_t DirectInputDeviceVtableCount=32;
+struct DirectInputDeviceData { DWORD offset,data,timeStamp,sequence; ULONG_PTR applicationData; };
+bool IsDigitScanCode(DWORD code)
+{
+    return (code>=0x02&&code<=0x0B)
+        || (code>=0x47&&code<=0x49)||(code>=0x4B&&code<=0x4D)
+        || (code>=0x4F&&code<=0x53);
+}
+bool CloneAndPatchVtable(void* instance,size_t entries,size_t slot,void* detour,void** original)
+{
+    if(!instance||slot>=entries||!detour||!original)return false;
+    auto** table=*reinterpret_cast<void***>(instance);
+    if(!table)return false;
+    if(table[slot]==detour)return true;
+    auto** copy=static_cast<void**>(HeapAlloc(GetProcessHeap(),0,entries*sizeof(void*)));
+    if(!copy)return false;
+    std::memcpy(copy,table,entries*sizeof(void*));
+    *original=copy[slot];
+    copy[slot]=detour;
+    *reinterpret_cast<void***>(instance)=copy;
+    return *original!=nullptr;
+}
+HRESULT STDMETHODCALLTYPE HDirectInputGetDeviceState(void* self,DWORD size,LPVOID data)
+{
+    const HRESULT result=directInputGetDeviceState(self,size,data);
+    if(SUCCEEDED(result)&&keyboardCapture&&data&&size>=256) {
+        auto* keys=static_cast<BYTE*>(data);
+        for(DWORD code=0;code<256;++code)if(IsDigitScanCode(code))keys[code]=0;
+    }
+    return result;
+}
+HRESULT STDMETHODCALLTYPE HDirectInputGetDeviceData(void* self,DWORD recordSize,void* data,DWORD* count,DWORD flags)
+{
+    const HRESULT result=directInputGetDeviceData(self,recordSize,data,count,flags);
+    if(FAILED(result)||!keyboardCapture||!data||!count||recordSize!=sizeof(DirectInputDeviceData))return result;
+    auto* records=static_cast<DirectInputDeviceData*>(data);
+    DWORD write=0;
+    for(DWORD read=0;read<*count;++read) {
+        if(IsDigitScanCode(records[read].offset))continue;
+        if(write!=read)records[write]=records[read];
+        ++write;
+    }
+    *count=write;
+    return result;
+}
+HRESULT STDMETHODCALLTYPE HDirectInputCreateDevice(void* self,const GUID* guid,void** device,IUnknown* outer)
+{
+    const HRESULT result=directInputCreateDevice(self,guid,device,outer);
+    static const GUID systemKeyboard={0x6F1D2B61,0xD5A0,0x11CF,{0xBF,0xC7,0x44,0x45,0x53,0x54,0x00,0x00}};
+    if(SUCCEEDED(result)&&guid&&device&&*device&&std::memcmp(guid,&systemKeyboard,sizeof(GUID))==0) {
+        auto*** table=reinterpret_cast<void***>(*device);
+        if(table&&*table) {
+            auto** vtable=*table;
+            bool stateHooked=vtable[DirectInputDeviceStateSlot]==reinterpret_cast<void*>(HDirectInputGetDeviceState);
+            bool dataHooked=vtable[DirectInputDeviceDataSlot]==reinterpret_cast<void*>(HDirectInputGetDeviceData);
+            if(vtable[DirectInputDeviceStateSlot]!=reinterpret_cast<void*>(HDirectInputGetDeviceState)) {
+                stateHooked=CloneAndPatchVtable(*device,DirectInputDeviceVtableCount,DirectInputDeviceStateSlot,
+                    reinterpret_cast<void*>(HDirectInputGetDeviceState),reinterpret_cast<void**>(&directInputGetDeviceState));
+            }
+            if(vtable[DirectInputDeviceDataSlot]!=reinterpret_cast<void*>(HDirectInputGetDeviceData)) {
+                dataHooked=CloneAndPatchVtable(*device,DirectInputDeviceVtableCount,DirectInputDeviceDataSlot,
+                    reinterpret_cast<void*>(HDirectInputGetDeviceData),reinterpret_cast<void**>(&directInputGetDeviceData));
+            }
+            if(!loggedDirectInputKeyboardHook.exchange(true))
+                host->log("earthworks  DirectInput keyboard device filter: state=%d buffered=%d",
+                    static_cast<int>(stateHooked),static_cast<int>(dataHooked));
+        }
+    }
+    return result;
+}
+HRESULT WINAPI HDirectInput8Create(HINSTANCE instance,DWORD version,REFIID iid,LPVOID* out,LPUNKNOWN outer)
+{
+    const HRESULT result=directInput8Create(instance,version,iid,out,outer);
+    if(SUCCEEDED(result)&&out&&*out)
+        CloneAndPatchVtable(*out,DirectInput8VtableCount,DirectInput8CreateDeviceSlot,
+            reinterpret_cast<void*>(HDirectInputCreateDevice),reinterpret_cast<void**>(&directInputCreateDevice));
+    return result;
+}
 #define BOOL_HOOK(name,original,block) bool name(void* self) { const bool value=original(self); return (block) ? false:value; }
 BOOL_HOOK(HLeftPress,leftPress,LeftTaken())
 BOOL_HOOK(HLeftAOff,leftAOff,LeftTaken())
@@ -1148,12 +1240,17 @@ bool InstallRuntime()
     for (const auto& item:imports) if (!host->findIatSlot(host->exeModule,"C3DDLL64.dll",item.symbol)) {
         host->log("earthworks  missing input import %s; planning disabled",item.symbol); return false;
     }
+    if(!host->findIatSlot(host->engineModule,"dinput8.dll","DirectInput8Create")) {
+        host->log("earthworks  missing engine DirectInput8Create import; planning disabled"); return false;
+    }
     for (const auto& item:imports) if (!host->patchIat(host->exeModule,"C3DDLL64.dll",item.symbol,item.detour,item.original,"Earthworks input capture")) return false;
+    if(!host->patchIat(host->engineModule,"dinput8.dll","DirectInput8Create",reinterpret_cast<void*>(HDirectInput8Create),
+        reinterpret_cast<void**>(&directInput8Create),"Earthworks DirectInput digit capture"))return false;
     if (!host->installInlineHook(host->exeBase+LateRva,reinterpret_cast<void*>(HookedLate),reinterpret_cast<void**>(&originalLate),lateBytes,sizeof(lateBytes),"Earthworks read-only frame")) return false;
     if (!host->installInlineHook(host->exeBase+LoadRva,reinterpret_cast<void*>(HookedLoad),reinterpret_cast<void**>(&originalLoad),loadBytes,sizeof(loadBytes),"Earthworks world boundary")) return false;
     if (!host->installInlineHook(host->exeBase+ConstructionAssignRva,reinterpret_cast<void*>(HookedConstructionAssign),reinterpret_cast<void**>(&originalConstructionAssign),constructionAssignBytes,sizeof(constructionAssignBytes),"Earthworks office assignment filter")) return false;
     if (!host->installInlineHook(host->exeBase+VehicleSlotRva,reinterpret_cast<void*>(HookedVehicleSlot),reinterpret_cast<void**>(&originalVehicleSlot),vehicleSlotBytes,sizeof(vehicleSlotBytes),"Earthworks vehicle slot filter")) return false;
-    host->log("earthworks  bindings installed: 13 input imports, frame, world-load, office assignment, and Earthworks vehicle slot filters");
+    host->log("earthworks  bindings installed: 13 C3D input imports, DirectInput digit filter, frame, world-load, office assignment, and Earthworks vehicle slot filters");
     BindTerrainProbe();
     BindNativeTerrainCallProbe();
     host->log("earthworks  terrain executor bindings %s",raiseLower&&heightQuery&&openHeightmap&&closeHeightmap?"available":"unavailable; projects remain queued");
