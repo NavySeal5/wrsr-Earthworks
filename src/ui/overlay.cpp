@@ -443,8 +443,9 @@ void DrawInterface(const Snapshot& s)
                     ImGui::EndDisabled();
 
                     ImGui::TableNextColumn();
-                    ImGui::BeginDisabled(!s.cameraFocusAvailable);
-                    if(ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26}))SendProject(Action::FocusProject,project.id);
+                    // TODO: Investigate the native game's camera-centering action before re-enabling View.
+                    ImGui::BeginDisabled(true);
+                    ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26});
                     ImGui::EndDisabled();
                     ImGui::PopID();
                 }

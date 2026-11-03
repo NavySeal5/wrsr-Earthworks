@@ -10,7 +10,7 @@ Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/worl
 | World load | EXE+0x430FC0, void() | Invalidate session draft and queued commands before native loading |
 | World | Inline EXE+0x9D4F10 | Cursor +0xF78; day/year/progress +0x590/594/59C |
 | Readiness | Road-network pointer EXE+0x9E46B0 and byte EXE+0x993C65 | Gate all planning queries |
-| Camera | Pointer EXE+0x9EAD10; C3D_CAMERA `ViewGetPosition`, `ViewGetLookAt`, `ViewSetPosition`, `ViewSetLookAt`, `CalculateFinal` exports | Copy view matrix, projection at +0xC8; project-row focus eases position and look-at together after the native frame update, then recalculates the final camera matrices to apply the new view while preserving angle/distance |
+| Camera | Pointer EXE+0x9EAD10 | Copy view matrix and projection at +0xC8 for cursor projection. Project-row camera centering is disabled; TODO: investigate and use the same native camera-centering behavior as the game's entity View action before re-enabling it. |
 | Terrain | *( *(EXE+0x9941F0) +0xED8 ) | Read-only height-query object |
 | Height | C3DDLL64 CollisionTerrainHeightOverPoint | float(void* terrain, const float* Win64 by-value vector copy) |
 | Input | 13 verified C3D_INPUT imports in EXE | Consume native input, suppress only overlay-owned input |

@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.17-stage10a-camera-view-fix**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.18-stage10a-view-disabled**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -29,7 +29,7 @@ Build: **0.11.17-stage10a-camera-view-fix**. This is a user-run in-game review. 
 14. Check selected tabs and pressed/hovered controls: their backgrounds should be lighter, dark text should remain the same color and readable, and text color should not switch with the state.
 15. Hover over the Earthworks panel and use WASD and other usual gameplay shortcuts; movement and game shortcuts should continue. Click panel buttons and tabs, then repeat. Focus the Target height field and type a value; while it is actively being edited, keystrokes should go into the field instead of controlling the game. Click elsewhere in the panel and confirm gameplay keys pass through again.
 16. Move the cursor over the panel and its buttons; confirm the game-styled cursor remains visible without a second Windows arrow.
-17. In Projects, press View on a project that is off-screen. Confirm the camera moves smoothly to its footprint centre and retains the current zoom distance and viewing angle. Try a second row to confirm each button targets its own project. The button should not show a tooltip. This should not change project state or terrain.
+17. Confirm each project's View button is visibly disabled and does nothing. Camera-centering investigation is deferred; no tooltip should appear.
 18. Hover and move across the Earthworks panel. Confirm the game's beige cursor art is visible over the panel, without a second Windows arrow. Move off and close the panel; confirm the native cursor returns.
 
 ## Expected results
@@ -43,7 +43,7 @@ Build: **0.11.17-stage10a-camera-view-fix**. This is a user-run in-game review. 
 - Ordinary left clicks pass through while no map-picking action is armed; Select area and Sample height capture only their intentional terrain clicks.
 - Keyboard input passes through while the panel is hovered or clicked, and is captured only while the Target height field is actively edited.
 - Over the panel, the game cursor art (`media_soviet/editor/cursor.png`) is drawn above the UI; the Windows pointer is suppressed only while overlapping the panel and restored on exit.
-- Each project's View button recentres the camera on that row's project without changing its state or terrain.
+- Each project's View button is temporarily disabled pending investigation of the native camera-centering action.
 - Earthworks controls do not display tooltips.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 
