@@ -101,17 +101,24 @@ bool ProjectCanMove(ProjectStatus status)
 {
     return status==ProjectStatus::Queued||status==ProjectStatus::Running||status==ProjectStatus::Waiting||status==ProjectStatus::Paused;
 }
-bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback)
+bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback,const char* tooltip)
 {
-    if(!texture)return ImGui::Button(fallback,{30,30});
-    const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
-    ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
-    const bool pressed=ImGui::ImageButton(id,image,{30,30},{0,0},{1,1},{0,0,0,0});
-    ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+    constexpr ImVec2 size{30,30};
+    const auto pos=ImGui::GetCursorScreenPos();
+    const bool hovered=ImGui::IsMouseHoveringRect(pos,{pos.x+size.x,pos.y+size.y},true);
+    bool pressed=false;
+    if(!texture)pressed=ImGui::Button(fallback,size);
+    else {
+        const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
+        pressed=ImGui::ImageButton(id,image,size,{0,0},{1,1},hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1});
+        ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+    }
+    if(hovered&&tooltip) {ImGui::BeginTooltip();ImGui::TextUnformatted(tooltip);ImGui::EndTooltip();}
     return pressed;
 }
 bool Hit(const RECT& rect, LPARAM point)
@@ -449,16 +456,16 @@ void DrawInterface(const Snapshot& s)
                 ImGui::EndCombo();
             }
             ImGui::SameLine();
-            if(GameIconButton("##NewProject",projectNewIcon,"New")) {
+            if(GameIconButton("##NewProject",projectNewIcon,"New","New Project")) {
                 nameBuffer[0]=0;renameAction=Action::CreateNamedProject;renameTarget=0;ImGui::OpenPopup("Project name");
             }
             ImGui::SameLine();ImGui::BeginDisabled(!s.selectedNamedProjectId);
-            if(GameIconButton("##RenameProject",siteRenameIcon,"Rename")) {
+            if(GameIconButton("##RenameProject",siteRenameIcon,"Rename","Rename Project")) {
                 strncpy_s(nameBuffer,s.projectContainerName,_TRUNCATE);renameAction=Action::RenameNamedProject;
                 renameTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Project name");
             }
             ImGui::SameLine();
-            if(GameIconButton("##DeleteProject",projectDeleteIcon,"Delete")) {
+            if(GameIconButton("##DeleteProject",projectDeleteIcon,"Delete","Delete Project")) {
                 deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");
             }
             ImGui::EndDisabled();
@@ -503,18 +510,21 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) {ImGui::BeginTooltip();ImGui::TextUnformatted("Rename");ImGui::EndTooltip();}
-                    auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture) {
+                    auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture,const char* tooltip) {
                         if(!texture)return false;
                         constexpr float iconSize=30.0f;
                         ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.0f,(ImGui::GetContentRegionAvail().x-iconSize)*0.5f));
+                        const auto pos=ImGui::GetCursorScreenPos();
+                        const bool hovered=ImGui::IsMouseHoveringRect(pos,{pos.x+iconSize,pos.y+iconSize},true);
                         const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
                         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
                         ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
                         ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
-                        const bool pressed=ImGui::ImageButton(id,image,{iconSize,iconSize},{0,0},{1,1},{0,0,0,0});
+                        const bool pressed=ImGui::ImageButton(id,image,{iconSize,iconSize},{0,0},{1,1},hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1});
                         ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+                        if(hovered&&tooltip) {ImGui::BeginTooltip();ImGui::TextUnformatted(tooltip);ImGui::EndTooltip();}
                         return pressed;
                     };
                     for(size_t i=0;i<s.projectCount;++i) {
@@ -539,14 +549,14 @@ void DrawInterface(const Snapshot& s)
                         const bool removable=site.status==ProjectStatus::Cancelled;
                         ImGui::BeginDisabled(!cancellable&&!removable);
                         if(siteCancelIcon) {
-                            if(drawIconButton("##CancelSite",siteCancelIcon))
+                            if(drawIconButton("##CancelSite",siteCancelIcon,removable?"Delete Site":"Cancel Site"))
                                 SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
                         } else if(ImGui::Button("×",{32,32}))
                             SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();
                         if(siteRenameIcon) {
-                            if(drawIconButton("##RenameSite",siteRenameIcon)) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
+                            if(drawIconButton("##RenameSite",siteRenameIcon,"Rename Site")) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         ImGui::PopID();
                     }
@@ -798,8 +808,11 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
-            renamePressed=ImGui::ImageButton("##RenameSelectedSite",icon,{24,24},{0,0},{1,1},{0,0,0,0});
+            const auto renameIconPos=ImGui::GetCursorScreenPos();
+            const bool hovered=ImGui::IsMouseHoveringRect(renameIconPos,{renameIconPos.x+24.0f,renameIconPos.y+24.0f},true);
+            renamePressed=ImGui::ImageButton("##RenameSelectedSite",icon,{24,24},{0,0},{1,1},hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1});
             ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+            if(hovered) {ImGui::BeginTooltip();ImGui::TextUnformatted("Rename Site");ImGui::EndTooltip();}
         } else renamePressed=ImGui::Button("R",{24,24});
         ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));
         if(renamePressed) {
