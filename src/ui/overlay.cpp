@@ -820,7 +820,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::SameLine();
         const bool saveRename=ImGui::Button("Save",{48,26})||enterPressed;
         ImGui::SameLine();
-        const bool cancelRename=ImGui::Button("Cancel",{54,26});
+        const bool cancelRename=ImGui::Button("Cancel##CancelSiteRename",{54,26});
         ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));
         if(saveRename) {
             SendProjectText(Action::RenameSite,s.editingSiteId,renameBuffer);
@@ -916,7 +916,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             const float cancelWidth=ImGui::GetContentRegionAvail().x;
             ImGui::BeginDisabled(!(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running
                 ||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
-            if(ImGui::Button("Cancel",{cancelWidth,32.0f}))SendProjectAction(Action::CancelProject,s.editingSiteId);
+            if(ImGui::Button("Cancel##CancelSiteWork",{cancelWidth,32.0f}))SendProjectAction(Action::CancelProject,s.editingSiteId);
             ImGui::EndDisabled();
         }
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
