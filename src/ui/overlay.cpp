@@ -653,6 +653,8 @@ void DrawInterface(const Snapshot& s)
 void DrawSiteEditor(const Snapshot& s,ImVec2 display)
 {
     if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {editorRectValid=false;return;}
+    static char renameBuffer[MaxSavedNameBytes+1]{};
+    static uint64_t renameTarget=0;
     const Plan& plan=s.editorPlan;
     const float width=400.0f,height=400.0f+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
@@ -710,6 +712,25 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
     if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
+    if(!s.creatingSite&&ImGui::Button("Rename Site",{ImGui::GetContentRegionAvail().x,28.0f})) {
+        strncpy_s(renameBuffer,s.selectedSiteName,_TRUNCATE);
+        renameTarget=s.editingSiteId;
+        ImGui::OpenPopup("Rename selected Site");
+    }
+    if(ImGui::BeginPopupModal("Rename selected Site",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+        RememberRect(&popupRect);popupRectValid=true;
+        ImGui::Text("Rename Site");
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::InputText("Name",renameBuffer,sizeof(renameBuffer));
+        nameTextEditing|=ImGui::IsItemActive();
+        if(ImGui::Button("Save")) {
+            SendProjectText(Action::RenameSite,renameTarget,renameBuffer);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     ImGui::Separator();
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),static_cast<double>(plan.Width())*plan.Depth());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);
