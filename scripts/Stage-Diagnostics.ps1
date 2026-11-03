@@ -49,12 +49,26 @@ if (Test-Path -LiteralPath $symbols) {
 $manifest.dll = $stagedDllName
 $stagedManifest = $manifest | ConvertTo-Json -Depth 16
 [IO.File]::WriteAllText((Join-Path $plugins 'EarthworksPlanning.rml.json'), $stagedManifest, [Text.UTF8Encoding]::new($false))
+$pluginVersion = ($manifest.version.ToLowerInvariant() -replace '[^a-z0-9]+', '.').Trim('.')
+$pluginId = "tesmio.earthworksplanning.$pluginVersion.$($dllHash.Substring(0, 8))"
 $buildingStage = Join-Path $PSScriptRoot 'Stage-EarthworksBuilding.ps1'
 & $buildingStage
 if (-not $?) { throw 'Dedicated Earthworks building content staging failed.' }
 $config = Get-Content -LiteralPath (Join-Path $root 'assets\rml\diagnostic-config.json') -Raw | ConvertFrom-Json
 $config.gamePath = Join-Path $game 'SOVIET64.exe'
+$config.plugins.PSObject.Properties.Remove('earthworks.planning')
+$config.plugins | Add-Member -MemberType NoteProperty -Name $pluginId -Value ([pscustomobject]@{
+    enabled = $true
+    force = $false
+    priority = 100
+}) -Force
+$config.playlists[0].plugins = @([pscustomobject]@{
+    id = $pluginId
+    force = $false
+    priority = 100
+    order = 0
+})
 [IO.File]::WriteAllText((Join-Path $runtime 'rml\config.json'), ($config | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
 Write-Host "RML development runtime ready: $runtime"
-Write-Host 'Earthworks Development selects the RML plugin; the dedicated Earthworks workshop_wip item is staged locally.'
+Write-Host "Earthworks Development selects $pluginId; the dedicated Earthworks workshop_wip item is staged locally."
 Write-Host 'The diagnostic preset is refreshed by staging. Your subscribed RML configuration is untouched. The game has not been launched.'
