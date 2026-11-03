@@ -894,12 +894,19 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::EndDisabled();
     ImGui::PopStyleVar();
     ImGui::BeginDisabled(!editable);
-    const float sampleInfoWidth=22.0f;
-    const float sampleButtonWidth=std::max(0.0f,ImGui::GetContentRegionAvail().x-sampleInfoWidth-ImGui::GetStyle().ItemSpacing.x);
-    if(ImGui::Button("Sample target from map",{sampleButtonWidth,28}))Send(Action::SampleSiteTarget);
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY()+3.0f);
-    GameIconButton("##SampleTargetHelp",targetHeightInfoIcon,"i","Click this button, then click a point on the map to set the target height.",{22.0f,22.0f});
+    const float sampleButtonWidth=ImGui::GetContentRegionAvail().x;
+    const bool sampleTargetPressed=ImGui::Button("Sample target from map",{sampleButtonWidth,28});
+    const ImVec2 sampleButtonMin=ImGui::GetItemRectMin(),sampleButtonMax=ImGui::GetItemRectMax();
+    const ImVec2 sampleInfoMin{sampleButtonMax.x-25.0f,sampleButtonMin.y+3.0f};
+    const ImVec2 sampleInfoMax{sampleButtonMax.x-3.0f,sampleButtonMin.y+25.0f};
+    const bool sampleInfoHovered=targetHeightInfoIcon&&ImGui::IsMouseHoveringRect(sampleInfoMin,sampleInfoMax,true);
+    if(targetHeightInfoIcon) {
+        const ImTextureRef infoTexture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(targetHeightInfoIcon)));
+        ImGui::GetWindowDrawList()->AddImage(infoTexture,sampleInfoMin,sampleInfoMax,{0,0},{1,1},
+            sampleInfoHovered?IM_COL32_WHITE:IM_COL32(209,209,209,255));
+    }
+    if(sampleTargetPressed)Send(Action::SampleSiteTarget);
+    if(sampleInfoHovered)NativeTooltip("Click this button, then click a point on the map to set the target height.");
     ImGui::EndDisabled();
     if(s.creatingSite) {
         const bool draftInvalid=s.siteDraftError[0]!=0;
