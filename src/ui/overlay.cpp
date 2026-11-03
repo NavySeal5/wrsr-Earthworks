@@ -56,7 +56,6 @@ std::atomic<bool> editorWasDragged{false};
 bool escapeKeyDown = false;
 bool escapeOwned = false;
 bool pickCancelledByEscape = false;
-bool loggedDigitCaptureProbe = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
 std::atomic<bool> areaPickCapture{false};
@@ -191,12 +190,6 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         ||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_DEADCHAR||message==WM_SYSDEADCHAR
         ||message==WM_UNICHAR||message==WM_IME_STARTCOMPOSITION||message==WM_IME_COMPOSITION||message==WM_IME_ENDCOMPOSITION;
     const bool suppressTypedShortcut=keyboardMessage&&keyboardCapture&&!KeyboardShortcutPassesThrough(message,wParam);
-    if(!loggedDigitCaptureProbe&&message==WM_KEYDOWN&&wParam>='0'&&wParam<='9') {
-        loggedDigitCaptureProbe=true;
-        host->log("earthworks  digit input probe: key=%c capture=%d textInput=%d activeItem=%d swallowed=%d",
-            static_cast<char>(wParam),static_cast<int>(keyboardCapture.load()),static_cast<int>(ImGui::GetIO().WantTextInput),
-            static_cast<int>(ImGui::IsAnyItemActive()),static_cast<int>(suppressTypedShortcut));
-    }
     const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || suppressTypedShortcut || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
