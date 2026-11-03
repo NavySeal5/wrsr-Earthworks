@@ -33,8 +33,9 @@ constexpr size_t PanelFieldsBytes = 0x34;
 constexpr size_t PanelZoomCentre = 0x6730;
 constexpr size_t PanelZoom = 0x673C;
 constexpr size_t TextureSetSlot = 14;
-constexpr size_t MaxSegments = 1400;
-constexpr size_t GroupCount = 5;
+constexpr size_t MaxSegments = 4096;
+constexpr size_t GroupCount = 7;
+constexpr float ShadeRowPixels = 5.0f;
 
 using BeginFn = void (*)(void*, const char*, bool);
 using EndFn = void (*)(void*);
@@ -55,6 +56,8 @@ void ResetGroups()
     groups[2].color = IM_COL32(175,180,190,210); groups[2].width = 1.5f;
     groups[3].color = IM_COL32(205,210,220,235); groups[3].width = 2.5f;
     groups[4].color = IM_COL32(245,250,255,255); groups[4].width = 2.5f;
+    groups[5].color = IM_COL32(62,221,166,55); groups[5].width = ShadeRowPixels;
+    groups[6].color = IM_COL32(255,159,67,55); groups[6].width = ShadeRowPixels;
     for (auto& group : groups) group.count = 0;
 }
 
@@ -76,6 +79,50 @@ void AddLine(const Snapshot& s, Point a, Point b, int group, float width, float 
     if (!Project(s,a,width,height,&x1,&y1)||!Project(s,b,width,height,&x2,&y2)) return;
     auto* out=groups[group].values+groups[group].count++*4;
     out[0]=x1;out[1]=y1;out[2]=x2;out[3]=y2;
+}
+
+void AddScreenSpan(float x1,float y,float x2,int group)
+{
+    if(groups[group].count>=static_cast<int>(MaxSegments)||x2-x1<0.5f)return;
+    auto* out=groups[group].values+groups[group].count++*4;
+    out[0]=x1;out[1]=y;out[2]=x2;out[3]=y;
+}
+
+void AddShadeTriangle(const Snapshot& s,const Point* triangle,const float* depth,float sign,int group,float width,float height)
+{
+    if(groups[group].count>=static_cast<int>(MaxSegments))return;
+    Point clipped[6]{};int count=0;
+    for(int i=0;i<3;++i) {
+        const int j=(i+1)%3;
+        const float a=depth[i]*sign,b=depth[j]*sign;
+        if(a>=0)clipped[count++]=triangle[i];
+        if((a>0&&b<0)||(a<0&&b>0)) {
+            const float t=a/(a-b);
+            clipped[count++]={triangle[i].x+t*(triangle[j].x-triangle[i].x),triangle[i].y,triangle[i].z+t*(triangle[j].z-triangle[i].z)};
+        }
+    }
+    if(count<3)return;
+    float px[6]{},py[6]{},minY=0,maxY=0;
+    for(int i=0;i<count;++i) {
+        if(!Project(s,clipped[i],width,height,&px[i],&py[i]))return;
+        if(i==0)minY=maxY=py[i];else {minY=std::min(minY,py[i]);maxY=std::max(maxY,py[i]);}
+    }
+    minY=std::max(85.0f,minY);maxY=std::min(height-90.0f,maxY);
+    if(maxY-minY<0.5f)return;
+    const float firstY=std::floor(minY/ShadeRowPixels)*ShadeRowPixels+ShadeRowPixels*0.5f;
+    for(float y=firstY;y<maxY;y+=ShadeRowPixels) {
+        if(groups[group].count>=static_cast<int>(MaxSegments))return;
+        float intersections[6]{};int n=0;
+        for(int i=0;i<count;++i) {
+            const int j=(i+1)%count;
+            const float low=std::min(py[i],py[j]),high=std::max(py[i],py[j]);
+            if(y<low||y>=high||std::abs(py[j]-py[i])<1e-5f)continue;
+            const float t=(y-py[i])/(py[j]-py[i]);
+            intersections[n++]=px[i]+t*(px[j]-px[i]);
+        }
+        std::sort(intersections,intersections+n);
+        for(int i=0;i+1<n;i+=2)AddScreenSpan(intersections[i],y,intersections[i+1],group);
+    }
 }
 
 void DrawOutline(const Snapshot& s, Point a, Point b, float target, int group, float width, float height)
@@ -119,6 +166,17 @@ void Collect(const Snapshot& s, float width, float height)
         const int group=p.target>=p.Vertex(x,z,false).y?0:1;
         if(x<GridCells) AddLine(s,a,p.Vertex(x+1,z,true),group,width,height);
         if(z<GridCells) AddLine(s,a,p.Vertex(x,z+1,true),group,width,height);
+    }
+    for(int z=0;z<GridCells;++z) for(int x=0;x<GridCells;++x) {
+        const Point proposed[]={p.Vertex(x,z,true),p.Vertex(x+1,z,true),p.Vertex(x+1,z+1,true),p.Vertex(x,z+1,true)};
+        const float depths[]={p.target-p.Vertex(x,z,false).y,p.target-p.Vertex(x+1,z,false).y,
+            p.target-p.Vertex(x+1,z+1,false).y,p.target-p.Vertex(x,z+1,false).y};
+        for(int t=0;t<2;++t) {
+            const Point triangle[]={proposed[0],proposed[t+1],proposed[t+2]};
+            const float triangleDepth[]={depths[0],depths[t+1],depths[t+2]};
+            AddShadeTriangle(s,triangle,triangleDepth,1,5,width,height);
+            AddShadeTriangle(s,triangle,triangleDepth,-1,6,width,height);
+        }
     }
     const int c[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
     for(int k=0;k<4;++k) AddLine(s,p.Vertex(c[k][0],c[k][1],true),p.Vertex(c[(k+1)%4][0],c[(k+1)%4][1],true),4,width,height);
@@ -174,7 +232,8 @@ void DrawUnderUi()
         auto* panel=base+PanelRva;
         reinterpret_cast<BeginFn>(*reinterpret_cast<void**>(base+PanelBeginIat))(panel,nullptr,false);
         __try {
-            for(const auto& group:groups) DrawGroup(base,group);
+            DrawGroup(base,groups[5]);DrawGroup(base,groups[6]);
+            for(int i=0;i<5;++i)DrawGroup(base,groups[i]);
         } __finally {
             reinterpret_cast<EndFn>(*reinterpret_cast<void**>(base+PanelEndIat))(panel);
         }

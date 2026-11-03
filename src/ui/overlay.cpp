@@ -25,6 +25,7 @@ namespace {
 using PresentFn = HRESULT (STDMETHODCALLTYPE*)(IDXGISwapChain*,UINT,UINT);
 PresentFn originalPresent = nullptr;
 bool gameUnderlayInstalled = false;
+bool previewLinesUnderlay = false;
 ID3D11Device* device = nullptr;
 ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
@@ -202,12 +203,13 @@ bool Project(const Snapshot& s,Point p,ImVec2* out)
 }
 void Line(const Snapshot& s,Point a,Point b,ImU32 color,float thickness=1)
 {
-    if(gameUnderlayInstalled) return;
+    if(previewLinesUnderlay) return;
     ImVec2 p,q;
     if (Project(s,a,&p) && Project(s,b,&q)) ImGui::GetBackgroundDrawList()->AddLine(p,q,color,thickness);
 }
 void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign,ImU32 color)
 {
+    if(gameUnderlayInstalled)return;
     Point clipped[6]{}; int count=0;
     for (int i=0; i<3; ++i) {
         const int j=(i+1)%3;
@@ -1132,7 +1134,9 @@ void Render(IDXGISwapChain* swap)
     const auto& io=ImGui::GetIO();
     const auto snapshot=ReadSnapshot();
     ImGui::GetBackgroundDrawList()->PushClipRect({65,85},{io.DisplaySize.x,io.DisplaySize.y-90},true);
+    previewLinesUnderlay=gameUnderlayInstalled;
     DrawPreview(snapshot);
+    previewLinesUnderlay=false;
 #ifdef EARTHWORKS_DEVELOPER_UI
     DrawProbe(snapshot);
 #endif
