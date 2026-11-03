@@ -28,6 +28,10 @@ ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
 ID3D11ShaderResourceView* panelPaper = nullptr;
 UINT panelPaperWidth = 0, panelPaperHeight = 0;
+ID3D11ShaderResourceView* nativeCursorTexture = nullptr;
+HCURSOR nativeCursor = nullptr, textureCursor = nullptr;
+int nativeCursorWidth = 0, nativeCursorHeight = 0, nativeCursorHotX = 0, nativeCursorHotY = 0;
+bool nativeCursorHidden = false;
 IDXGISwapChain* gameChain = nullptr;
 ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
@@ -92,6 +96,97 @@ void RememberRect(RECT* rect)
     const auto p = ImGui::GetWindowPos(), s = ImGui::GetWindowSize();
     *rect = {static_cast<LONG>(p.x),static_cast<LONG>(p.y),static_cast<LONG>(p.x+s.x),static_cast<LONG>(p.y+s.y)};
 }
+bool CursorOverPanel(POINT* clientPoint=nullptr)
+{
+    if(!gameWindow || !panelOpen || !panelRectValid) return false;
+    POINT point{};
+    if(!GetCursorPos(&point) || !ScreenToClient(gameWindow,&point)) return false;
+    if(clientPoint) *clientPoint=point;
+    return Hit(panelRect,MAKELPARAM(point.x,point.y));
+}
+bool BuildNativeCursorTexture(HCURSOR cursor)
+{
+    if(!cursor || !device) return false;
+    if(cursor==textureCursor && nativeCursorTexture) return true;
+    if(nativeCursorTexture) { nativeCursorTexture->Release();nativeCursorTexture=nullptr; }
+    textureCursor=nullptr;
+    ICONINFO icon{};
+    if(!GetIconInfo(cursor,&icon)) return false;
+    BITMAP bitmap{};
+    HBITMAP source=icon.hbmColor?icon.hbmColor:icon.hbmMask;
+    const bool dimensionsOk=source && GetObjectW(source,sizeof(bitmap),&bitmap)==sizeof(bitmap);
+    int width=dimensionsOk?bitmap.bmWidth:0;
+    int height=dimensionsOk?bitmap.bmHeight:0;
+    if(!icon.hbmColor) height/=2;
+    bool ok=width>0&&height>0&&width<=128&&height<=128;
+    HDC screen=nullptr,dc=nullptr;
+    HBITMAP dib=nullptr;
+    HGDIOBJ oldBitmap=nullptr;
+    BYTE* pixels=nullptr;
+    std::vector<BYTE> rgba;
+    if(ok) {
+        screen=GetDC(nullptr); dc=screen?CreateCompatibleDC(screen):nullptr;
+        BITMAPINFO info{};
+        info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=width;info.bmiHeader.biHeight=-height;
+        info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
+        if(dc) dib=CreateDIBSection(dc,&info,DIB_RGB_COLORS,reinterpret_cast<void**>(&pixels),nullptr,0);
+        ok=dc&&dib&&pixels;
+    }
+    if(ok) {
+        oldBitmap=SelectObject(dc,dib);
+        std::memset(pixels,0,static_cast<size_t>(width)*height*4);
+        ok=DrawIconEx(dc,0,0,cursor,width,height,0,nullptr,DI_NORMAL)!=FALSE;
+        if(ok&&icon.hbmMask) {
+            HGDIOBJ oldMask=SelectObject(dc,icon.hbmMask);
+            for(int y=0;y<height;++y)for(int x=0;x<width;++x) {
+                const COLORREF mask=GetPixel(dc,x,y);
+                BYTE& alpha=pixels[(static_cast<size_t>(y)*width+x)*4+3];
+                if(mask==CLR_INVALID||GetRValue(mask)>127)alpha=0;
+                else if(!alpha)alpha=255;
+            }
+            SelectObject(dc,oldMask);
+        }
+        if(ok) {
+            rgba.assign(pixels,pixels+static_cast<size_t>(width)*height*4);
+            D3D11_TEXTURE2D_DESC desc{};
+            desc.Width=width;desc.Height=height;desc.MipLevels=1;desc.ArraySize=1;desc.Format=DXGI_FORMAT_B8G8R8A8_UNORM;
+            desc.SampleDesc.Count=1;desc.Usage=D3D11_USAGE_IMMUTABLE;desc.BindFlags=D3D11_BIND_SHADER_RESOURCE;
+            D3D11_SUBRESOURCE_DATA data{};data.pSysMem=rgba.data();data.SysMemPitch=static_cast<UINT>(width*4);
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+            ok=SUCCEEDED(device->CreateTexture2D(&desc,&data,&texture))
+                && SUCCEEDED(device->CreateShaderResourceView(texture.Get(),nullptr,&nativeCursorTexture));
+        }
+    }
+    if(oldBitmap&&dc)SelectObject(dc,oldBitmap);
+    if(dib)DeleteObject(dib);
+    if(dc)DeleteDC(dc);
+    if(screen)ReleaseDC(nullptr,screen);
+    if(icon.hbmColor)DeleteObject(icon.hbmColor);
+    if(icon.hbmMask)DeleteObject(icon.hbmMask);
+    if(!ok) return false;
+    textureCursor=cursor;nativeCursorWidth=width;nativeCursorHeight=height;
+    nativeCursorHotX=static_cast<int>(icon.xHotspot);nativeCursorHotY=static_cast<int>(icon.yHotspot);
+    return true;
+}
+void DrawNativeCursor()
+{
+    if(GetForegroundWindow()!=gameWindow) return;
+    POINT point{};
+    if(!CursorOverPanel(&point)) {
+        if(nativeCursorHidden&&nativeCursor)SetCursor(nativeCursor);
+        nativeCursorHidden=false;
+        return;
+    }
+    HCURSOR current=GetCursor();
+    if(current) nativeCursor=current;
+    if(!nativeCursor||!BuildNativeCursorTexture(nativeCursor)) return;
+    SetCursor(nullptr);
+    nativeCursorHidden=true;
+    const ImVec2 min{static_cast<float>(point.x-nativeCursorHotX),static_cast<float>(point.y-nativeCursorHotY)};
+    const ImVec2 max{min.x+nativeCursorWidth,min.y+nativeCursorHeight};
+    const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(nativeCursorTexture)));
+    ImGui::GetForegroundDrawList()->AddImage(texture,min,max,ImVec2(0,0),ImVec2(1,1),IM_COL32_WHITE);
+}
 LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam)
 {
     std::lock_guard<std::recursive_mutex> lock(guiMutex);
@@ -99,7 +194,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
     const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam));
-    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; }
+    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(nativeCursorHidden&&nativeCursor)SetCursor(nativeCursor);nativeCursorHidden=false; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
@@ -133,6 +228,14 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || (keyMessage && keyboardCapture) || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
+    if(message==WM_SETCURSOR) {
+        const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
+        if(HCURSOR cursor=GetCursor())nativeCursor=cursor;
+        POINT point{};
+        if(CursorOverPanel(&point)) { SetCursor(nullptr);nativeCursorHidden=true;return TRUE; }
+        nativeCursorHidden=false;
+        return result;
+    }
     return CallWindowProcW(originalWndProc,window,message,wParam,lParam);
 }
 bool Project(const Snapshot& s,Point p,ImVec2* out)
@@ -706,14 +809,15 @@ void Render(IDXGISwapChain* swap)
 #endif
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
+    DrawNativeCursor();
     if(snapshot.mode==PickMode::None) pickCancelledByEscape=false;
     mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
     keyboardCapture=focused && io.WantTextInput && targetHeightEditing && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
-    // Preserve the game's own cursor. The overlay must not replace it with a
-    // Win32 system shape or draw an ImGui software cursor over the game.
+    // The native cursor is copied into an overlay texture only above the panel;
+    // ImGui must not replace it with a different Windows or software cursor.
     ImGui::GetIO().MouseDrawCursor=false;
     ClearInputLatches();
     ImGui::Render();

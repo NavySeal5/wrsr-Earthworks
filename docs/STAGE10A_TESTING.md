@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.11-stage10a-project-camera**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.12-stage10a-cursor-visible**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -29,6 +29,7 @@ Build: **0.11.11-stage10a-project-camera**. This is a user-run in-game review. T
 15. Hover over the Earthworks panel and use WASD and other usual gameplay shortcuts; movement and game shortcuts should continue. Click panel buttons and tabs, then repeat. Focus the Target height field and type a value; while it is actively being edited, keystrokes should go into the field instead of controlling the game. Click elsewhere in the panel and confirm gameplay keys pass through again.
 16. Move the cursor over the panel and its buttons; confirm the game's in-game cursor remains visible and no Windows arrow/text cursor or second software cursor appears.
 17. In Projects, press View on a project that is off-screen. Confirm the camera moves to its footprint centre and retains the current zoom distance and viewing angle. Try a second row to confirm each button targets its own project. This should not change project state or terrain.
+18. Hover and move across the Earthworks panel. Confirm one copy of the game's cursor appears above the parchment and controls, with no second Windows pointer. Move off the panel and confirm cursor handling returns to the game; close the panel while the pointer is over it and confirm the cursor is restored.
 
 ## Expected results
 
@@ -41,6 +42,7 @@ Build: **0.11.11-stage10a-project-camera**. This is a user-run in-game review. T
 - Ordinary left clicks pass through while no map-picking action is armed; Select area and Sample height capture only their intentional terrain clicks.
 - Keyboard input passes through while the panel is hovered or clicked, and is captured only while the Target height field is actively edited.
 - The game's in-game cursor remains the only visible cursor over the Earthworks panel.
+- While over the panel, the game's own cursor image is drawn above it once; moving off or closing the panel restores native cursor handling.
 - Each project's View button recentres the camera on that row's project without changing its state or terrain.
 - Existing project behavior and terrain are unchanged by opening or navigating the UI.
 
