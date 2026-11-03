@@ -11,10 +11,8 @@ namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
 constexpr size_t PlanSize = 2 + 7 * sizeof(float) + GridSide * GridSide * sizeof(float);
-constexpr size_t ProjectSizeV1 = sizeof(uint64_t) + 1 + PlanSize;
-constexpr size_t ProjectSizeV2 = sizeof(uint64_t) + 1 + sizeof(uint32_t) + PlanSize;
-constexpr size_t ProjectSize = sizeof(uint64_t) + 1 + 2 * sizeof(uint32_t) + 2 * sizeof(float) + 1 + PlanSize;
-constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + MaxSavedProjects * ProjectSize;
+constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
+    + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
 
 void Put32(std::vector<uint8_t>& out, uint32_t v)
 {
@@ -23,6 +21,11 @@ void Put32(std::vector<uint8_t>& out, uint32_t v)
 void Put64(std::vector<uint8_t>& out, uint64_t v)
 {
     for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<uint8_t>(v >> (i * 8)));
+}
+void PutString(std::vector<uint8_t>& out,const std::string& value)
+{
+    Put32(out,static_cast<uint32_t>(value.size()));
+    out.insert(out.end(),value.begin(),value.end());
 }
 void PutFloat(std::vector<uint8_t>& out, float v)
 {
@@ -55,6 +58,13 @@ struct Reader {
         uint8_t b[8]; if (!Take(b, sizeof(b))) return false;
         *out = 0; for (unsigned i = 0; i < 8; ++i) *out |= static_cast<uint64_t>(b[i]) << (i * 8); return true;
     }
+    bool String(std::string* out) {
+        uint32_t length=0;
+        if(!out||!U32(&length)||length==0||length>MaxSavedNameBytes||pos>size||length>size-pos)return false;
+        out->assign(reinterpret_cast<const char*>(data+pos),length);pos+=length;
+        for(unsigned char c:*out)if(c<0x20||c==0x7f)return false;
+        return true;
+    }
     bool Float(float* out) {
         uint32_t bits = 0; if (!U32(&bits)) return false;
         std::memcpy(out, &bits, sizeof(bits)); return std::isfinite(*out);
@@ -85,24 +95,50 @@ bool ValidPlan(const Plan& p)
     for (float h : p.ground) if (!std::isfinite(h)) return false;
     return !p.complete || (p.Width() > 0 && p.Depth() > 0);
 }
+bool ValidName(const std::string& value)
+{
+    if(value.empty()||value.size()>MaxSavedNameBytes)return false;
+    for(unsigned char c:value)if(c<0x20||c==0x7f)return false;
+    return true;
+}
 }
 
 bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
 {
-    if (!bytes || state.schema != StateSchemaVersion || state.projects.size() > MaxSavedProjects || !ValidPlan(state.draft)) return false;
+    if (!bytes || state.schema != StateSchemaVersion || state.projects.empty() || state.projects.size() > MaxSavedProjects
+        || state.earthworks.size() > MaxSavedEarthworks || !ValidPlan(state.draft) || !state.nextSiteNumber) return false;
     std::vector<uint8_t> payload;
-    payload.reserve(32 + PlanSize + state.projects.size() * ProjectSize);
+    payload.reserve(MaxFileSize-HeaderSize);
     payload.insert(payload.end(), state.terrainFingerprint.begin(), state.terrainFingerprint.end());
     PutPlan(payload,state.draft);
+    Put64(payload,state.selectedProjectId);Put32(payload,state.nextSiteNumber);
+    Put32(payload,static_cast<uint32_t>(state.projects.size()));
     for (size_t i=0; i<state.projects.size(); ++i) {
         const auto& p=state.projects[i];
-        if (!p.id || static_cast<uint8_t>(p.status) > static_cast<uint8_t>(ProjectStatus::Waiting) || !ValidPlan(p.plan) || !p.plan.complete
-            || !std::isfinite(p.progress) || p.progress < 0 || p.progress > 1
-            || !std::isfinite(p.workRemainderM3) || p.workRemainderM3 < 0) return false;
+        if (!p.id || !ValidName(p.name) || p.facilityIds.size()>MaxProjectFacilities) return false;
         for (size_t j=0; j<i; ++j) if (state.projects[j].id == p.id) return false;
-        Put64(payload,p.id); payload.push_back(static_cast<uint8_t>(p.status)); Put32(payload,p.facilityId);Put32(payload,p.executionCursor);
-        PutFloat(payload,p.progress); PutFloat(payload,p.workRemainderM3);
-        payload.push_back(p.needsReview ? 1 : 0); PutPlan(payload,p.plan);
+        for(size_t j=0;j<p.facilityIds.size();++j) {
+            if(!p.facilityIds[j])return false;
+            for(size_t k=0;k<j;++k)if(p.facilityIds[k]==p.facilityIds[j])return false;
+            for(size_t prior=0;prior<i;++prior)
+                for(uint32_t priorFacility:state.projects[prior].facilityIds)if(priorFacility==p.facilityIds[j])return false;
+        }
+        Put64(payload,p.id);PutString(payload,p.name);Put32(payload,static_cast<uint32_t>(p.facilityIds.size()));
+        for(uint32_t facility:p.facilityIds)Put32(payload,facility);
+    }
+    auto selected=std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==state.selectedProjectId;});
+    if(selected==state.projects.end())return false;
+    Put32(payload,static_cast<uint32_t>(state.earthworks.size()));
+    for(size_t i=0;i<state.earthworks.size();++i) {
+        const auto& e=state.earthworks[i];
+        if(!e.id||!ValidName(e.name)||selected==state.projects.end()||
+            std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==state.projects.end()
+            ||static_cast<uint8_t>(e.status)>static_cast<uint8_t>(ProjectStatus::Waiting)||!ValidPlan(e.plan)||!e.plan.complete
+            ||!std::isfinite(e.progress)||e.progress<0||e.progress>1||!std::isfinite(e.workRemainderM3)||e.workRemainderM3<0)return false;
+        for(size_t j=0;j<i;++j)if(state.earthworks[j].id==e.id)return false;
+        Put64(payload,e.id);Put64(payload,e.projectId);PutString(payload,e.name);payload.push_back(static_cast<uint8_t>(e.status));
+        Put32(payload,e.executionCursor);PutFloat(payload,e.progress);PutFloat(payload,e.workRemainderM3);
+        payload.push_back(e.needsReview?1:0);PutPlan(payload,e.plan);
     }
     bytes->clear(); bytes->reserve(HeaderSize+payload.size());
     bytes->insert(bytes->end(),std::begin(Magic),std::end(Magic));
@@ -118,27 +154,38 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     uint32_t version=0,payloadSize=0,crc=0;
     if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version < 1 || version > StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
-    const size_t projectSize=version==1?ProjectSizeV1:(version==2?ProjectSizeV2:ProjectSize);
-    const size_t fixedPayload=32+PlanSize;
-    if(payloadSize<fixedPayload || (payloadSize-fixedPayload)%projectSize!=0)return false;
+    if(version!=StateSchemaVersion)return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !GetPlan(r,&parsed.draft)) return false;
-    while (r.pos < r.size) {
-        if (parsed.projects.size() >= MaxSavedProjects) return false;
-        SavedProject p; uint8_t status=0;
-        if (!r.U64(&p.id) || !r.U8(&status) || !p.id || status>static_cast<uint8_t>(version>=4?ProjectStatus::Waiting:ProjectStatus::Cancelled)) return false;
-        p.status=static_cast<ProjectStatus>(status);
-        if(version>=2 && !r.U32(&p.facilityId))return false;
-        if(version>=3) {
-            uint8_t review=0;
-            if(!r.U32(&p.executionCursor) || !r.Float(&p.progress) || !r.Float(&p.workRemainderM3) || !r.U8(&review) || review>1)return false;
-            p.needsReview=review!=0;
+    if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;
+    uint32_t count=0;if(!r.U32(&count)||!count||count>MaxSavedProjects)return false;
+    for(uint32_t i=0;i<count;++i) {
+        SavedProject p;uint32_t facilities=0;
+        if(!r.U64(&p.id)||!p.id||!r.String(&p.name)||!r.U32(&facilities)||facilities>MaxProjectFacilities)return false;
+        for(const auto& prior:parsed.projects)if(prior.id==p.id)return false;
+        for(uint32_t j=0;j<facilities;++j) {
+            uint32_t id=0;if(!r.U32(&id)||!id)return false;
+            for(uint32_t prior:p.facilityIds)if(prior==id)return false;
+            for(const auto& priorProject:parsed.projects)for(uint32_t prior:priorProject.facilityIds)if(prior==id)return false;
+            p.facilityIds.push_back(id);
         }
-        if (!GetPlan(r,&p.plan) || !p.plan.complete) return false;
-        for (const auto& prior : parsed.projects) if (prior.id==p.id) return false;
-        parsed.projects.push_back(p);
+        parsed.projects.push_back(std::move(p));
     }
+    if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==parsed.selectedProjectId;})==parsed.projects.end())return false;
+    if(!r.U32(&count)||count>MaxSavedEarthworks)return false;
+    for(uint32_t i=0;i<count;++i) {
+        SavedEarthwork e;uint8_t status=0,review=0;
+        if(!r.U64(&e.id)||!e.id||!r.U64(&e.projectId)||!r.String(&e.name)||!r.U8(&status)
+            ||status>static_cast<uint8_t>(ProjectStatus::Waiting)||!r.U32(&e.executionCursor)||!r.Float(&e.progress)
+            ||e.progress<0||e.progress>1||!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1
+            ||!GetPlan(r,&e.plan)||!e.plan.complete)return false;
+        e.status=static_cast<ProjectStatus>(status);e.needsReview=review!=0;
+        if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==parsed.projects.end())return false;
+        for(const auto& prior:parsed.earthworks)if(prior.id==e.id)return false;
+        parsed.earthworks.push_back(std::move(e));
+    }
+    if(r.pos!=r.size)return false;
     parsed.schema=StateSchemaVersion;
     *state=std::move(parsed); return true;
 }

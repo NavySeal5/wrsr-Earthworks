@@ -14,6 +14,7 @@ enum class PickMode { Corners, Sample, None, InspectBuilding };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; };
 struct ProjectBrief {
     uint64_t id = 0;
+    char name[MaxSavedNameBytes+1]{};
     ProjectStatus status = ProjectStatus::Draft;
     unsigned facilityId = 0;
     unsigned allocatedWorkers = 0, allocatedMachines = 0;
@@ -32,6 +33,7 @@ struct Snapshot {
     uint64_t generation = 0, revision = 0;
     uint64_t projectId = 0;
     size_t projectCount = 0, projectTotal = 0;
+    char projectContainerName[MaxSavedNameBytes+1]{};
     unsigned projectFacilityId = 0;
     float projectFacilityDistance = 0;
     int day = 0, year = 0;

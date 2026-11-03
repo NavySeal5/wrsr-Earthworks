@@ -3,20 +3,31 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 4;
-constexpr size_t MaxSavedProjects = 128;
-constexpr size_t MaxVisibleProjects = MaxSavedProjects;
+constexpr uint32_t StateSchemaVersion = 5;
+constexpr size_t MaxSavedProjects = 32;
+constexpr size_t MaxSavedEarthworks = 128;
+constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;
+constexpr size_t MaxProjectFacilities = 16;
+constexpr size_t MaxSavedNameBytes = 48;
 
 enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5, Waiting = 6 };
 
 struct SavedProject {
     uint64_t id = 0;
+    std::string name;
+    std::vector<uint32_t> facilityIds;
+};
+
+struct SavedEarthwork {
+    uint64_t id = 0;
+    uint64_t projectId = 0;
+    std::string name;
     ProjectStatus status = ProjectStatus::Draft;
-    uint32_t facilityId = 0;
     uint32_t executionCursor = 0;
     float progress = 0;
     bool needsReview = false;
@@ -30,6 +41,9 @@ struct DurableState {
     std::array<uint8_t, 32> terrainFingerprint{};
     Plan draft{};
     std::vector<SavedProject> projects;
+    std::vector<SavedEarthwork> earthworks;
+    uint64_t selectedProjectId = 0;
+    uint32_t nextSiteNumber = 1;
 };
 
 // Versioned, bounded binary representation for a companion file. It contains

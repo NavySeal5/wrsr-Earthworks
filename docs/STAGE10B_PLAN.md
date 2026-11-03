@@ -9,12 +9,12 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 ## Intended player workflow
 
 1. Open the Earthworks panel. The Plan tab is gone; the Projects view is the main workflow.
-2. Use a project selector to switch the Earthworks list to the selected named Project. Create, rename, and delete named Projects. Remember the selected Project after save/reload.
+2. Use a project selector to switch the Earthworks list to the selected named Project. Create, rename, and delete named Projects. Rename individual Earthwork sites as well. Remember the selected Project after save/reload.
 3. Click **New Earthwork** below the list. It is assigned to the selected Project and receives an editable sequential default name (`Site-1`, `Site-2`, etc.), then the player selects two opposite terrain corners using the current area-selection behavior.
 4. After selecting the site, show a separate editor box beside that site. It contains footprint dimensions/area, sampled terrain height, cut/fill estimates and the target-height control. Angle is a possible future field, not part of this stage's first implementation.
 5. Clicking the earthwork site opens its editor again. The selected site's preview and editor can be used without returning to a separate Plan tab.
 6. Assign one or more Earthworks facilities to the named Project as a whole. A facility belongs to at most one named Project. Its facilities then provide capacity to the Earthworks in that container.
-7. Manage each Earthwork with the existing row workflow: within-Project priority ordering, start/pause/review/resume, cancel, camera view, and removal after completion. The list shows only Earthworks in the selected Project.
+7. Manage each Earthwork with the existing row workflow: within-Project priority ordering, start/pause/review/resume, cancel, disabled camera View, and removal after completion. The list shows only Earthworks in the selected Project.
 
 ## Implementation scope
 
@@ -36,11 +36,11 @@ Each checkpoint ends with a user-run in-game review. Do not move to the next che
 
 ### 10b.1 — Data model and fresh-save storage
 
-Implement named Project and Earthwork records in a new companion schema while preserving execution behavior. No schema-4 migration is required. On a fresh save, test project creation, Earthwork status/progress, facility links, and save/reload. Confirm planning/storage changes do not alter terrain.
+Implement named Project and Earthwork records in a new companion schema while preserving execution behavior. A fresh world starts with one `Project 1` container; the selector and create/rename/delete controls arrive in 10b.2. No schema-4 migration is required. On a fresh save, test the default container, generated site names, Earthwork status/progress, project-level facility link and save/reload. Confirm planning/storage changes do not alter terrain. Selected-container reload behavior becomes directly selectable and testable once the 10b.2 selector is implemented.
 
 ### 10b.2 — Named-project management
 
-Add the selector, create, rename, delete and facility assignment controls. Switching the selected Project filters the list without changing Earthwork state or scheduler state. Assign and remove multiple facilities at the Project level; reject assigning a facility already owned by another Project. Test with several Projects containing mixed Earthwork states, then save/reload. Deletion must be blocked while unfinished Earthworks are inside the container; ended records can be removed with their container.
+Add the selector, create, rename, delete and facility assignment controls. Switching the selected Project filters the list without changing Earthwork state or scheduler state. Add a rename action for each Earthwork site. Assign and remove multiple facilities at the Project level; reject assigning a facility already owned by another Project. Test with several Projects containing mixed Earthwork states, then save/reload. Deletion must be blocked while unfinished Earthworks are inside the container; ended records can be removed with their container.
 
 ### 10b.3 — Create Earthwork from the Projects view
 
@@ -52,7 +52,7 @@ Show a separate world-anchored editor beside the newly selected site with target
 
 ### 10b.5 — Regression and acceptance
 
-Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Earthworks from the selected Project only. Stage 10b is accepted only after user review.
+Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, disabled camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Earthworks from the selected Project only. Stage 10b is accepted only after user review.
 
 ## Confirmed rules and remaining decision
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.11.18-stage10a-view-disabled",
+  "version": "0.12.0-stage10b1-named-storage",
   "description": "Plan terrain projects, assign Earthworks facilities, and manage project status and priorities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

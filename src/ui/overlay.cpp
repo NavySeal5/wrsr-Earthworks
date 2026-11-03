@@ -380,6 +380,8 @@ void DrawInterface(const Snapshot& s)
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Project queue");
             ImGui::SameLine();
+            ImGui::TextDisabled("%s",s.projectContainerName);
+            ImGui::SameLine();
             char clearCompletedLabel[64];
             sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
             const auto& style=ImGui::GetStyle();
@@ -391,7 +393,7 @@ void DrawInterface(const Snapshot& s)
             if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
             ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
             if(s.projectCount && ImGui::BeginTable("Project rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,2.7f);
+                ImGui::TableSetupColumn("Earthwork",ImGuiTableColumnFlags_WidthStretch,2.7f);
                 ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.1f);
                 ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.35f);
                 ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.15f);
@@ -404,7 +406,7 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextRow(ImGuiTableRowFlags_None,34.0f);
                     ImGui::TableNextColumn();
                     char label[80];
-                    sprintf_s(label,"Project %llu  |  %s",static_cast<unsigned long long>(project.id),ProjectStatusName(project.status));
+                    sprintf_s(label,"%s  |  %s",project.name,ProjectStatusName(project.status));
                     if(ImGui::Selectable(label,s.projectId==project.id,ImGuiSelectableFlags_None,{0,28}))SendProject(Action::SelectProject,project.id);
 
                     ImGui::TableNextColumn();
