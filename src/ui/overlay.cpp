@@ -444,6 +444,20 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthFixed,64.0f);
                     ImGui::TableSetupColumn("Rename",ImGuiTableColumnFlags_WidthFixed,64.0f);
                     ImGui::TableHeadersRow();
+                    auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture) {
+                        if(!texture)return false;
+                        constexpr float iconSize=30.0f;
+                        ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.0f,(ImGui::GetContentRegionAvail().x-iconSize)*0.5f));
+                        const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+                        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0.0f);
+                        ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
+                        const bool pressed=ImGui::ImageButton(id,image,{iconSize,iconSize},{0,0},{1,1},{0,0,0,0});
+                        ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
+                        return pressed;
+                    };
                     for(size_t i=0;i<s.projectCount;++i) {
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
                         ImGui::TableNextRow(ImGuiTableRowFlags_None,48.0f);
@@ -465,22 +479,12 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
                         ImGui::BeginDisabled(!cancellable);
                         if(siteCancelIcon) {
-                            const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteCancelIcon)));
-                            ImGui::PushStyleColor(ImGuiCol_Button,{0.77f,0.64f,0.47f,1});
-                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.86f,0.73f,0.55f,1});
-                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.70f,0.56f,0.39f,1});
-                            if(ImGui::ImageButton("##CancelSite",icon,{24,24},{0,0},{1,1},{0,0,0,0}))SendProjectAction(Action::CancelProject,site.id);
-                            ImGui::PopStyleColor(3);
+                            if(drawIconButton("##CancelSite",siteCancelIcon))SendProjectAction(Action::CancelProject,site.id);
                         } else if(ImGui::Button("×",{32,32}))SendProjectAction(Action::CancelProject,site.id);
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();
                         if(siteRenameIcon) {
-                            const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
-                            ImGui::PushStyleColor(ImGuiCol_Button,{0.77f,0.64f,0.47f,1});
-                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.86f,0.73f,0.55f,1});
-                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.70f,0.56f,0.39f,1});
-                            if(ImGui::ImageButton("##RenameSite",icon,{24,24},{0,0},{1,1},{0,0,0,0})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
-                            ImGui::PopStyleColor(3);
+                            if(drawIconButton("##RenameSite",siteRenameIcon)) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
                         } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
                         ImGui::PopID();
                     }
