@@ -867,9 +867,10 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::BeginDisabled(!editable);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
+    ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Target height (m)");
     ImGui::SameLine();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
     const auto& input=ImGui::GetIO();
     const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
     auto applyHeight=[&](float height) {
