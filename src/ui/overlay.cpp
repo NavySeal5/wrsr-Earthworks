@@ -446,9 +446,25 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.15f);
                     ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.05f);
                     ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.05f);
-                    ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthFixed,64.0f);
-                    ImGui::TableSetupColumn("Rename",ImGuiTableColumnFlags_WidthFixed,64.0f);
-                    ImGui::TableHeadersRow();
+                    ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,40.0f);
+                    ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,40.0f);
+                    ImGui::TableNextRow(ImGuiTableRowFlags_Headers,32.0f);
+                    ImGui::TableNextColumn();ImGui::TextUnformatted("Site");
+                    ImGui::TableNextColumn();ImGui::TextUnformatted("Progress");
+                    ImGui::TableNextColumn();ImGui::TextUnformatted("Priority");
+                    ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
+                    ImGui::TableNextColumn();
+                    if(siteCancelIcon) {
+                        const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteCancelIcon)));
+                        ImGui::Image(icon,{24,24});
+                    } else ImGui::TextUnformatted("×");
+                    if(ImGui::IsItemHovered()) {ImGui::BeginTooltip();ImGui::TextUnformatted("Cancel");ImGui::EndTooltip();}
+                    ImGui::TableNextColumn();
+                    if(siteRenameIcon) {
+                        const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
+                        ImGui::Image(icon,{24,24});
+                    } else ImGui::TextUnformatted("R");
+                    if(ImGui::IsItemHovered()) {ImGui::BeginTooltip();ImGui::TextUnformatted("Rename");ImGui::EndTooltip();}
                     auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture) {
                         if(!texture)return false;
                         constexpr float iconSize=30.0f;
