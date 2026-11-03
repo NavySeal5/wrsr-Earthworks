@@ -867,13 +867,13 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetNextItemWidth(130);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
     const bool changed=ImGui::InputFloat("Target height (m)",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
-    ImGui::PopStyleVar();
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
         if(s.creatingSite)Send(Action::Target,editHeight);
         else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,editHeight);
     }
+    ImGui::PopStyleVar();
     ImGui::EndDisabled();
     ImGui::BeginDisabled(!editable);
     if(ImGui::Button("Sample target from map",{ImGui::GetContentRegionAvail().x,28}))Send(Action::SampleSiteTarget);
