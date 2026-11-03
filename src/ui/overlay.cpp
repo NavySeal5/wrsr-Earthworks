@@ -873,9 +873,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SameLine();
     const auto& input=ImGui::GetIO();
     const float heightStep=input.KeyCtrl?(input.KeyShift?100.0f:10.0f):1.0f;
-    if(ImGui::Button("-",{28.0f,0.0f}))editHeight-=heightStep;
+    if(ImGui::Button("-##DecreaseTargetHeight",{28.0f,0.0f}))editHeight-=heightStep;
     ImGui::SameLine();
-    if(ImGui::Button("+",{28.0f,0.0f}))editHeight+=heightStep;
+    if(ImGui::Button("+##IncreaseTargetHeight",{28.0f,0.0f}))editHeight+=heightStep;
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
         if(s.creatingSite)Send(Action::Target,editHeight);
