@@ -619,7 +619,7 @@ void DrawInterface(const Snapshot& s)
             }
             if(ImGui::BeginPopupModal("Site name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
-                ImGui::Text("Rename Site");ImGui::SetNextItemWidth(300);ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));nameTextEditing|=ImGui::IsItemActive();
+                ImGui::Text("Rename Site");ImGui::SetNextItemWidth(300);ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});ImGui::InputText("Name",nameBuffer,sizeof(nameBuffer));ImGui::PopStyleVar();nameTextEditing|=ImGui::IsItemActive();
                 if(ImGui::Button("Save")) {SendProjectText(Action::RenameSite,renameTarget,nameBuffer);ImGui::CloseCurrentPopup();}
                 ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();ImGui::EndPopup();
             }
@@ -806,12 +806,16 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*(2.0f/3.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
         if(ImGui::InputText("Site name",draftNameBuffer,sizeof(draftNameBuffer)))
             SendProjectText(Action::SetDraftSiteName,0,draftNameBuffer);
+        ImGui::PopStyleVar();
         nameTextEditing|=ImGui::IsItemActive();
     } else if(renameEditing) {
         ImGui::SetNextItemWidth(155.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
         const bool enterPressed=ImGui::InputText("##EditingSiteName",renameBuffer,sizeof(renameBuffer),ImGuiInputTextFlags_EnterReturnsTrue);
+        ImGui::PopStyleVar();
         nameTextEditing|=ImGui::IsItemActive();
         ImGui::SameLine();
         const bool saveRename=ImGui::Button("Save",{48,26})||enterPressed;
@@ -861,7 +865,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused));
     ImGui::BeginDisabled(!editable);
     ImGui::SetNextItemWidth(130);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
     const bool changed=ImGui::InputFloat("Target height (m)",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::PopStyleVar();
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     ImGui::SameLine();
     if(ImGui::Button("Apply height")||changed) {
