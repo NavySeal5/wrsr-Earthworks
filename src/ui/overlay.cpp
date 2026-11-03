@@ -404,7 +404,6 @@ void DrawInterface(const Snapshot& s)
         RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);return;
     }
     ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
-    ImGui::TextWrapped("%s",s.message);
     static char nameBuffer[MaxSavedNameBytes+1]{};
     static Action renameAction=Action::RenameNamedProject;
     static uint64_t renameTarget=0;
