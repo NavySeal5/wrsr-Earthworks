@@ -381,8 +381,6 @@ void DrawInterface(const Snapshot& s)
         RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);return;
     }
     ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
-    ImGui::TextWrapped("Manage Sites in the selected Project. Select a Site on the map to edit it.");
-    ImGui::Separator();
     ImGui::TextWrapped("%s",s.message);
     static char nameBuffer[MaxSavedNameBytes+1]{};
     static Action renameAction=Action::RenameNamedProject;
