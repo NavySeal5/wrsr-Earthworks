@@ -58,6 +58,7 @@ Updated 2 November 2026. This register separates the user's confirmed intent fro
 | D63 | Present projects as native-style list rows with per-project move-up, move-down, start/resume-or-pause, and cancel controls | User requested the Projects list follow the construction-office queue concept, with controls on each row, 3 November 2026 |
 | D64 | Hovering over or clicking elsewhere in the Earthworks panel must not capture gameplay keys; suppress keyboard input only while editing the Target height value | User explicitly requested WASD and other keys pass through unless typing a target height, 3 November 2026 |
 | D65 | Keep the game's own cursor when the Earthworks panel is hovered; do not show a Windows system cursor or an ImGui software cursor | User explicitly requested the in-game cursor remain the only cursor, 3 November 2026 |
+| D66 | Provide a per-project View button that pans the camera to the project's footprint centre while preserving the current view angle and distance | User requested a camera-pan button on each Projects row, 3 November 2026; centre-of-footprint focus is the direct interpretation |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 

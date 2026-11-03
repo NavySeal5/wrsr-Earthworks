@@ -33,11 +33,15 @@ using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
 using RaiseFn = void (*)(void*,const float*,float,float,float,float,bool);
 using TextureFn = void (*)(void*);
+using CameraGetVectorFn = float* (*)(void*,float*);
+using CameraSetVectorFn = void (*)(void*,const float*);
 LateFn originalLate = nullptr;
 LoadFn originalLoad = nullptr;
 HeightFn heightQuery = nullptr;
 RaiseFn raiseLower = nullptr;
 TextureFn openHeightmap = nullptr, closeHeightmap = nullptr;
+CameraGetVectorFn cameraGetPosition = nullptr, cameraGetLookAt = nullptr;
+CameraSetVectorFn cameraSetPosition = nullptr, cameraSetLookAt = nullptr;
 double lastSimulationHour = -1;
 ULONGLONG lastCompletionCheck = 0;
 using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
@@ -64,6 +68,7 @@ bool ReadNative(Snapshot* out)
         out->time = *reinterpret_cast<const float*>(world+0x59C);
         const auto* camera = *reinterpret_cast<unsigned char**>(b+0x9EAD10);
         out->cameraValid = camera != nullptr;
+        out->cameraFocusAvailable = camera && cameraGetPosition && cameraGetLookAt && cameraSetPosition && cameraSetLookAt;
         if (camera) {
             std::memcpy(out->view, camera, sizeof(out->view));
             std::memcpy(out->projection, camera+0xC8, sizeof(out->projection));
@@ -265,6 +270,27 @@ void ProcessProbe(ProbeAction action)
         Message("Diagnostic edit changed real ground. Old preview cleared; inspect the test measurements below.");
     } else Message("See the Stage 3 test status and measurements below.");
 }
+bool PanCameraToProject(const Plan& plan)
+{
+    if(!cameraGetPosition||!cameraGetLookAt||!cameraSetPosition||!cameraSetLookAt) return false;
+    __try {
+        auto* camera=*reinterpret_cast<unsigned char**>(host->exeBase+0x9EAD10);
+        if(!camera) return false;
+        alignas(16) float position[3]{},lookAt[3]{};
+        cameraGetPosition(camera,position);
+        cameraGetLookAt(camera,lookAt);
+        const float centerX=(plan.a.x+plan.b.x)*0.5f;
+        const float centerZ=(plan.a.z+plan.b.z)*0.5f;
+        float centerY=lookAt[1];
+        ReadHeight(centerX,centerZ,&centerY);
+        const float deltaX=centerX-lookAt[0],deltaY=centerY-lookAt[1],deltaZ=centerZ-lookAt[2];
+        const float nextPosition[]={position[0]+deltaX,position[1]+deltaY,position[2]+deltaZ};
+        const float nextLookAt[]={centerX,centerY,centerZ};
+        cameraSetPosition(camera,nextPosition);
+        cameraSetLookAt(camera,nextLookAt);
+        return true;
+    } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
 void Process(const Command& command)
 {
     if (command.generation != current.generation || !current.ready) return;
@@ -351,6 +377,17 @@ void Process(const Command& command)
     case Action::SelectProject:
         if(FindProject(command.projectId)){selectedProjectId=command.projectId;RefreshProjectStatus();}
         break;
+    case Action::FocusProject: {
+        const auto* project=FindProject(command.projectId);
+        if(!project) {Message("That project is no longer available.");break;}
+        if(PanCameraToProject(project->plan)) {
+            host->log("earthworks  camera centered on project=%llu at=(%.2f,%.2f)",
+                static_cast<unsigned long long>(project->id),(project->plan.a.x+project->plan.b.x)*0.5f,
+                (project->plan.a.z+project->plan.b.z)*0.5f);
+            Message("Camera centered on the project. View distance and angle are preserved.");
+        } else Message("Could not move the camera to that project.");
+        break;
+    }
     case Action::MoveProjectUp:
     case Action::MoveProjectDown: {
         auto it=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& p){return p.id==command.projectId;});
@@ -808,6 +845,10 @@ bool InstallRuntime()
     raiseLower=reinterpret_cast<RaiseFn>(GetProcAddress(engine,"?EditRaiseLower@C3D_TERRAIN@@QEAAXVC3DVECTOR3@@MMMM_N@Z"));
     openHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureOpen@C3D_TERRAIN@@QEAAXXZ"));
     closeHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureClose@C3D_TERRAIN@@QEAAXXZ"));
+    cameraGetPosition=reinterpret_cast<CameraGetVectorFn>(GetProcAddress(engine,"?ViewGetPosition@C3D_CAMERA@@QEAA?AVC3DVECTOR3@@XZ"));
+    cameraGetLookAt=reinterpret_cast<CameraGetVectorFn>(GetProcAddress(engine,"?ViewGetLookAt@C3D_CAMERA@@QEAA?AVC3DVECTOR3@@XZ"));
+    cameraSetPosition=reinterpret_cast<CameraSetVectorFn>(GetProcAddress(engine,"?ViewSetPosition@C3D_CAMERA@@QEAAXVC3DVECTOR3@@@Z"));
+    cameraSetLookAt=reinterpret_cast<CameraSetVectorFn>(GetProcAddress(engine,"?ViewSetLookAt@C3D_CAMERA@@QEAAXVC3DVECTOR3@@@Z"));
     if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
         || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
         || !host->findIatSlot || !host->patchIat || !host->installInlineHook
@@ -829,6 +870,7 @@ bool InstallRuntime()
     BindTerrainProbe();
     BindNativeTerrainCallProbe();
     host->log("earthworks  terrain executor bindings %s",raiseLower&&heightQuery&&openHeightmap&&closeHeightmap?"available":"unavailable; projects remain queued");
+    host->log("earthworks  project camera focus %s",cameraGetPosition&&cameraGetLookAt&&cameraSetPosition&&cameraSetLookAt?"available":"unavailable");
     return true;
 }
 }

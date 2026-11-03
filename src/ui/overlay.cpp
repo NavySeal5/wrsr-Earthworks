@@ -350,12 +350,13 @@ void DrawInterface(const Snapshot& s)
         if(ImGui::BeginTabItem("Projects")) {
             if(!s.projectTotal)ImGui::TextDisabled("No projects yet. Add a project from the Plan tab.");
             ImGui::BeginChild("Project queue",{0,220},ImGuiChildFlags_Borders);
-            if(s.projectCount && ImGui::BeginTable("Project rows",5,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+            if(s.projectCount && ImGui::BeginTable("Project rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                 ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,2.7f);
                 ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.1f);
                 ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.35f);
                 ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.15f);
                 ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthStretch,1.0f);
+                ImGui::TableSetupColumn("View",ImGuiTableColumnFlags_WidthStretch,0.9f);
                 ImGui::TableHeadersRow();
                 for(size_t i=0;i<s.projectCount;++i) {
                     const auto& project=s.projects[i];
@@ -397,6 +398,12 @@ void DrawInterface(const Snapshot& s)
                     const bool cancellable=project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused;
                     ImGui::BeginDisabled(!cancellable);
                     if(ImGui::Button("Cancel",{ImGui::GetContentRegionAvail().x,26}))SendProjectAction(Action::CancelProject,project.id);
+                    ImGui::EndDisabled();
+
+                    ImGui::TableNextColumn();
+                    ImGui::BeginDisabled(!s.cameraFocusAvailable);
+                    if(ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26}))SendProject(Action::FocusProject,project.id);
+                    ImGui::SetItemTooltip("Pan the camera to this project's centre while keeping the current view angle and distance");
                     ImGui::EndDisabled();
                     ImGui::PopID();
                 }
