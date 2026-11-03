@@ -8,6 +8,7 @@
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include "../runtime/runtime.h"
+#include "game_underlay.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "../core/productivity.h"
@@ -23,6 +24,7 @@ namespace ew {
 namespace {
 using PresentFn = HRESULT (STDMETHODCALLTYPE*)(IDXGISwapChain*,UINT,UINT);
 PresentFn originalPresent = nullptr;
+bool gameUnderlayInstalled = false;
 ID3D11Device* device = nullptr;
 ID3D11DeviceContext* context = nullptr;
 ID3D11RenderTargetView* target = nullptr;
@@ -190,6 +192,7 @@ bool Project(const Snapshot& s,Point p,ImVec2* out)
 }
 void Line(const Snapshot& s,Point a,Point b,ImU32 color,float thickness=1)
 {
+    if(gameUnderlayInstalled) return;
     ImVec2 p,q;
     if (Project(s,a,&p) && Project(s,b,&q)) ImGui::GetBackgroundDrawList()->AddLine(p,q,color,thickness);
 }
@@ -249,7 +252,7 @@ void DrawPreview(const Snapshot& s)
     if (!p.first) return;
     if (!p.complete) {
         ImVec2 first;
-        if (Project(s,p.a,&first)) ImGui::GetBackgroundDrawList()->AddCircle(first,7,IM_COL32(255,235,135,255),16,2);
+        if (!gameUnderlayInstalled && Project(s,p.a,&first)) ImGui::GetBackgroundDrawList()->AddCircle(first,7,IM_COL32(255,235,135,255),16,2);
         if (panelOpen && s.cursorValid && s.mode==PickMode::Corners) {
             const Point a={p.a.x,p.target,p.a.z},b={s.cursor.x,p.target,p.a.z},c={s.cursor.x,p.target,s.cursor.z},d={p.a.x,p.target,s.cursor.z};
             Line(s,a,b,fillColor,2); Line(s,b,c,fillColor,2); Line(s,c,d,fillColor,2); Line(s,d,a,fillColor,2);
@@ -1018,6 +1021,8 @@ bool Initialize(IDXGISwapChain* swap)
     originalWndProc=reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gameWindow,GWLP_WNDPROC,reinterpret_cast<LONG_PTR>(WindowProc)));
     if (!originalWndProc) return false;
     gameChain=swap;
+    gameUnderlayInstalled=InstallGameUnderlay(host);
+    host->log("earthworks  native UI terrain underlay %s",gameUnderlayInstalled?"installed":"unavailable; using foreground fallback");
     host->log("earthworks  overlay initialized hwnd=%p; on-screen Earthworks button only",gameWindow);
     return true;
 }
