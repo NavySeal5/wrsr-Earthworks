@@ -42,6 +42,12 @@ RaiseFn raiseLower = nullptr;
 TextureFn openHeightmap = nullptr, closeHeightmap = nullptr;
 CameraGetVectorFn cameraGetPosition = nullptr, cameraGetLookAt = nullptr;
 CameraSetVectorFn cameraSetPosition = nullptr, cameraSetLookAt = nullptr;
+struct CameraPan {
+    bool active = false;
+    ULONGLONG started = 0;
+    float fromPosition[3]{}, fromLookAt[3]{}, toPosition[3]{}, toLookAt[3]{};
+};
+CameraPan cameraPan;
 double lastSimulationHour = -1;
 ULONGLONG lastCompletionCheck = 0;
 using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
@@ -205,6 +211,7 @@ void ResetWorld()
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
     durableState = DurableState{}; selectedProjectId=0; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    cameraPan.active=false;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
     ProbeWorldBoundary();
     ResetWorkforce();
@@ -270,7 +277,7 @@ void ProcessProbe(ProbeAction action)
         Message("Diagnostic edit changed real ground. Old preview cleared; inspect the test measurements below.");
     } else Message("See the Stage 3 test status and measurements below.");
 }
-bool PanCameraToProject(const Plan& plan)
+bool StartCameraPanToProject(const Plan& plan)
 {
     if(!cameraGetPosition||!cameraGetLookAt||!cameraSetPosition||!cameraSetLookAt) return false;
     __try {
@@ -279,17 +286,51 @@ bool PanCameraToProject(const Plan& plan)
         alignas(16) float position[3]{},lookAt[3]{};
         cameraGetPosition(camera,position);
         cameraGetLookAt(camera,lookAt);
+        for(int i=0;i<3;++i)if(!std::isfinite(position[i])||!std::isfinite(lookAt[i]))return false;
         const float centerX=(plan.a.x+plan.b.x)*0.5f;
         const float centerZ=(plan.a.z+plan.b.z)*0.5f;
         float centerY=lookAt[1];
         ReadHeight(centerX,centerZ,&centerY);
         const float deltaX=centerX-lookAt[0],deltaY=centerY-lookAt[1],deltaZ=centerZ-lookAt[2];
-        const float nextPosition[]={position[0]+deltaX,position[1]+deltaY,position[2]+deltaZ};
-        const float nextLookAt[]={centerX,centerY,centerZ};
-        cameraSetPosition(camera,nextPosition);
-        cameraSetLookAt(camera,nextLookAt);
+        cameraPan.active=true;
+        cameraPan.started=GetTickCount64();
+        for(int i=0;i<3;++i) {
+            cameraPan.fromPosition[i]=position[i];
+            cameraPan.fromLookAt[i]=lookAt[i];
+        }
+        cameraPan.toPosition[0]=position[0]+deltaX;
+        cameraPan.toPosition[1]=position[1]+deltaY;
+        cameraPan.toPosition[2]=position[2]+deltaZ;
+        cameraPan.toLookAt[0]=centerX;
+        cameraPan.toLookAt[1]=centerY;
+        cameraPan.toLookAt[2]=centerZ;
         return true;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+void TickCameraPan()
+{
+    if(!cameraPan.active||!cameraSetPosition||!cameraSetLookAt)return;
+    const auto elapsed=GetTickCount64()-cameraPan.started;
+    const float t=std::min(1.0f,static_cast<float>(elapsed)/750.0f);
+    const float eased=t*t*(3.0f-2.0f*t);
+    float position[3]{},lookAt[3]{};
+    for(int i=0;i<3;++i) {
+        position[i]=cameraPan.fromPosition[i]+(cameraPan.toPosition[i]-cameraPan.fromPosition[i])*eased;
+        lookAt[i]=cameraPan.fromLookAt[i]+(cameraPan.toLookAt[i]-cameraPan.fromLookAt[i])*eased;
+    }
+    __try {
+        auto* camera=*reinterpret_cast<unsigned char**>(host->exeBase+0x9EAD10);
+        if(!camera)return;
+        cameraSetPosition(camera,position);
+        cameraSetLookAt(camera,lookAt);
+        if(t>=1.0f) {
+            cameraPan.active=false;
+            host->log("earthworks  camera pan completed at=(%.2f,%.2f)",cameraPan.toLookAt[0],cameraPan.toLookAt[2]);
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        cameraPan.active=false;
+        host->log("earthworks  camera pan stopped after guarded camera access failed");
+    }
 }
 void Process(const Command& command)
 {
@@ -380,11 +421,11 @@ void Process(const Command& command)
     case Action::FocusProject: {
         const auto* project=FindProject(command.projectId);
         if(!project) {Message("That project is no longer available.");break;}
-        if(PanCameraToProject(project->plan)) {
-            host->log("earthworks  camera centered on project=%llu at=(%.2f,%.2f)",
+        if(StartCameraPanToProject(project->plan)) {
+            host->log("earthworks  camera pan started for project=%llu at=(%.2f,%.2f)",
                 static_cast<unsigned long long>(project->id),(project->plan.a.x+project->plan.b.x)*0.5f,
                 (project->plan.a.z+project->plan.b.z)*0.5f);
-            Message("Camera centered on the project. View distance and angle are preserved.");
+            Message("Moving the camera to the project. View distance and angle are preserved.");
         } else Message("Could not move the camera to that project.");
         break;
     }
@@ -694,6 +735,7 @@ void Tick()
             } else Message("Ground readback unavailable. Select the area again before relying on this preview.");
         }
     }
+    TickCameraPan();
     current.canUndo = history.CanUndo(); current.canRedo = history.CanRedo();
     current.probe = ReadProbeView();
     current.nativeTerrainCall = ReadNativeTerrainCallProbe();

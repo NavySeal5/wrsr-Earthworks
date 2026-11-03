@@ -430,7 +430,7 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();
                     ImGui::BeginDisabled(!s.cameraFocusAvailable);
                     if(ImGui::Button("View",{ImGui::GetContentRegionAvail().x,26}))SendProject(Action::FocusProject,project.id);
-                    ImGui::SetItemTooltip("Pan the camera to this project's centre while keeping the current view angle and distance");
+                    ImGui::SetItemTooltip("Move the camera smoothly to this project's centre while keeping the current view angle and distance");
                     ImGui::EndDisabled();
                     ImGui::PopID();
                 }

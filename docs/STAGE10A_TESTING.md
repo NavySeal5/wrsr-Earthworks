@@ -1,6 +1,6 @@
 # Stage 10a — player UI review
 
-Build: **0.11.14-stage10a-game-cursor-art**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
+Build: **0.11.15-stage10a-camera-pan**. This is a user-run in-game review. The agent compiled and staged the player build but did not launch the game or inspect a save.
 
 ## Setup
 
@@ -28,7 +28,7 @@ Build: **0.11.14-stage10a-game-cursor-art**. This is a user-run in-game review. 
 14. Check selected tabs and pressed/hovered controls: their backgrounds should be lighter, dark text should remain the same color and readable, and text color should not switch with the state.
 15. Hover over the Earthworks panel and use WASD and other usual gameplay shortcuts; movement and game shortcuts should continue. Click panel buttons and tabs, then repeat. Focus the Target height field and type a value; while it is actively being edited, keystrokes should go into the field instead of controlling the game. Click elsewhere in the panel and confirm gameplay keys pass through again.
 16. Move the cursor over the panel and its buttons; confirm the game-styled cursor remains visible without a second Windows arrow.
-17. In Projects, press View on a project that is off-screen. Confirm the camera moves to its footprint centre and retains the current zoom distance and viewing angle. Try a second row to confirm each button targets its own project. This should not change project state or terrain.
+17. In Projects, press View on a project that is off-screen. Confirm the camera moves smoothly to its footprint centre and retains the current zoom distance and viewing angle. Try a second row to confirm each button targets its own project. This should not change project state or terrain.
 18. Hover and move across the Earthworks panel. Confirm the game's beige cursor art is visible over the panel, without a second Windows arrow. Move off and close the panel; confirm the native cursor returns.
 
 ## Expected results
