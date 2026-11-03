@@ -8,7 +8,7 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 5;
+constexpr uint32_t StateSchemaVersion = 6;
 constexpr size_t MaxSavedProjects = 32;
 constexpr size_t MaxSavedEarthworks = 128;
 constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;
@@ -40,6 +40,7 @@ struct DurableState {
     uint32_t schema = StateSchemaVersion;
     std::array<uint8_t, 32> terrainFingerprint{};
     Plan draft{};
+    std::string draftName = "Site-1";
     std::vector<SavedProject> projects;
     std::vector<SavedEarthwork> earthworks;
     uint64_t selectedProjectId = 0;

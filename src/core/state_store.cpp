@@ -11,7 +11,7 @@ namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
 constexpr size_t PlanSize = 2 + 7 * sizeof(float) + GridSide * GridSide * sizeof(float);
-constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
+constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
     + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
 
 void Put32(std::vector<uint8_t>& out, uint32_t v)
@@ -107,10 +107,11 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
 {
     if (!bytes || state.schema != StateSchemaVersion || state.projects.size() > MaxSavedProjects
         || state.earthworks.size() > MaxSavedEarthworks || !ValidPlan(state.draft) || !state.nextSiteNumber) return false;
+    if(!ValidName(state.draftName))return false;
     std::vector<uint8_t> payload;
     payload.reserve(MaxFileSize-HeaderSize);
     payload.insert(payload.end(), state.terrainFingerprint.begin(), state.terrainFingerprint.end());
-    PutPlan(payload,state.draft);
+    PutPlan(payload,state.draft);PutString(payload,state.draftName);
     Put64(payload,state.selectedProjectId);Put32(payload,state.nextSiteNumber);
     Put32(payload,static_cast<uint32_t>(state.projects.size()));
     for (size_t i=0; i<state.projects.size(); ++i) {
@@ -152,13 +153,17 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version < 1 || version > StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
-    if(version!=StateSchemaVersion)return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !GetPlan(r,&parsed.draft)) return false;
+    if(version==StateSchemaVersion&&!r.String(&parsed.draftName))return false;
     if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;
+    if(version==5) {
+        char defaultName[MaxSavedNameBytes+1]{};sprintf_s(defaultName,"Site-%u",parsed.nextSiteNumber);
+        parsed.draftName=defaultName;
+    }
     uint32_t count=0;if(!r.U32(&count)||count>MaxSavedProjects)return false;
     for(uint32_t i=0;i<count;++i) {
         SavedProject p;uint32_t facilities=0;

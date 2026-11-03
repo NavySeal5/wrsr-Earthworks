@@ -174,6 +174,12 @@ bool AvailabilitySignal()
     __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 void Message(const char* text) { strcpy_s(current.message, text); }
+void SetDefaultDraftSiteName()
+{
+    char name[MaxSavedNameBytes+1]{};
+    sprintf_s(name,"Site-%u",durableState.nextSiteNumber);
+    durableState.draftName=name;
+}
 bool ProjectReservesFootprint(ProjectStatus status)
 {
     return status==ProjectStatus::Queued||status==ProjectStatus::Running||status==ProjectStatus::Waiting||status==ProjectStatus::Paused;
@@ -316,6 +322,7 @@ void RefreshProjectStatus()
     current.projectProgress=0;
     current.selectedSiteName[0]=0;
     current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;
+    strncpy_s(current.siteDraftName,durableState.draftName.c_str(),_TRUNCATE);
     current.editorPlan=Plan{};
     current.projectFacilityDistance=0;
     current.queuedPlan=Plan{};
@@ -377,6 +384,7 @@ void Process(const Command& command)
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::Corners;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Continue selecting two opposite corners.");break;}
         if(current.plan.first) {creatingSite=true;siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::Corners;RefreshProjectStatus();Message(current.plan.complete?"Saved Site draft reopened.":"Continue selecting two opposite corners.");break;}
         history.Reset(); current.plan = Plan{}; Changed();
+        SetDefaultDraftSiteName();
         editingSiteId=0;creatingSite=true;siteEditorOpen=true;
         current.mode = PickMode::Corners;
         RefreshProjectStatus();
@@ -384,12 +392,12 @@ void Process(const Command& command)
         break;
     case Action::Select:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
-        history.Reset();current.plan=Plan{};Changed();editingSiteId=0;creatingSite=true;siteEditorOpen=true;current.mode=PickMode::Corners;RefreshProjectStatus();
+        history.Reset();current.plan=Plan{};Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;current.mode=PickMode::Corners;RefreshProjectStatus();
         Message("Select two opposite corners for the Site area.");break;
     case Action::CloseSiteEditor:
         siteEditorOpen=false;RefreshProjectStatus();break;
     case Action::CancelSiteDraft:
-        if(creatingSite) {current.plan=Plan{};history.Reset();current.mode=PickMode::None;creatingSite=false;editingSiteId=0;siteEditorOpen=false;Changed();Message("New Site draft discarded.");}
+        if(creatingSite) {current.plan=Plan{};history.Reset();current.mode=PickMode::None;creatingSite=false;editingSiteId=0;siteEditorOpen=false;SetDefaultDraftSiteName();Changed();Message("New Site draft discarded.");}
         break;
     case Action::Sample:
         current.mode = PickMode::Sample;
@@ -485,13 +493,23 @@ void Process(const Command& command)
     case Action::ConfirmProject: {
         UpdateSiteDraftValidation();
         if(current.siteDraftError[0]) {Message(current.siteDraftError);break;}
+        std::string siteName=command.text[0]?command.text:durableState.draftName;
+        while(!siteName.empty()&&std::isspace(static_cast<unsigned char>(siteName.front())))siteName.erase(siteName.begin());
+        while(!siteName.empty()&&std::isspace(static_cast<unsigned char>(siteName.back())))siteName.pop_back();
+        if(siteName.empty()||siteName.size()>MaxSavedNameBytes) {Message("Enter a Site name of 1 to 48 characters.");break;}
+        bool invalidName=false;for(unsigned char c:siteName)if(c<0x20||c==0x7f)invalidName=true;
+        if(invalidName) {Message("Site names cannot contain control characters.");break;}
+        bool duplicateName=false;
+        for(const auto& existing:durableState.earthworks)
+            if(existing.projectId==durableState.selectedProjectId&&_stricmp(existing.name.c_str(),siteName.c_str())==0)duplicateName=true;
+        if(duplicateName) {Message("A Site with that name already exists in this Project.");break;}
         SavedEarthwork project;
         project.id=1;
         for(const auto& saved:durableState.earthworks)project.id=std::max(project.id,saved.id+1);
         project.projectId=durableState.selectedProjectId;
-        char siteName[MaxSavedNameBytes+1]{};
-        sprintf_s(siteName,"Site-%u",durableState.nextSiteNumber++);
         project.name=siteName;
+        ++durableState.nextSiteNumber;
+        SetDefaultDraftSiteName();
         project.status=ProjectStatus::Queued;
         project.plan=current.plan;
         durableState.earthworks.push_back(project);
@@ -504,6 +522,18 @@ void Process(const Command& command)
         Changed();
         host->log("earthworks  site confirmed and queued id=%llu name=%s priority=%zu",static_cast<unsigned long long>(project.id),project.name.c_str(),durableState.earthworks.size());
         Message("Earthwork site queued in the selected project.");
+        break;
+    }
+    case Action::SetDraftSiteName: {
+        if(!creatingSite)break;
+        std::string name=command.text;
+        while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
+        while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
+        if(name.empty()||name.size()>MaxSavedNameBytes)break;
+        bool invalid=false;for(unsigned char c:name)if(c<0x20||c==0x7f)invalid=true;
+        if(invalid)break;
+        durableState.draftName=std::move(name);
+        RefreshProjectStatus();
         break;
     }
     case Action::SelectNamedProject:

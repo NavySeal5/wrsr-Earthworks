@@ -658,13 +658,18 @@ void DrawInterface(const Snapshot& s)
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display)
 {
+    static char renameBuffer[MaxSavedNameBytes+1]{};
+    static char draftNameBuffer[MaxSavedNameBytes+1]{};
+    static bool draftNameWasActive=false;
+    static uint64_t renameTarget=0;
     if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {
         editorRectValid=false;
         if(!s.siteEditorOpen)editorWasDragged=false;
+        if(!s.creatingSite)draftNameWasActive=false;
         return;
     }
-    static char renameBuffer[MaxSavedNameBytes+1]{};
-    static uint64_t renameTarget=0;
+    if(s.creatingSite&&!draftNameWasActive)strncpy_s(draftNameBuffer,s.siteDraftName,_TRUNCATE);
+    draftNameWasActive=s.creatingSite;
     const Plan& plan=s.editorPlan;
     const float width=400.0f,height=(s.creatingSite?400.0f:440.0f)+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
@@ -724,6 +729,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
     if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
+    if(s.creatingSite) {
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if(ImGui::InputText("Site name",draftNameBuffer,sizeof(draftNameBuffer)))
+            SendProjectText(Action::SetDraftSiteName,0,draftNameBuffer);
+        nameTextEditing|=ImGui::IsItemActive();
+    }
     if(!s.creatingSite) {
         bool renamePressed=false;
         if(siteRenameIcon) {
@@ -787,7 +798,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         const bool draftInvalid=s.siteDraftError[0]!=0;
         if(draftInvalid)ImGui::TextColored({0.67f,0.15f,0.12f,1.0f},"%s",s.siteDraftError);
         ImGui::BeginDisabled(draftInvalid);
-        if(ImGui::Button("Save Site",{ImGui::GetContentRegionAvail().x,32}))Send(Action::ConfirmProject);
+        if(ImGui::Button("Save Site",{ImGui::GetContentRegionAvail().x,32}))SendProjectText(Action::ConfirmProject,0,draftNameBuffer);
         ImGui::EndDisabled();
         if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30}))Send(Action::CancelSiteDraft);
     } else {
