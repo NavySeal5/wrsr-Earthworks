@@ -1,6 +1,6 @@
 # Stage 11 — Named projects and in-context Site editing (formerly Stage 10b)
 
-**Status:** First implementation of all Stage 11 UI elements is complete in build 0.13.0-stage11-first-ui. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
+**Status:** First implementation of all Stage 11 UI elements is complete in build 0.13.1-stage11-ui-polish. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
 
 ## Purpose
 

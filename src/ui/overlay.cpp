@@ -304,6 +304,7 @@ bool CursorOnVisibleSite(const Snapshot& s)
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display);
 void DrawPanelPaper(bool headerOnly);
+void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size);
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
@@ -617,35 +618,54 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
     ImVec2 screen{};
     if(!Project(s,anchor,&screen))screen={display.x*0.5f,display.y*0.5f};
-    float x=screen.x+26.0f;
-    if(x+width>display.x-12.0f)x=screen.x-width-26.0f;
+    static uint64_t trackedSite=~uint64_t{0};
+    static ImVec2 editorOffset{26.0f,-95.0f};
+    const uint64_t siteKey=s.creatingSite?~uint64_t{0}:s.editingSiteId;
+    if(siteKey!=trackedSite) {trackedSite=siteKey;editorOffset={26.0f,-95.0f};}
+    float x=screen.x+editorOffset.x;
+    float y=screen.y+editorOffset.y;
+    if(x+width>display.x-12.0f&&editorOffset.x>=0) {editorOffset.x=-width-26.0f;x=screen.x+editorOffset.x;}
     x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
-    float y=std::clamp(screen.y-95.0f,70.0f,std::max(70.0f,display.y-height-90.0f));
+    y=std::clamp(y,70.0f,std::max(70.0f,display.y-height-90.0f));
     RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
     RECT overlap{};
     if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
-        x=screen.x-width-26.0f;
-        if(x<12.0f)x=screen.x+26.0f;
+        editorOffset.x=-width-26.0f;x=screen.x+editorOffset.x;
+        if(x<12.0f) {editorOffset.x=26.0f;x=screen.x+editorOffset.x;}
         x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
     }
+    editorOffset.x=x-screen.x;editorOffset.y=y-screen.y;
     ImGui::SetNextWindowPos({x,y},ImGuiCond_Always);
     ImGui::SetNextWindowSize({width,height},ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
     ImGui::Begin("##EarthworksSiteEditor",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
     ImGui::PopStyleVar();ImGui::PopStyleColor();
-    DrawPanelPaper(false);
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
-    ImGui::GetWindowDrawList()->AddText({pos.x+10.0f,pos.y+27.0f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),
+    DrawSiteEditorPaper(pos,size);
+    ImGui::SetCursorScreenPos({pos.x+2.0f,pos.y+2.0f});
+    ImGui::InvisibleButton("##DragSiteEditorHeader",{size.x-44.0f,44.0f});
+    if(ImGui::IsItemActive()&&ImGui::GetIO().MouseDown[0]) {
+        const ImVec2 delta=ImGui::GetIO().MouseDelta;
+        editorOffset.x+=delta.x;editorOffset.y+=delta.y;
+        ImGui::SetWindowPos({pos.x+delta.x,pos.y+delta.y});
+    }
+    const auto movedPos=ImGui::GetWindowPos();
+    ImGui::GetWindowDrawList()->AddText({movedPos.x+10.0f,movedPos.y+27.0f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),
         s.creatingSite?"New Site":"Site editor");
-    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
-    ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
+    ImGui::PushStyleColor(ImGuiCol_Text,{0.20f,0.145f,0.105f,1.0f});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.77f,0.64f,0.47f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.86f,0.73f,0.55f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.70f,0.56f,0.39f,1});
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
-    ImGui::SetCursorScreenPos({pos.x+size.x-38.0f,pos.y+11.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.66f,0.29f,0.25f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.76f,0.36f,0.32f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.57f,0.22f,0.19f,1});
+    ImGui::SetCursorScreenPos({movedPos.x+size.x-38.0f,movedPos.y+11.0f});
     if(ImGui::Button("X",{26,26}))Send(Action::CloseSiteEditor);
-    ImGui::SetCursorScreenPos({pos.x+12.0f,pos.y+56.0f});
+    ImGui::PopStyleColor(4);
+    ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
     if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
     ImGui::Separator();
@@ -687,7 +707,24 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
     }
     ImGui::PopStyleVar();ImGui::PopStyleColor(4);
+    const auto finalPos=ImGui::GetWindowPos();editorOffset={finalPos.x-screen.x,finalPos.y-screen.y};
     RememberRect(&editorRect);editorRectValid=true;ImGui::End();
+}
+void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size)
+{
+    auto* draw=ImGui::GetWindowDrawList();
+    if(!panelPaper||!panelPaperWidth||!panelPaperHeight) {
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+size.y},IM_COL32(232,220,197,255),12.0f);
+        draw->AddRectFilled(pos,{pos.x+size.x,pos.y+52.0f},IM_COL32(150,60,55,255),12.0f,ImDrawFlags_RoundCornersTop);
+        return;
+    }
+    const ImTextureRef texture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(panelPaper)));
+    const ImVec2 bodyUv0{52.0f/panelPaperWidth,63.0f/panelPaperHeight};
+    const ImVec2 bodyUv1{605.0f/panelPaperWidth,698.0f/panelPaperHeight};
+    const ImVec2 headerUv0{52.0f/panelPaperWidth,20.0f/panelPaperHeight};
+    const ImVec2 headerUv1{605.0f/panelPaperWidth,63.0f/panelPaperHeight};
+    draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},bodyUv0,bodyUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersBottom);
+    draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+52.0f},headerUv0,headerUv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersTop);
 }
 void CleanupTarget() { if (target) { target->Release(); target=nullptr; } }
 void LoadPanelPaper()
@@ -793,8 +830,10 @@ void LoadGameCursorArt()
 void DrawGameCursorArt()
 {
     const auto pos=ImGui::GetIO().MousePos;
-    const bool overPanel=panelOpen&&panelRectValid&&std::isfinite(pos.x)&&std::isfinite(pos.y)
-        &&Hit(panelRect,MAKELPARAM(static_cast<int>(pos.x),static_cast<int>(pos.y)));
+    const bool finite=std::isfinite(pos.x)&&std::isfinite(pos.y);
+    const auto point=finite?MAKELPARAM(static_cast<int>(pos.x),static_cast<int>(pos.y)):LPARAM{};
+    const bool overPanel=finite
+        &&((panelOpen&&panelRectValid&&Hit(panelRect,point))||(editorRectValid&&Hit(editorRect,point)));
     if(!overPanel||GetForegroundWindow()!=gameWindow) {
         if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);
         systemCursorHiddenForPanel=false;cursorToRestore=nullptr;return;
