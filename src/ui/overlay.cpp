@@ -38,7 +38,9 @@ HWND gameWindow = nullptr;
 WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
 RECT buttonRect{}, panelRect{};
+RECT editorRect{};
 bool panelRectValid = false;
+bool editorRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
 float expandedPanelHeight = 640.0f;
@@ -47,6 +49,7 @@ bool escapeOwned = false;
 bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
+std::atomic<bool> areaPickCapture{false};
 #ifdef EARTHWORKS_DEVELOPER_UI
 bool showProbe=true;
 #endif
@@ -55,10 +58,14 @@ thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
 void Send(Action action, float value = 0)
 {
-    if(action==Action::Select || action==Action::Sample || action==Action::InspectBuilding) pickCancelledByEscape=false;
+    if(action==Action::Select || action==Action::NewSite || action==Action::Sample || action==Action::SampleSiteTarget || action==Action::InspectBuilding) pickCancelledByEscape=false;
     Enqueue({action,value,frameGeneration});
 }
 void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
+void SendProjectValue(Action action,uint64_t projectId,float value)
+{
+    Command command{};command.action=action;command.value=value;command.projectId=projectId;command.generation=frameGeneration;Enqueue(command);
+}
 void SendProjectText(Action action,uint64_t projectId,const char* text)
 {
     Command command{};command.action=action;command.generation=frameGeneration;command.projectId=projectId;
@@ -109,7 +116,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     auto* previous = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
-    const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam));
+    const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -118,8 +125,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             if(panelOpen) {
                 escapeOwned=true;
                 escapeCapture=true;
-                if(mapPickCapture) { mapPickCapture=false; pickCancelledByEscape=true; Send(Action::CancelPick); }
-                else { panelOpen=false; panelRectValid=false; keyboardCapture=false; pickCancelledByEscape=false; host->log("earthworks  planning panel closed with Escape"); }
+                if(areaPickCapture) { mapPickCapture=false;areaPickCapture=false;pickCancelledByEscape=true; Send(Action::CancelPick); }
+                else { panelOpen=false; panelRectValid=false; keyboardCapture=false; pickCancelledByEscape=false;Send(Action::CloseSiteEditor);host->log("earthworks  planning panel closed with Escape"); }
             }
         }
         escapeMessage=escapeOwned;
@@ -146,7 +153,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
-        const bool overPanel=panelOpen&&panelRectValid&&Hit(panelRect,lParam);
+        const bool overPanel=panelOpen&&((panelRectValid&&Hit(panelRect,lParam))||(editorRectValid&&Hit(editorRect,lParam)));
         if(overPanel) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;
@@ -159,8 +166,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if(message==WM_SETCURSOR) {
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
         POINT point{};
-        if(GetCursorPos(&point)&&ScreenToClient(window,&point)&&panelOpen&&panelRectValid
-            &&Hit(panelRect,MAKELPARAM(point.x,point.y))) {
+        if(GetCursorPos(&point)&&ScreenToClient(window,&point)&&panelOpen
+            &&((panelRectValid&&Hit(panelRect,MAKELPARAM(point.x,point.y)))||(editorRectValid&&Hit(editorRect,MAKELPARAM(point.x,point.y))))) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;return TRUE;
         }
@@ -227,10 +234,14 @@ void DrawPreview(const Snapshot& s)
     if (!s.ready || !s.cameraValid) return;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& project=s.projects[i];
-        if(project.status!=ProjectStatus::Queued&&project.status!=ProjectStatus::Running
-            &&project.status!=ProjectStatus::Waiting&&project.status!=ProjectStatus::Paused)continue;
-        if(project.id==s.projectId)DrawQueuedWireframe(s,s.queuedPlan);
-        else DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(175,180,190,205));
+        if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
+            ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
+            if(project.id==s.editingSiteId)DrawQueuedWireframe(s,s.queuedPlan);
+            else DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(175,180,190,205));
+        } else if(project.status==ProjectStatus::Completed)
+            DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(100,190,155,190));
+        else if(project.status==ProjectStatus::Cancelled)
+            DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(170,135,135,170));
     }
     const auto& p=s.plan;
     if (!p.first) return;
@@ -281,6 +292,17 @@ void DrawProbe(const Snapshot& s)
     }
 }
 #endif
+bool CursorOnVisibleSite(const Snapshot& s)
+{
+    if(!s.cursorValid)return false;
+    for(size_t i=0;i<s.projectCount;++i) {
+        const auto& site=s.projects[i];
+        if(s.cursor.x>=std::min(site.a.x,site.b.x)&&s.cursor.x<=std::max(site.a.x,site.b.x)
+            &&s.cursor.z>=std::min(site.a.z,site.b.z)&&s.cursor.z<=std::max(site.a.z,site.b.z))return true;
+    }
+    return false;
+}
+void DrawSiteEditor(const Snapshot& s,ImVec2 display);
 void DrawPanelPaper(bool headerOnly);
 void DrawInterface(const Snapshot& s)
 {
@@ -309,7 +331,7 @@ void DrawInterface(const Snapshot& s)
         host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");
     }
     RememberRect(&buttonRect); ImGui::End();
-    if (!panelOpen) { panelRectValid=false; return; }
+    if (!panelOpen) { panelRectValid=false;editorRectValid=false; return; }
     const float panelWidth=std::min(920.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
@@ -328,7 +350,7 @@ void DrawInterface(const Snapshot& s)
     auto* panelDraw=ImGui::GetWindowDrawList();
     const auto panelPos=ImGui::GetWindowPos(),panelSize=ImGui::GetWindowSize();
     DrawPanelPaper(collapsedThisFrame);
-    panelDraw->AddText({panelPos.x+11.0f,panelPos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Sites");
+    panelDraw->AddText({panelPos.x+11.0f,panelPos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Projects");
     ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
     ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
@@ -343,51 +365,25 @@ void DrawInterface(const Snapshot& s)
     ImGui::PopStyleColor(4);
     if(!panelMinimized && !collapsedThisFrame) expandedPanelHeight=panelSize.y;
     if(!open) {
-        panelOpen=false; mapPickCapture=false; leftRelease=true; panelRectValid=false;
+        panelOpen=false; mapPickCapture=false;areaPickCapture=false;leftRelease=true; panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
         ImGui::End();
         host->log("earthworks  planning panel closed; native left clicks released after button up");
         return;
     }
     if(collapsedThisFrame || panelMinimized) {
-        RememberRect(&panelRect); panelRectValid=true; ImGui::End(); return;
+        RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);return;
     }
     ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
-    ImGui::TextWrapped("Plan terrain work and manage projects from one place.");
+    ImGui::TextWrapped("Manage Sites in the selected Project. Select a Site on the map to edit it.");
     ImGui::Separator();
     ImGui::TextWrapped("%s",s.message);
-    static float height=0;
-    static uint64_t seenRevision=~uint64_t{0},seenWorld=~uint64_t{0};
-    if (seenRevision!=s.revision || seenWorld!=s.generation) { height=s.plan.target; seenRevision=s.revision; seenWorld=s.generation; }
     static bool showFacilityManager=false;
     static char nameBuffer[MaxSavedNameBytes+1]{};
     static Action renameAction=Action::RenameNamedProject;
     static uint64_t renameTarget=0;
     static uint64_t deleteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
-        if(ImGui::BeginTabItem("Plan")) {
-            if (ImGui::Button("Select area")) Send(Action::Select);
-            ImGui::SameLine();
-            if (ImGui::Button("Sample height")) Send(Action::Sample);
-            ImGui::TextDisabled("Click two opposite corners on the ground; keep this panel open while selecting.");
-            ImGui::SetNextItemWidth(180);
-            if (ImGui::InputFloat("Target height (m)",&height,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue)) Send(Action::Target,height);
-            targetHeightEditing = ImGui::IsItemActive();
-            ImGui::SameLine(); if (ImGui::Button("Apply height")) Send(Action::Target,height);
-            if (s.plan.complete) {
-                ImGui::SeparatorText("Planned area");
-                ImGui::Text("%.1f x %.1f m  |  %.0f m2",s.plan.Width(),s.plan.Depth(),static_cast<double>(s.plan.Width())*s.plan.Depth());
-                ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",s.volumes.cut);
-                ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",s.volumes.fill);
-                ImGui::TextWrapped("Sharp edges. The preview is visible through terrain. Volume figures are sampled estimates.");
-                if(ImGui::Button("Add Site to selected Project"))Send(Action::ConfirmProject);
-            } else ImGui::TextDisabled("Select an area to preview the planned terrain.");
-            ImGui::Separator();
-            ImGui::BeginDisabled(!s.canUndo); if (ImGui::Button("Undo")) Send(Action::Undo); ImGui::EndDisabled();
-            ImGui::SameLine(); ImGui::BeginDisabled(!s.canRedo); if (ImGui::Button("Redo")) Send(Action::Redo); ImGui::EndDisabled();
-            ImGui::SameLine(); if (ImGui::Button("Clear plan")) Send(Action::Clear);
-            ImGui::EndTabItem();
-        }
-        if(ImGui::BeginTabItem("Sites")) {
+        if(ImGui::BeginTabItem("Projects and Sites")) {
             size_t completedCount=0;
             for(size_t i=0;i<s.projectCount;++i)if(s.projects[i].status==ProjectStatus::Completed)++completedCount;
             ImGui::AlignTextToFramePadding();ImGui::Text("Project");ImGui::SameLine();
@@ -433,7 +429,7 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
                 ImGui::EndDisabled();
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
-                else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet. Create an area in the Plan tab.");
+                else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
                 if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
@@ -471,11 +467,15 @@ void DrawInterface(const Snapshot& s)
                     ImGui::EndTable();
                 }
                 ImGui::EndChild();
-                if(s.projectQueued) {
+                ImGui::BeginDisabled(!s.selectedNamedProjectId);
+                const char* draftAction=(s.creatingSite||s.plan.first)?"Continue draft":"New Site";
+                if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
+                ImGui::EndDisabled();
+                if(s.mode==PickMode::Corners)ImGui::TextDisabled("Click two opposite corners on the ground to define the new Site.");
+                if(s.projectQueued&&!s.creatingSite) {
                     ImGui::SeparatorText("Selected Site");ImGui::Text("%s  |  %s",s.selectedSiteName,ProjectStatusName(s.projectStatus));
                     if(s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Started and waiting for facility capacity.");
                     if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextColored({0.55f,0.25f,0.08f,1},"Terrain needs review before work can resume.");
-                    ImGui::Text("Project facilities: %u",s.assignedFacilityCount);
                 }
             } else {
                 ImGui::SeparatorText("Facilities | Project");ImGui::SameLine();ImGui::Text("%s",s.projectContainerName);
@@ -601,9 +601,93 @@ void DrawInterface(const Snapshot& s)
         ImGui::EndTabBar();
     }
     ImGui::Separator();
-    ImGui::TextWrapped("Map clicks pass through normally. Select area and Sample height capture only their required terrain clicks. Esc cancels map picking; Esc again closes this panel. Planning does not change terrain.");
-    if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) open=false;
-    RememberRect(&panelRect); panelRectValid=true; ImGui::End();
+    ImGui::TextWrapped("Map clicks pass through normally except while selecting a Site or when reopening a Site editor. Planning does not change terrain.");
+    if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) {
+        panelOpen=false;mapPickCapture=false;areaPickCapture=false;leftRelease=true;panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
+    }
+    RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);
+}
+void DrawSiteEditor(const Snapshot& s,ImVec2 display)
+{
+    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {editorRectValid=false;return;}
+    const Plan& plan=s.editorPlan;
+    const float width=400.0f,height=400.0f;
+    double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
+    const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
+    Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
+    ImVec2 screen{};
+    if(!Project(s,anchor,&screen))screen={display.x*0.5f,display.y*0.5f};
+    float x=screen.x+26.0f;
+    if(x+width>display.x-12.0f)x=screen.x-width-26.0f;
+    x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
+    float y=std::clamp(screen.y-95.0f,70.0f,std::max(70.0f,display.y-height-90.0f));
+    RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
+    RECT overlap{};
+    if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
+        x=screen.x-width-26.0f;
+        if(x<12.0f)x=screen.x+26.0f;
+        x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
+    }
+    ImGui::SetNextWindowPos({x,y},ImGuiCond_Always);
+    ImGui::SetNextWindowSize({width,height},ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+    ImGui::Begin("##EarthworksSiteEditor",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleVar();ImGui::PopStyleColor();
+    DrawPanelPaper(false);
+    const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
+    ImGui::GetWindowDrawList()->AddText({pos.x+10.0f,pos.y+27.0f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),
+        s.creatingSite?"New Site":"Site editor");
+    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+    ImGui::SetCursorScreenPos({pos.x+size.x-38.0f,pos.y+11.0f});
+    if(ImGui::Button("X",{26,26}))Send(Action::CloseSiteEditor);
+    ImGui::SetCursorScreenPos({pos.x+12.0f,pos.y+56.0f});
+    ImGui::Text("%s",s.creatingSite?"New Site draft":s.selectedSiteName);
+    if(!s.creatingSite){ImGui::SameLine();ImGui::Text("|  %s",ProjectStatusName(s.projectStatus));}
+    ImGui::Separator();
+    ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),static_cast<double>(plan.Width())*plan.Depth());
+    ImGui::Text("Sampled ground mean: %.2f m",groundMean);
+    const auto volume=Estimate(plan);
+    ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",volume.cut);
+    ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",volume.fill);
+    ImGui::Separator();
+    static float editHeight=0;
+    static uint64_t seenEditorRevision=~uint64_t{0},seenEditorSite=~uint64_t{0};
+    if(seenEditorRevision!=s.revision||seenEditorSite!=s.editingSiteId) {
+        editHeight=plan.target;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
+    }
+    const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Paused));
+    ImGui::BeginDisabled(!editable);
+    ImGui::SetNextItemWidth(130);
+    const bool changed=ImGui::InputFloat("Target height (m)",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
+    targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
+    ImGui::SameLine();
+    if(ImGui::Button("Apply height")||changed) {
+        if(s.creatingSite)Send(Action::Target,editHeight);
+        else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,editHeight);
+    }
+    ImGui::EndDisabled();
+    ImGui::BeginDisabled(!editable);
+    if(ImGui::Button("Sample target from map",{ImGui::GetContentRegionAvail().x,28}))Send(Action::SampleSiteTarget);
+    ImGui::EndDisabled();
+    if(s.creatingSite) {
+        ImGui::BeginDisabled(!plan.complete);
+        if(ImGui::Button("Save Site",{ImGui::GetContentRegionAvail().x,32}))Send(Action::ConfirmProject);
+        ImGui::EndDisabled();
+        if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30}))Send(Action::CancelSiteDraft);
+    } else {
+        const bool finished=s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled;
+        if(finished)ImGui::TextDisabled("Finished Sites cannot be edited.");
+        else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Pause this Site before changing its target.");
+        else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextWrapped("This Site needs terrain review before work can resume.");
+        if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
+    }
+    ImGui::PopStyleVar();ImGui::PopStyleColor(4);
+    RememberRect(&editorRect);editorRectValid=true;ImGui::End();
 }
 void CleanupTarget() { if (target) { target->Release(); target=nullptr; } }
 void LoadPanelPaper()
@@ -830,7 +914,9 @@ void Render(IDXGISwapChain* swap)
     DrawInterface(snapshot);
     DrawGameCursorArt();
     if(snapshot.mode==PickMode::None) pickCancelledByEscape=false;
-    mapPickCapture=panelOpen && !panelMinimized && snapshot.mode!=PickMode::None && !pickCancelledByEscape;
+    const bool sitePick=!snapshot.siteEditorOpen&&CursorOnVisibleSite(snapshot);
+    areaPickCapture=panelOpen&&!panelMinimized&&snapshot.mode!=PickMode::None&&!pickCancelledByEscape;
+    mapPickCapture=areaPickCapture||(!pickCancelledByEscape&&sitePick);
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
     keyboardCapture=focused && io.WantTextInput && (targetHeightEditing||nameTextEditing) && panelOpen;

@@ -1,6 +1,6 @@
-# Stage 10b — Named projects and in-context earthwork editing
+# Stage 11 — Named projects and in-context Site editing (formerly Stage 10b)
 
-**Status:** In progress; checkpoint 10b.2 is ready for user review. Stage 10b.1 schema acceptance remains unverified.
+**Status:** First implementation of all Stage 11 UI elements is complete in build 0.13.0-stage11-first-ui. User in-game review remains pending; no acceptance is claimed for checkpoints 11.1–11.4.
 
 ## Purpose
 
@@ -34,29 +34,29 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 
 Each checkpoint ends with a user-run in-game review. Do not move to the next checkpoint until the user confirms the behavior or requests adjustments.
 
-### 10b.1 — Data model and fresh-save storage
+### 11.1 — Data model and fresh-save storage
 
-Implement named Project and Earthwork records in a new companion schema while preserving execution behavior. A fresh world starts with one `Project 1` container; the selector and create/rename/delete controls arrive in 10b.2. No schema-4 migration is required. On a fresh save, test the default container, generated site names, Earthwork status/progress, project-level facility link and save/reload. Confirm planning/storage changes do not alter terrain. Selected-container reload behavior becomes directly selectable and testable once the 10b.2 selector is implemented.
+Implement named Project and Site records in a new companion schema while preserving execution behavior. A fresh world starts with one `Project 1` container; the selector and create/rename/delete controls arrive in 11.2. No schema-4 migration is required. On a fresh save, test the default container, generated Site names, status/progress, Project-level facility link and save/reload. Confirm planning/storage changes do not alter terrain. Selected-Project reload behavior becomes directly testable once the 11.2 selector is implemented.
 
-### 10b.2 — Named-project management
+### 11.2 — Named-project management
 
 Add the selector and inline create, rename, delete and facility assignment controls shown in [mockup A](mockups/STAGE10B_UI_PROPOSAL_A_WIDE.svg). Switching the selected Project filters the Sites list without changing Site state or scheduler state. Add a rename action for each Site. Assign and remove multiple facilities at the Project level; reject assigning a facility already owned by another Project. Test with several Projects containing mixed Site states, then save/reload. Deletion must be blocked while unfinished Sites are inside the container; ended records can be removed with their container.
 
-### 10b.3 — Create Earthwork from the Projects view
+### 11.3 — Create Site from the Projects view — first version implemented
 
 Remove Plan tab and add **New Site** below the list. Confirm a selected Project is required, the new Site is assigned to it, the two-corner selection works, and normal map interaction returns when selection finishes or is cancelled. Confirm planning alone never edits terrain.
 
-### 10b.4 — Site-local editor
+### 11.4 — Site-local editor — first version implemented
 
 Show a separate world-anchored editor beside the newly selected site with target height. Clicking the site reopens it. Confirm its position tracks the footprint as the camera pans/zooms, it remains usable near screen edges, it does not steal ordinary map input when closed, and changing target height updates the preview. Save/reload and reopen an existing Earthwork editor.
 
-### 10b.5 — Regression and acceptance
+### 11.5 — Regression and acceptance — pending user review
 
-Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, disabled camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Earthworks from the selected Project only. Stage 10b is accepted only after user review.
+Check facility assignment at the Project level, facility exclusivity across containers, within-Project ordering, facility concurrency, work controls, disabled camera View, review/pause/cancel, completion removal, overlapping-footprint rules, save/reload and filtering across multiple containers. Confirm the cleanup button removes completed Sites from the selected Project only. Stage 11 is accepted only after user review.
 
 ## Confirmed rules and remaining decision
 
-- Existing saves do not need migration (D72); Stage 10b tests use fresh saves. The new companion format only needs to read its own new schema.
+- Existing saves do not need migration (D72); Stage 11 tests use fresh saves. The new companion format only needs to read its own new schema.
 - Deletion is blocked if a container includes unfinished Earthworks (D73).
 - The editor is world-anchored beside the site (D74).
 - Earthwork row order is local to the selected Project (D75).

@@ -26,6 +26,8 @@ std::deque<Command> commands;
 History history;
 DurableState durableState;
 uint64_t selectedProjectId=0;
+uint64_t editingSiteId=0;
+bool siteEditorOpen=false,creatingSite=false;
 bool savePending = false;
 bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
@@ -223,6 +225,7 @@ void Changed()
     durableState.draft = current.plan;
     current.volumes = Estimate(current.plan);
     ++current.revision;
+    RefreshProjectStatus();
     host->log("earthworks  draft-only revision=%llu world=%llu complete=%d target=%.3f area=%.2f cut=%.2f fill=%.2f",
         current.revision, current.generation, current.plan.complete ? 1 : 0, current.plan.target,
         static_cast<double>(current.plan.Width())*current.plan.Depth(), current.volumes.cut, current.volumes.fill);
@@ -231,7 +234,7 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
-    durableState = DurableState{}; selectedProjectId=0; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
@@ -283,6 +286,8 @@ void RefreshProjectStatus()
     current.projectNeedsReview=false;
     current.projectProgress=0;
     current.selectedSiteName[0]=0;
+    current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;
+    current.editorPlan=Plan{};
     current.projectFacilityDistance=0;
     current.queuedPlan=Plan{};
     auto selected=durableState.earthworks.end();
@@ -303,6 +308,16 @@ void RefreshProjectStatus()
                 const Point center{(selected->plan.a.x+selected->plan.b.x)*0.5f,0,(selected->plan.a.z+selected->plan.b.z)*0.5f};
                 current.projectFacilityDistance=std::hypot(center.x-facility.position.x,center.z-facility.position.z);
             }
+        }
+    }
+    if(siteEditorOpen) {
+        if(creatingSite)current.editorPlan=current.plan;
+        else if(auto* editing=FindProject(editingSiteId);editing&&editing->projectId==durableState.selectedProjectId) {
+            current.editorPlan=editing->plan;
+            current.editingSiteId=editing->id;
+            strncpy_s(current.selectedSiteName,editing->name.c_str(),_TRUNCATE);
+        } else {
+            siteEditorOpen=false;editingSiteId=0;current.siteEditorOpen=false;current.editingSiteId=0;
         }
     }
 }
@@ -328,17 +343,39 @@ void Process(const Command& command)
 {
     if (command.generation != current.generation || !current.ready) return;
     switch(command.action) {
-    case Action::Select:
-        history.Commit(current.plan); current.plan = Plan{}; Changed();
+    case Action::NewSite:
+        if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
+        if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::Corners;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Continue selecting two opposite corners.");break;}
+        if(current.plan.first) {creatingSite=true;siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::Corners;RefreshProjectStatus();Message(current.plan.complete?"Saved Site draft reopened.":"Continue selecting two opposite corners.");break;}
+        history.Reset(); current.plan = Plan{}; Changed();
+        editingSiteId=0;creatingSite=true;siteEditorOpen=true;
         current.mode = PickMode::Corners;
-        Message("Click the first corner on the ground.");
+        RefreshProjectStatus();
+        Message("Click two opposite corners on the ground for the new Site.");
+        break;
+    case Action::Select:
+        if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
+        history.Reset();current.plan=Plan{};Changed();editingSiteId=0;creatingSite=true;siteEditorOpen=true;current.mode=PickMode::Corners;RefreshProjectStatus();
+        Message("Select two opposite corners for the Site area.");break;
+    case Action::CloseSiteEditor:
+        siteEditorOpen=false;RefreshProjectStatus();break;
+    case Action::CancelSiteDraft:
+        if(creatingSite) {current.plan=Plan{};history.Reset();current.mode=PickMode::None;creatingSite=false;editingSiteId=0;siteEditorOpen=false;Changed();Message("New Site draft discarded.");}
         break;
     case Action::Sample:
         current.mode = PickMode::Sample;
         Message("Click the ground to sample its height.");
         break;
+    case Action::SampleSiteTarget:
+        if(creatingSite)current.mode=PickMode::Sample;
+        else if(auto* site=FindProject(editingSiteId);site&&site->projectId==durableState.selectedProjectId
+            &&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled
+            &&site->status!=ProjectStatus::Running&&site->status!=ProjectStatus::Waiting)current.mode=PickMode::SampleSiteTarget;
+        else {Message("Select an editable Site before sampling its target height.");break;}
+        Message("Click the ground to sample a target height.");break;
     case Action::CancelPick:
         if(current.mode==PickMode::Sample) Message("Height sampling cancelled.");
+        else if(current.mode==PickMode::SampleSiteTarget) Message("Site target sampling cancelled.");
         else if(current.mode==PickMode::Corners) Message("Area selection cancelled. The current draft is kept.");
         else if(current.mode==PickMode::InspectBuilding) Message("Facility picking cancelled.");
         current.mode=PickMode::None;
@@ -351,7 +388,27 @@ void Process(const Command& command)
         }
         Point p = current.cursor;
         if (!ReadHeight(p.x,p.z,&p.y)) { Message("Cannot sample terrain here. Try another point."); break; }
-        if (current.mode == PickMode::Sample) {
+        if(current.mode==PickMode::None&&!siteEditorOpen) {
+            auto site=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
+                if(item.projectId!=durableState.selectedProjectId)return false;
+                const float minX=std::min(item.plan.a.x,item.plan.b.x),maxX=std::max(item.plan.a.x,item.plan.b.x);
+                const float minZ=std::min(item.plan.a.z,item.plan.b.z),maxZ=std::max(item.plan.a.z,item.plan.b.z);
+                return p.x>=minX&&p.x<=maxX&&p.z>=minZ&&p.z<=maxZ;
+            });
+            if(site!=durableState.earthworks.end()) {
+                editingSiteId=site->id;selectedProjectId=site->id;creatingSite=false;siteEditorOpen=true;panelOpen=true;
+                RefreshProjectStatus();Message("Site editor opened.");
+            }
+        } else if(current.mode==PickMode::SampleSiteTarget) {
+            auto* site=FindProject(editingSiteId);
+            if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {
+                current.mode=PickMode::None;Message("The selected Site can no longer be edited.");break;
+            }
+            if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting) {current.mode=PickMode::None;Message("Pause this Site before changing its target.");break;}
+            if(site->status==ProjectStatus::Paused)site->needsReview=true;
+            site->plan.target=p.y;current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
+            RefreshProjectStatus();Message(site->needsReview?"Target sampled. Review this Site before resuming.":"Target sampled; terrain remains unchanged.");
+        } else if (current.mode == PickMode::Sample) {
             history.Commit(current.plan); current.plan.target = p.y; current.mode = PickMode::None;
             Message("Height sampled. Adjust the target or select a new area."); Changed();
         } else if (current.mode == PickMode::Corners) {
@@ -374,6 +431,17 @@ void Process(const Command& command)
             history.Commit(current.plan); current.plan.target = command.value; Changed(); Message("Target updated. Actual terrain is unchanged.");
         } else Message("Enter a finite height within the terrain preview's numeric range.");
         break;
+    case Action::SetSiteTarget: {
+        auto* site=FindProject(command.projectId);
+        if(!site||site->projectId!=durableState.selectedProjectId||!std::isfinite(command.value)||std::abs(command.value)>=100000) {
+            Message("That Site target could not be updated.");break;
+        }
+        if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {Message("Finished Sites cannot be edited.");break;}
+        if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting) {Message("Pause this Site before changing its target.");break;}
+        if(site->status==ProjectStatus::Paused)site->needsReview=true;
+        site->plan.target=command.value;editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;
+        RefreshProjectStatus();Message(site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
+    }
     case Action::Clear:
         history.Commit(current.plan); current.plan = Plan{}; current.mode = PickMode::None;
         Changed(); Message("Preview cleared. Select area to begin again."); break;
@@ -403,6 +471,7 @@ void Process(const Command& command)
         project.plan=current.plan;
         durableState.earthworks.push_back(project);
         selectedProjectId=project.id;
+        editingSiteId=project.id;creatingSite=false;siteEditorOpen=true;
         RefreshProjectStatus();
         current.plan=Plan{};
         current.mode=PickMode::None;
@@ -414,11 +483,13 @@ void Process(const Command& command)
     }
     case Action::SelectNamedProject:
         if(FindNamedProject(command.projectId)) {
-            durableState.selectedProjectId=command.projectId;selectedProjectId=0;RefreshProjectStatus();
+            if(creatingSite) {Message("Save or discard the current Site draft before switching Projects.");break;}
+            durableState.selectedProjectId=command.projectId;selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();
             Message("Project selected. Its Sites are shown below.");
         }
         break;
     case Action::CreateNamedProject: {
+        if(creatingSite) {Message("Save or discard the current Site draft before creating another Project.");break;}
         std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
         while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
         if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Project name of 1 to 48 characters.");break;}
@@ -427,7 +498,7 @@ void Process(const Command& command)
         if(durableState.projects.size()>=MaxSavedProjects) {Message("Project limit reached.");break;}
         SavedProject project;project.id=1;for(const auto& item:durableState.projects)project.id=std::max(project.id,item.id+1);
         project.name=std::move(name);durableState.projects.push_back(std::move(project));durableState.selectedProjectId=durableState.projects.back().id;
-        selectedProjectId=0;RefreshProjectStatus();Message("Project created.");break;
+        selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();Message("Project created.");break;
     }
     case Action::RenameNamedProject: {
         auto* project=FindNamedProject(command.projectId);if(!project)break;
@@ -439,6 +510,7 @@ void Process(const Command& command)
         project->name=std::move(name);RefreshProjectStatus();Message("Project renamed.");break;
     }
     case Action::DeleteNamedProject: {
+        if(creatingSite&&command.projectId==durableState.selectedProjectId) {Message("Save or discard the current Site draft before deleting its Project.");break;}
         const auto project=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& item){return item.id==command.projectId;});
         if(project==durableState.projects.end())break;
         const bool unfinished=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
@@ -449,7 +521,7 @@ void Process(const Command& command)
         durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site){return site.projectId==deletedId;}),durableState.earthworks.end());
         durableState.projects.erase(project);
         if(durableState.selectedProjectId==deletedId)durableState.selectedProjectId=durableState.projects.empty()?0:durableState.projects.front().id;
-        selectedProjectId=0;RefreshProjectStatus();Message("Project and its finished Site records were deleted.");break;
+        selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();Message("Project and its finished Site records were deleted.");break;
     }
     case Action::RenameSite: {
         auto* site=FindProject(command.projectId);if(!site||site->projectId!=durableState.selectedProjectId)break;
@@ -482,7 +554,9 @@ void Process(const Command& command)
         RefreshProjectStatus();Message("Facility removed from this Project.");break;
     }
     case Action::SelectProject:
-        if(FindProject(command.projectId)){selectedProjectId=command.projectId;RefreshProjectStatus();}
+        if(auto* site=FindProject(command.projectId);site&&site->projectId==durableState.selectedProjectId) {
+            selectedProjectId=site->id;editingSiteId=site->id;creatingSite=false;siteEditorOpen=true;RefreshProjectStatus();
+        }
         break;
     case Action::RemoveProject: {
         const auto project=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
@@ -492,6 +566,7 @@ void Process(const Command& command)
         if(selectedProjectId==project->id)selectedProjectId=0;
         const auto removedId=project->id;
         durableState.earthworks.erase(project);
+        if(editingSiteId==removedId){editingSiteId=0;siteEditorOpen=false;}
         RefreshProjectStatus();
         host->log("earthworks  completed site removed id=%llu",static_cast<unsigned long long>(removedId));
         Message("Completed Site removed from the list.");
@@ -506,6 +581,7 @@ void Process(const Command& command)
             return item.projectId==projectId&&item.status==ProjectStatus::Completed;
         }),durableState.earthworks.end());
         const auto removed=previousSize-durableState.earthworks.size();
+        if(auto* editing=FindProject(editingSiteId);editing&&editing->projectId==projectId&&editing->status==ProjectStatus::Completed){editingSiteId=0;siteEditorOpen=false;}
         RefreshProjectStatus();
         host->log("earthworks  completed projects cleared count=%zu",removed);
         char message[80];sprintf_s(message,"Removed %zu completed Site(s) from the list.",removed);Message(message);

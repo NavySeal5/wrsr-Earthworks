@@ -1,5 +1,7 @@
 # Stage 10b.2 — named Project management
 
+For the combined first UI implementation (build 0.13.0), use [STAGE10B_FIRST_UI_TESTING.md](STAGE10B_FIRST_UI_TESTING.md), which supersedes the Plan-tab workflow below.
+
 Build: **0.12.1-stage10b2-project-ui**. Use a fresh test save for the reworked companion schema. The build and RML staging are technical checks only; the game was not launched and no in-game test was run by the agent.
 
 ## Project and Site organization

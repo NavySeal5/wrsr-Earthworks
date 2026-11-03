@@ -69,8 +69,9 @@ The diagnostic profile currently enables zero Workshop items. Its first test wor
 | 8 | One autonomous project | Staffed/equipped operation changes terrain gradually and resumes correctly | Throughput model, work appearance, pause/cancel and conflicts |
 | 9 | Multiple projects and offices | Agreed scheduling and conflict rules remain understandable and correct | Queue policy, sharing, priorities and overlap behaviour |
 | 10a | Player-facing UI | Plan and Projects tabs present the workflow clearly; technical diagnostics are absent | Tab layout, project/facility selection flow, message clarity |
-| 10b | Purpose-built Earthworks facility | Dedicated two-bay earthmoving facility and decorative tank are identifiable in game | Exact shape/details and native building-panel presentation |
-| 11 | Balanced candidate package | Agreed workflow works in intended gameplay settings and a clean install | Rates, limits, release scope and intended gameplay settings |
+| 11 | Named Projects and in-context Site editing | Named Projects contain Sites managed from a filtered list and map-anchored editor | Site creation/editing workflow, editor placement and Project/facility interaction |
+| 12 | Purpose-built Earthworks facility | Dedicated two-bay earthmoving facility and decorative tank are identifiable in game | Exact shape/details and native building-panel presentation |
+| 13 | Balanced candidate package | Agreed workflow works in intended gameplay settings and a clean install | Rates, limits, release scope and intended gameplay settings |
 
 Every row is a separate in-game review boundary. A stage may be split further if its checklist becomes too broad. Splitting never removes an existing acceptance gate. Public publishing is a separate user decision.
 
@@ -251,9 +252,23 @@ In-game checklist:
 
 Acceptance evidence: the user confirms the workflow is clear and key actions/statuses fit their normal settings; diagnostics do not appear in the player build. A build pass does not substitute for the user's in-game review.
 
-**16. Stage 10b — purpose-built Earthworks facility**
+**16. Stage 11 — named Projects and in-context Site editing**
 
-The user selected the open two-bay canopy plus dispatch office concept and requested a visible fuel tank. The tank is decorative only in this stage; fuel use and refuelling remain future gameplay work. Correct the current test item's inherited 16 parking points to exactly two, matching the user's selected Stage 9 fixture; final release capacities remain for Stage 11. Preserve the user-approved 20-worker temporary test setting, eligible vehicle classes, automatic facility recognition, and exclusion from ordinary construction work.
+Stage 11 is the reorganized workflow originally planned as Stage 10b. Projects contain named Sites; the Projects view owns creation, selection, assignment and prioritization, while each Site's target editor is anchored beside its terrain footprint. The first version is implemented in build 0.13.0; user review and acceptance remain pending. See [Stage 11 plan and checkpoints](docs/STAGE10B_PLAN.md) and [Stage 11 in-game checklist](docs/STAGE10B_FIRST_UI_TESTING.md).
+
+In-game checklist:
+
+1. Create, rename, select and delete Projects; confirm Site filtering and deletion rules.
+2. Create a Site with two map clicks, set/sample height in its adjacent editor, and confirm without terrain changes.
+3. Reopen a Site editor by clicking the footprint with the panel open and closed; pan/zoom and check screen edges.
+4. Test typed input, map click pass-through, selection/sample Escape behavior and WASD.
+5. Check facility assignment, multi-facility Project capacity, save/reload and the existing Site row controls.
+
+Acceptance evidence: the user confirms the end-to-end Project/Site workflow and map-anchored editor in game. Implementation and compilation alone do not constitute acceptance.
+
+**17. Stage 12 — purpose-built Earthworks facility**
+
+The user selected the open two-bay canopy plus dispatch office concept and requested a visible fuel tank. The tank is decorative only in this stage; fuel use and refuelling remain future gameplay work. Correct the current test item's inherited 16 parking points to exactly two, matching the user's selected Stage 9 fixture; final release capacities remain for Stage 13. Preserve the user-approved 20-worker temporary test setting, eligible vehicle classes, automatic facility recognition, and exclusion from ordinary construction work.
 
 Implementation proposal: author a compact bespoke low-poly model, prepare its mesh/material through the game's ModelViewer pipeline, generate the dedicated building item and preview icon, and retain construction-office workplace/vehicle behavior underneath. The building should communicate worker dispatch and two equipment bays without suggesting implemented fuel storage services.
 
@@ -264,9 +279,9 @@ In-game checklist:
 3. Confirm worker arrivals, accepted vehicle classes, two-vehicle capacity and that ordinary construction jobs remain blocked.
 4. Check the native building panel, construction appearance and save/reload in the existing fixture.
 
-Acceptance evidence: the user confirms the building's appearance and native behavior in game. Any mismatch in footprint, station count, staff display or vehicle behavior is corrected before Stage 10b acceptance.
+Acceptance evidence: the user confirms the building's appearance and native behavior in game. Any mismatch in footprint, station count, staff display or vehicle behavior is corrected before Stage 12 acceptance.
 
-**17. Stage 11 — balance and candidate package**
+**18. Stage 13 — balance and candidate package**
 
 After Stage 10 is accepted, review rates, office capacity/radius, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
 
