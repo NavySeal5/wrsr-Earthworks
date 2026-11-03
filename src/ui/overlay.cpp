@@ -30,6 +30,8 @@ ID3D11ShaderResourceView* panelPaper = nullptr;
 UINT panelPaperWidth = 0, panelPaperHeight = 0;
 ID3D11ShaderResourceView* gameCursorArt = nullptr;
 UINT gameCursorArtWidth = 0, gameCursorArtHeight = 0;
+ID3D11ShaderResourceView* siteCancelIcon = nullptr;
+ID3D11ShaderResourceView* siteRenameIcon = nullptr;
 HCURSOR cursorToRestore = nullptr;
 bool systemCursorHiddenForPanel = false;
 IDXGISwapChain* gameChain = nullptr;
@@ -333,14 +335,14 @@ void DrawInterface(const Snapshot& s)
     }
     RememberRect(&buttonRect); ImGui::End();
     if (!panelOpen) { panelRectValid=false;editorRectValid=false; return; }
-    const float panelWidth=std::min(700.0f,std::max(480.0f,display.x-20.0f));
+    const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
     if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
     else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
     else ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints({std::min(680.0f,std::max(480.0f,display.x-20.0f)),44},{std::min(900.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
+    ImGui::SetNextWindowSizeConstraints({std::min(560.0f,std::max(480.0f,display.x-20.0f)),44},{std::min(800.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
@@ -434,14 +436,13 @@ void DrawInterface(const Snapshot& s)
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
-                if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                    ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
+                if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                    ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.5f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.15f);
-                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.1f);
-                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.1f);
-                    ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthStretch,1.0f);
-                    ImGui::TableSetupColumn("Rename",ImGuiTableColumnFlags_WidthStretch,1.0f);
-                    ImGui::TableSetupColumn("View",ImGuiTableColumnFlags_WidthStretch,0.9f);
+                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.05f);
+                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.05f);
+                    ImGui::TableSetupColumn("Cancel",ImGuiTableColumnFlags_WidthFixed,64.0f);
+                    ImGui::TableSetupColumn("Rename",ImGuiTableColumnFlags_WidthFixed,64.0f);
                     ImGui::TableHeadersRow();
                     for(size_t i=0;i<s.projectCount;++i) {
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
@@ -462,9 +463,25 @@ void DrawInterface(const Snapshot& s)
                             if(workAction==Action::RemoveProject)SendProject(workAction,site.id);else SendProjectAction(workAction,site.id);
                         }ImGui::EndDisabled();
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
-                        ImGui::BeginDisabled(!cancellable);if(ImGui::Button("Cancel",{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(Action::CancelProject,site.id);ImGui::EndDisabled();
-                        ImGui::TableNextColumn();if(ImGui::Button("Rename",{ImGui::GetContentRegionAvail().x,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
-                        ImGui::TableNextColumn();ImGui::BeginDisabled(true);ImGui::Button("View",{ImGui::GetContentRegionAvail().x,32});ImGui::EndDisabled();
+                        ImGui::BeginDisabled(!cancellable);
+                        if(siteCancelIcon) {
+                            const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteCancelIcon)));
+                            ImGui::PushStyleColor(ImGuiCol_Button,{0.77f,0.64f,0.47f,1});
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.86f,0.73f,0.55f,1});
+                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.70f,0.56f,0.39f,1});
+                            if(ImGui::ImageButton("##CancelSite",icon,{24,24},{0,0},{1,1},{0,0,0,0}))SendProjectAction(Action::CancelProject,site.id);
+                            ImGui::PopStyleColor(3);
+                        } else if(ImGui::Button("×",{32,32}))SendProjectAction(Action::CancelProject,site.id);
+                        ImGui::EndDisabled();
+                        ImGui::TableNextColumn();
+                        if(siteRenameIcon) {
+                            const ImTextureRef icon(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(siteRenameIcon)));
+                            ImGui::PushStyleColor(ImGuiCol_Button,{0.77f,0.64f,0.47f,1});
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.86f,0.73f,0.55f,1});
+                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.70f,0.56f,0.39f,1});
+                            if(ImGui::ImageButton("##RenameSite",icon,{24,24},{0,0},{1,1},{0,0,0,0})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
+                            ImGui::PopStyleColor(3);
+                        } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;ImGui::OpenPopup("Site name");}
                         ImGui::PopID();
                     }
                     ImGui::EndTable();
@@ -789,6 +806,52 @@ void DrawPanelPaper(bool headerOnly)
     const ImVec2 uv1{605.0f/panelPaperWidth,(headerOnly?63.0f:698.0f)/panelPaperHeight};
     draw->AddImageRounded(texture,pos,{pos.x+size.x,pos.y+size.y},uv0,uv1,IM_COL32_WHITE,12.0f,ImDrawFlags_RoundCornersAll);
 }
+void LoadGameUiIcon(const wchar_t* filename,ID3D11ShaderResourceView** output)
+{
+    if(!device||!output||*output)return;
+    wchar_t executable[MAX_PATH]{};
+    const auto length=GetModuleFileNameW(nullptr,executable,MAX_PATH);
+    if(!length||length>=MAX_PATH)return;
+    std::wstring path(executable,length);
+    const auto slash=path.find_last_of(L"\\/");
+    if(slash==std::wstring::npos)return;
+    path.resize(slash+1);path+=L"media_soviet\\editor\\";path+=filename;
+    const auto init=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
+    if(FAILED(init)&&init!=RPC_E_CHANGED_MODE)return;
+    const bool uninitialize=SUCCEEDED(init);
+    Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+    Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+    HRESULT hr=CoCreateInstance(CLSID_WICImagingFactory,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&factory));
+    if(SUCCEEDED(hr))hr=factory->CreateDecoderFromFilename(path.c_str(),nullptr,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
+    if(SUCCEEDED(hr))hr=decoder->GetFrame(0,&frame);
+    if(SUCCEEDED(hr))hr=factory->CreateFormatConverter(&converter);
+    if(SUCCEEDED(hr))hr=converter->Initialize(frame.Get(),GUID_WICPixelFormat32bppRGBA,WICBitmapDitherTypeNone,nullptr,0,WICBitmapPaletteTypeCustom);
+    UINT width=0,height=0;
+    if(SUCCEEDED(hr))hr=converter->GetSize(&width,&height);
+    std::vector<BYTE> pixels;
+    if(SUCCEEDED(hr)&&width&&height&&static_cast<uint64_t>(width)*height<=1'000'000) {
+        pixels.resize(static_cast<size_t>(width)*height*4);
+        hr=converter->CopyPixels(nullptr,width*4,static_cast<UINT>(pixels.size()),pixels.data());
+    } else if(SUCCEEDED(hr))hr=E_INVALIDARG;
+    if(SUCCEEDED(hr)) {
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width=width;desc.Height=height;desc.MipLevels=1;desc.ArraySize=1;desc.Format=DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count=1;desc.Usage=D3D11_USAGE_IMMUTABLE;desc.BindFlags=D3D11_BIND_SHADER_RESOURCE;
+        D3D11_SUBRESOURCE_DATA data{};data.pSysMem=pixels.data();data.SysMemPitch=width*4;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+        hr=device->CreateTexture2D(&desc,&data,&texture);
+        if(SUCCEEDED(hr))hr=device->CreateShaderResourceView(texture.Get(),nullptr,output);
+    }
+    if(uninitialize)CoUninitialize();
+    if(FAILED(hr))host->log("earthworks  native Site row icon unavailable: %ls",filename);
+}
+void LoadSiteRowIcons()
+{
+    LoadGameUiIcon(L"button_cancel.png",&siteCancelIcon);
+    LoadGameUiIcon(L"button_rename.png",&siteRenameIcon);
+}
 void LoadGameCursorArt()
 {
     if(gameCursorArt || !device) return;
@@ -928,6 +991,7 @@ bool Initialize(IDXGISwapChain* swap)
     style.WindowRounding=12; style.ChildRounding=8; style.FrameRounding=6; style.TabRounding=6; style.GrabRounding=5;
     style.WindowBorderSize=1; style.FrameBorderSize=1;
     LoadPanelPaper();
+    LoadSiteRowIcons();
     LoadGameCursorArt();
     if (!ImGui_ImplWin32_Init(gameWindow) || !ImGui_ImplDX11_Init(device,context)) return false;
     SetLastError(0);
