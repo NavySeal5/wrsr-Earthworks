@@ -894,7 +894,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::EndDisabled();
     ImGui::PopStyleVar();
     ImGui::BeginDisabled(!editable);
-    if(ImGui::Button("Sample target from map",{ImGui::GetContentRegionAvail().x,28}))Send(Action::SampleSiteTarget);
+    const float sampleInfoWidth=22.0f;
+    const float sampleButtonWidth=std::max(0.0f,ImGui::GetContentRegionAvail().x-sampleInfoWidth-ImGui::GetStyle().ItemSpacing.x);
+    if(ImGui::Button("Sample target from map",{sampleButtonWidth,28}))Send(Action::SampleSiteTarget);
+    ImGui::SameLine();
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY()+3.0f);
+    GameIconButton("##SampleTargetHelp",targetHeightInfoIcon,"i","Click this button, then click a point on the map to set the target height.",{22.0f,22.0f});
     ImGui::EndDisabled();
     if(s.creatingSite) {
         const bool draftInvalid=s.siteDraftError[0]!=0;
