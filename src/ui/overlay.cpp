@@ -333,7 +333,7 @@ void DrawInterface(const Snapshot& s)
     }
     RememberRect(&buttonRect); ImGui::End();
     if (!panelOpen) { panelRectValid=false;editorRectValid=false; return; }
-    const float panelWidth=std::min(760.0f,std::max(480.0f,display.x-20.0f));
+    const float panelWidth=std::min(700.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
@@ -398,13 +398,23 @@ void DrawInterface(const Snapshot& s)
                 }
                 ImGui::EndCombo();
             }
-            ImGui::SameLine();
+            ImGui::Spacing();
             if(ImGui::Button("New")) {nameBuffer[0]=0;renameAction=Action::CreateNamedProject;renameTarget=0;ImGui::OpenPopup("Project name");}
             ImGui::SameLine();ImGui::BeginDisabled(!s.selectedNamedProjectId);
             if(ImGui::Button("Rename")) {strncpy_s(nameBuffer,s.projectContainerName,_TRUNCATE);renameAction=Action::RenameNamedProject;renameTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Project name");}
             ImGui::SameLine();
             if(ImGui::Button("Delete")) {deleteTarget=s.selectedNamedProjectId;ImGui::OpenPopup("Delete Project");}
             ImGui::EndDisabled();
+            if(!showFacilityManager) {
+                ImGui::SameLine();
+                char facilitiesLabel[64];sprintf_s(facilitiesLabel,"Facilities (%u)",s.assignedFacilityCount);
+                if(ImGui::Button(facilitiesLabel))showFacilityManager=true;
+                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
+                const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
+                ImGui::SameLine();ImGui::BeginDisabled(completedCount==0);
+                if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
+                ImGui::EndDisabled();
+            }
 
             if(ImGui::BeginPopupModal("Project name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text(renameAction==Action::CreateNamedProject?"Create Project":"Rename Project");
@@ -421,14 +431,6 @@ void DrawInterface(const Snapshot& s)
             }
 
             if(!showFacilityManager) {
-                ImGui::SameLine();
-                char facilitiesLabel[64];sprintf_s(facilitiesLabel,"Facilities (%u)",s.assignedFacilityCount);
-                if(ImGui::Button(facilitiesLabel))showFacilityManager=true;
-                char clearCompletedLabel[64];sprintf_s(clearCompletedLabel,"Remove completed (%zu)",completedCount);
-                const auto& style=ImGui::GetStyle();const float clearButtonWidth=ImGui::CalcTextSize(clearCompletedLabel).x+style.FramePadding.x*2.0f;
-                ImGui::SameLine();ImGui::BeginDisabled(completedCount==0);
-                if(ImGui::Button(clearCompletedLabel,{clearButtonWidth,26}))Send(Action::RemoveCompletedProjects);
-                ImGui::EndDisabled();
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
