@@ -1,6 +1,6 @@
 **Gameplay and UX decision register**
 
-Updated 2 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
+Updated 3 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
 
 **Confirmed decisions**
 
@@ -61,6 +61,15 @@ Updated 2 November 2026. This register separates the user's confirmed intent fro
 | D66 | Provide a per-project View button that pans the camera to the project's footprint centre while preserving the current view angle and distance | User requested a camera-pan button on each Projects row, 3 November 2026; centre-of-footprint focus is the direct interpretation |
 | D67 | Do not display a copied Windows cursor over the Earthworks panel; when the panel occludes the game-rendered cursor, use game cursor art above the panel and suppress the hardware pointer only during that overlap | User clarified that the cursor disappears behind the panel and the Windows cursor copy is not the desired visual, 3 November 2026 |
 | D68 | Allow removal of completed projects individually from their Work row, and provide a Projects-tab control to remove all completed records | User requested completed-project cleanup, 3 November 2026 |
+| D69 | A named Project is a container holding multiple individual Earthworks; selecting a container filters the Earthworks list | User's new Stage 10c direction, 3 November 2026 |
+| D70 | Remove the Plan tab; create new Earthworks from a button below the list and assign them to the selected named Project | User's new Stage 10c direction, 3 November 2026; supersedes D54's earlier two-tab layout |
+| D71 | Show a separate site-local editor after selecting an Earthwork area; clicking the site reopens it. Target height is included now; angle is deferred | User's new Stage 10c direction, 3 November 2026 |
+| D72 | Do not migrate old WIP flat Earthworks data; use fresh saves for the reorganized schema | User: existing data does not matter while the mod is WIP; use fresh saves, 3 November 2026 |
+| D73 | Block deletion of a named Project while it contains queued, running, waiting or paused Earthworks | User selected “Block deletion while it contains unfinished earthworks”, 3 November 2026 |
+| D74 | Anchor the separate Earthwork editor in world space beside its site | User selected the world-space editor option, 3 November 2026 |
+| D75 | Move-up/move-down order applies only among Earthworks in the selected named Project | User selected project-local ordering, 3 November 2026 |
+| D76 | The bulk completed-Earthwork cleanup button affects only the selected named Project | User selected selected-project-only cleanup, 3 November 2026 |
+| D77 | Assign one or more Earthworks facilities to a named Project as a whole; do not share a facility between Projects. Apply existing capacity, worker, machine and priority rules among Earthworks inside each Project | User: “Earthworks facilities should be assigned to projects as a whole, then use the existing rules within those projects”; selected multiple facilities per Project and no sharing, 3 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
