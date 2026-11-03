@@ -492,6 +492,7 @@ void DrawInterface(const Snapshot& s)
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 bool openSiteRenamePopup=false;
                 ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.5f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.15f);
@@ -527,14 +528,21 @@ void DrawInterface(const Snapshot& s)
                         if(hovered&&tooltip) {ImGui::BeginTooltip();ImGui::TextUnformatted(tooltip);ImGui::EndTooltip();}
                         return pressed;
                     };
+                    auto centerCellItem=[](float height) {
+                        constexpr float rowHeight=44.0f,cellPaddingY=3.0f;
+                        const float innerHeight=rowHeight-2.0f*cellPaddingY;
+                        ImGui::SetCursorPosY(ImGui::GetCursorPosY()+std::max(0.0f,(innerHeight-height)*0.5f));
+                    };
                     for(size_t i=0;i<s.projectCount;++i) {
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
-                        ImGui::TableNextRow(ImGuiTableRowFlags_None,48.0f);
+                        ImGui::TableNextRow(ImGuiTableRowFlags_None,44.0f);
                         ImGui::TableNextColumn();
                         char label[80];sprintf_s(label,"%s  |  %s",site.name,ProjectStatusName(site.status));
+                        centerCellItem(38.0f);
                         if(ImGui::Selectable(label,s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
-                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
+                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);centerCellItem(28.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
                         ImGui::TableNextColumn();
+                        centerCellItem(32.0f);
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
                         ImGui::BeginDisabled(!movable);if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);ImGui::EndDisabled();
                         ImGui::TableNextColumn();Action workAction=Action::StartProject;const char* workLabel="Done";bool workEnabled=false;
@@ -542,11 +550,12 @@ void DrawInterface(const Snapshot& s)
                         else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Completed){workAction=Action::RemoveProject;workLabel="Remove";workEnabled=true;}
-                        ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32})) {
+                        centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32})) {
                             if(workAction==Action::RemoveProject)SendProject(workAction,site.id);else SendProjectAction(workAction,site.id);
                         }ImGui::EndDisabled();
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
                         const bool removable=site.status==ProjectStatus::Cancelled;
+                        centerCellItem(30.0f);
                         ImGui::BeginDisabled(!cancellable&&!removable);
                         if(siteCancelIcon) {
                             if(drawIconButton("##CancelSite",siteCancelIcon,removable?"Delete Site":"Cancel Site"))
@@ -555,6 +564,7 @@ void DrawInterface(const Snapshot& s)
                             SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();
+                        centerCellItem(30.0f);
                         if(siteRenameIcon) {
                             if(drawIconButton("##RenameSite",siteRenameIcon,"Rename Site")) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
@@ -562,6 +572,7 @@ void DrawInterface(const Snapshot& s)
                     }
                     ImGui::EndTable();
                 }
+                ImGui::PopStyleVar();
                 ImGui::EndChild();
                 if(openSiteRenamePopup)ImGui::OpenPopup("Site name");
                 ImGui::BeginDisabled(!s.selectedNamedProjectId);
