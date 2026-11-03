@@ -652,7 +652,7 @@ void Process(const Command& command)
         }
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
-        for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
+        for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Queued) {
             BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
                 Message("Native terrain writer is unavailable for this game build. Project remains queued.");break;
@@ -686,12 +686,12 @@ void Process(const Command& command)
         }
         break;
     case Action::PauseProject:
-        for(auto& project:durableState.earthworks)if(project.id==current.projectId && (project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting)) {
+        for(auto& project:durableState.earthworks)if(project.id==command.projectId && (project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting)) {
             project.status=ProjectStatus::Paused;RefreshProjectStatus();Message("Site paused. Current terrain and progress are kept.");break;
         }
         break;
     case Action::ResumeProject:
-        for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
+        for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
             BuildingReading facility{};uint32_t facilityId=0;
             if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility first.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
@@ -701,7 +701,7 @@ void Process(const Command& command)
         }
         break;
     case Action::ReviewResumeProject:
-        for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
+        for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
             BuildingReading facility{};uint32_t facilityId=0;
             if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility before reviewing it.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
@@ -713,7 +713,7 @@ void Process(const Command& command)
         }
         break;
     case Action::CancelProject:
-        for(auto& project:durableState.earthworks)if(project.id==current.projectId &&
+        for(auto& project:durableState.earthworks)if(project.id==command.projectId &&
             (project.status==ProjectStatus::Queued || project.status==ProjectStatus::Running || project.status==ProjectStatus::Waiting || project.status==ProjectStatus::Paused)) {
             project.status=ProjectStatus::Cancelled;project.needsReview=false;RefreshProjectStatus();
             Message("Site cancelled. Terrain already changed is kept.");break;

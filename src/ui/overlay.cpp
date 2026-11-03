@@ -77,7 +77,6 @@ void SendProjectText(Action action,uint64_t projectId,const char* text)
 }
 void SendProjectAction(Action action,uint64_t projectId)
 {
-    SendProject(Action::SelectProject,projectId);
     SendProject(action,projectId);
 }
 const char* ProjectStatusName(ProjectStatus status)
