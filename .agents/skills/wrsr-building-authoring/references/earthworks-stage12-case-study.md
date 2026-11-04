@@ -1,0 +1,109 @@
+# Earthworks facility: workflow, review, and lessons learned
+
+This is a project-specific record for Stage 12. It distinguishes validated results from the prototype's remaining in-game checks. The repository's current source of truth is `scripts/Stage-EarthworksBuilding.ps1`, `assets/building/generate_earthworks_facility.py`, and the Stage 12 decision/review documents.
+
+## Accepted target and current limits
+
+The approved model concept is a compact dispatch office next to an open two-bay equipment canopy, with a visible decorative fuel tank. The current accepted road concept is a single frontage at the open bay side; the reviewed through-access variant was explicitly superseded. Two vehicle slots are required. The eventual staffing rule is zero worker capacity without an eligible parked machine, then 0.5 workers per Strength/Level point summed across eligible machines and rounded up. That dynamic rule is not implemented yet. The current building still has a fixed five-worker prototype value and a two-slot construction-office-derived configuration.
+
+Construction currently uses the installed vanilla construction-office coefficients:
+
+| Phase | Work coefficient | Resources | Mesh nodes |
+|---|---:|---|---|
+| Groundworks | 0.0 | `ground_asphalt 1.5` | `mesh_foundation_concrete`, `mesh_parking_bay_markings` |
+| Brick Laying | 1.0 | `wall_brick 0.7`, `wall_wood 0.3` | `mesh_dispatch_plaster_pale`, `mesh_window_frames`, `mesh_safety_red`, `mesh_office_window_glass` |
+| Rooftop Building | 1.0 | `roof_woodsteel 0.8` | `mesh_canopy_structural_steel`, `mesh_decorative_tank_painted_steel`, `mesh_corrugated_galvanized_roof`, `mesh_roof_rib_highlight` |
+
+These resource values are **coefficients**, not final item counts. The game calculates totals from the construction geometry. Balance remains subject to later testing. The construction vehicle work station is attached to `mesh_foundation_concrete`.
+
+## Source files and generated item
+
+| Role | Project path |
+|---|---|
+| Editable model and OBJ exporter | `assets/building/generate_earthworks_facility.py` |
+| Generated Blender, OBJ, source MTL | `assets/building/generated/` |
+| Game NMF, ModelViewer MTL, preview | `assets/building/native/` |
+| WIP item generator/stager | `scripts/Stage-EarthworksBuilding.ps1` |
+| User-run launch/staging wrapper | `launch-prototype.cmd` |
+| User-run model review | `docs/STAGE12_1_TESTING.md` |
+| Construction cost reference | `docs/STAGE12_CONSTRUCTION_COSTS.md` |
+
+The local item is `media_soviet/workshop_wip/9100000012`, with root `workshopconfig.ini`, `previewimage.png`, and `material.mtl`, and object folder `EarthworksDevelopmentFacility`. Its `renderconfig.ini` currently references `model.nmf` and the object-local `earthworks_facility_material.mtl`; runtime BC1 textures sit beside that MTL. `$OBJECT_BUILDING` must match the folder name. `imagegui.png` is copied into the object folder for the game catalog.
+
+The stage script emits three construction phases, two `$VEHICLE_PARKING` entries and a single `$CONNECTION_ROAD` at the open front. Bay centers and connector coordinates are prototype coordinates; native pathing has not been accepted yet.
+
+The current stager creates tiny BC1/DXT1 DDS files per submaterial. A single compressed block encodes a solid sample color; this makes color binding easy to inspect while keeping the files minimal. The present palette is muted and still awaits user review in game.
+
+## Full authoring procedure
+
+### 1. Review concept and requirements
+
+Before modeling, read the Stage 12 decisions and use the latest accepted visual concept. Keep roads, vehicle parking points, office placement, tank placement, scale, mesh parts and material names aligned. Do not silently reintroduce an option that the user superseded. Mark values such as five workers as temporary until explicitly balanced.
+
+### 2. Build the editable Blender source
+
+Use the project's portable Blender and the generator script. It builds the dispatch office, plinth/foundation, office windows/door, decorative tank, steel canopy, corrugated roof and bay markings at metric scale. Geometry groups by material. The exporter:
+
+- duplicates and groups parts by their first Blender material;
+- names each output object `mesh_<material>`;
+- merges vertices closer than 0.0001 m, triangulates faces and recalculates normals;
+- exports with forward axis `-Z` and up axis `Y` for ModelViewer;
+- saves editable `.blend`, `.obj`, and a PNG render.
+
+The first accepted vehicle approach faces negative Z. If geometry or orientation changes, revisit parking and road connector coordinates and regenerate the NMF. Check material-group node names after every export because construction phases refer to those names.
+
+### 3. Convert and review with ModelViewer
+
+Import `assets/building/generated/earthworks_facility.obj` into ModelViewer. Set Object type to **Building** when reviewing construction meshes and material appearance. Save `model.nmf` to `assets/building/native/earthworks_facility.nmf`, and use ModelViewer's native material workflow for the source MTL. Check that every expected `mesh_*` and submaterial name survived conversion. ModelViewer showing colors is necessary asset evidence, but it did not guarantee the same runtime result in game.
+
+### 4. Configure construction and facility metadata
+
+The stager copies type flags and resource source declarations from the installed vanilla construction-office configuration, then writes Earthworks-specific values. Keep `$COST_WORK`, `$COST_WORK_BUILDING_NODE`, `$COST_WORK_VEHICLE_STATION_ACCORDING_NODE`, and `$COST_RESOURCE_AUTO` in the correct phase blocks. The phase blocks must occur before `$RESOURCE_SOURCE_*` in this parser setup. Give every mesh node a phase and avoid assigning an unrelated node name. The current facilities/costs table above documents the complete mapping.
+
+Do not infer a building's worker formula from `$WORKERS_NEEDED`; the current fixed `5` is only the temporary building panel/capacity configuration. The user-approved Strength/Level formula still needs separate implementation and mapping validation.
+
+### 5. Produce and stage materials
+
+The working in-game diagnostic was decisive: one compressed local DDS per NMF submaterial, referenced with `$TEXTURE_MTL 0`, made the finished model show the exaggerated colors. The current stager writes a small valid BC1/DXT1 color texture for each part and writes `earthworks_facility_material.mtl`, then references it from the object-local `renderconfig.ini`. Current colors are muted to match the intended industrial look; the diagnostic colors must not return to production unless another explicit diagnostic is needed.
+
+The simpler source MTL color constants and changing the `MATERIAL` path between object-local and parent-relative locations did not resolve the gray finished model. Do not repeat path-only experiments or tune the color constants as if that proved runtime binding. If a future result regresses, verify the live renderconfig target, local MTL, texture files, and game log; compare the finished placed building, not the green placement ghost or construction phase overlay.
+
+### 6. Stage and perform user-run review
+
+Close both game and project-local RML. Run `launch-prototype.cmd`; it rejects a running game/RML, verifies the game baseline through staging, stages the plugin and local Workshop item, and opens the isolated RML profile. Keep Steam open. Use a fresh/disposable save.
+
+If the game has no matching `building.bbox`/`building.fire` for the current NMF, let it start once to generate them, close it fully, then relaunch before checking costs. A stale donor bounds file can make the menu show all-zero construction requirements even when `building.ini` is correct. The stager removes generated bounds only when the NMF hash changes, otherwise preserving the game-generated files.
+
+In game, check the menu cost summary, construction resources/work progression, finished palette, approach road, both machine slots, save/reload and demolition. For color, wait until construction has finished. Do not mistake the blue/yellow/green construction/placement overlays for the final texture. Record each user-reported check separately; not all Stage 12.1 checks are complete yet.
+
+## Mistakes and corrections
+
+| Symptom/attempt | What we learned | Corrective action and current lesson |
+|---|---|---|
+| Model appeared black with atlas-like fragments. | The game log showed failed reads of `media_soviet/buildings/blankdiffuse.dds`; the blank diffuse asset is at the media root. | Corrected the original MTL diffuse reference. This removed the black/atlas artifact, but did not establish final color rendering. Current runtime uses explicit local textures instead. |
+| First color-material edit read mostly brown; later placements looked gray. | Reordering submaterials, adding `$END`, changing ambient/specular values and boosting diffuse colors did not solve the completed-building result. ModelViewer and finished in-game rendering were not equivalent. | Stop color tweaking until runtime binding is proven. The explicit local BC1 texture diagnostic proved binding; final muted textures now use that route. |
+| `MATERIAL ../material.mtl` and then a local `MATERIAL material.mtl` reference were tried as the main fix. | Both path variants failed to restore color on a fresh placed facility. | The successful diagnostic used a uniquely named object-local MTL plus local `$TEXTURE_MTL` DDS textures. Path correctness alone was insufficient in this case. |
+| Building model had no construction stages/nodes. | The ModelViewer guide identifies mesh names as needed by construction scripts and proper model rendering. Later, the user also observed zero cost/no requirements. | Assign all custom NMF nodes to native construction phases and include a real vehicle station node. Keep phase names and node strings synchronized. |
+| Initial cost phases used zero work/no resources; prototype stayed a yellow blueprint. | A blueprint with no cost phase did not provide a useful construction review. | Add native construction phase entries and material coefficients, then verify the build-menu summary and completion in game. |
+| First cost attempt put resource-source declarations before cost phases. | Menu still displayed zero costs. | Reorder cost phases before `$RESOURCE_SOURCE_*` as shown in the working vanilla config. |
+| Donor `building.bbox`/`building.fire` files were copied from a different, much larger construction office. | The generated node/collision bounds no longer matched the custom model; costs remained zero even after the INI was corrected. | Do not copy donor bounds to an unrelated NMF. Let the game generate custom bounds; invalidate on NMF hash change and restart the game so regenerated bounds load. This was the change after which the user confirmed construction costs and build progression worked. |
+| Diagnostic coefficients were set to `100.0`. | The game interpreted these as scale coefficients applied across construction geometry, producing extremely large requirements. Decimal syntax such as `1.0` is accepted; these values are not literal unit counts. | Return to the installed native construction-office coefficients (`0.0`, `1.0`, `1.5`, etc.) and adjust in small in-game steps. The current vanilla baseline is written in `docs/STAGE12_CONSTRUCTION_COSTS.md`. |
+| `Development inventory: local=1 enabled=0` was treated as evidence that the Workshop item did not load. | This RML checkbox refers to the optional DLL development payload, not the WIP building item. | Do not use that line to diagnose local building loading. Confirm the item directory and launcher profile separately. |
+| The test building inherited 16 parking points from a donor CO. | That contradicted the approved two-slot target and did not describe custom bay pathing. | Stage exactly two custom `$VEHICLE_PARKING` entries. Final pathing is still awaiting user review. |
+| Through-access roads were designed after the initial concept. | The user reverted that proposal to the original single-frontage layout. | Keep the single-front design. Do not revive through-access unless the user changes the decision; test the approved road side in game. |
+
+## Current review status
+
+- **Confirmed by the user:** the high-contrast local-texture diagnostic renders the separate material colors on a completed in-game facility; construction requirements and progression work after the bounds/order fixes.
+- **Staged but not yet accepted:** muted intended colors from commit `0d3f0db`.
+- **Still needed for Stage 12.1:** fresh-placement review of the muted palette, scale/footprint/ground contact, road snap and vehicle entry/exit for both slots, save/reload, demolition, plus any missing material warnings.
+- **Not implemented yet:** purpose-built native facility panel (Stage 12.2), Project/facility integration (Stage 12.3), dynamic Strength/Level staffing rule, final visual polish/balance. The five-worker value is not the approved final formula.
+
+## References
+
+- [Official General modding guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/General_modding)
+- [Official Modelling guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling)
+- [Stage 12 construction cost notes](../../../../docs/STAGE12_CONSTRUCTION_COSTS.md)
+- [Stage 12.1 user test instructions](../../../../docs/STAGE12_1_TESTING.md)
+- [Stage decisions](../../../../docs/DECISIONS.md)
+- [Stage review record](../../../../docs/STAGE_REVIEWS.md)
