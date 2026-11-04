@@ -1,6 +1,6 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** Stage 12.1 model draft generated from the approved single-frontage concept. Blender source, OBJ/MTL and a render are prepared. Native ModelViewer conversion and the placeable Workshop item are pending because ModelViewer launched without exposing a targetable window to the approved computer-use tool. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
+**Status:** Stage 12.1 has a first placeable model/item staged from the approved single-frontage concept. Blender source, OBJ/MTL, native NMF/material, preview icon, two parking slots and a provisional road connector are prepared. The in-game visual/routing review is pending. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
 
 ## Goal
 

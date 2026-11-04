@@ -1,4 +1,4 @@
-# Stage 12.1 — First model draft
+# Stage 12.1 — First model and placeable item
 
 The approved target is the initial two-bay canopy, a single road-facing entrance edge, a dispatch office at the left, and a visible decorative tank. The user approved this concept for modeling on 4 November 2026. The superseded through-access option is not used.
 
@@ -9,31 +9,36 @@ The approved target is the initial two-bay canopy, a single road-facing entrance
 - Two open vehicle bays under a pitched metal canopy, divided by a central support line.
 - Dispatch office with front windows, door, plinth, shallow roof, and restrained red trim.
 - A vertical decorative tank is visible beside the office. It has no pump or hose and makes no fuel-service promise.
-- The model is authored from named low-poly objects using Blender, with separate material groups. Generated OBJ/MTL is intended for ModelViewer import; the `.blend` file and generator remain editable project source.
-- The ModelViewer export is reduced to 10 material-group meshes, 3,590 vertices total and 6,596 triangles; the exported OBJ contains no quads/ngons. The official modelling notes recommend triangles and cite an approximate 19,000-vertex per-object limit: [Modelviewer](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer), [Modelling](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling).
+- The model is authored from named low-poly objects using Blender, with separate material groups. The `.blend` file and generator remain editable project source.
+- The OBJ export has 10 material-group meshes, 3,590 vertices total and 6,596 triangles. It contains no quads/ngons. The official modelling notes recommend triangles and cite an approximate 19,000-vertex per-object limit: [Modelviewer](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer), [Modelling](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling).
 
-Files:
+## Project assets
 
 - `assets/building/generate_earthworks_facility.py` — deterministic Blender authoring script.
 - `assets/building/generated/earthworks_facility.blend` — editable scene.
-- `assets/building/generated/earthworks_facility.obj` and `.mtl` — export for ModelViewer.
+- `assets/building/generated/earthworks_facility.obj` and `.mtl` — ModelViewer import source.
+- `assets/building/native/earthworks_facility.nmf` — native mesh exported by ModelViewer.
+- `assets/building/native/earthworks_facility.mtl` — native submaterials using the authored Blender diffuse/ambient colors.
+- `assets/building/native/previewimage.png` — square 512 px Workshop preview generated from the render.
 - `docs/mockups/STAGE12_FACILITY_MODEL_PREVIEW.png` — offline render for design review.
 
-Regenerate with the project Blender runtime:
+Regenerate the editable source and OBJ with the project Blender runtime:
 
 ```powershell
 tools\runtime\blender-5.2.3\blender-5.2.3-windows-x64\blender.exe --background --factory-startup --python assets/building/generate_earthworks_facility.py
 ```
 
-## Remaining 12.1 work and limits
+## Native conversion and item
 
-The ModelViewer conversion to the game's native model and material formats has not been completed, so there is not yet a placeable item. After the user authorized desktop use, the computer-use tool tried to launch `ModelViewer.exe` twice; both launches exited without exposing a targetable window. The native item script still uses the old construction-office donor and must not be treated as this model's item.
+The user opened ModelViewer for the 4 November 2026 authoring session. It imported the OBJ, saved the native NMF, and saved a native material template. The NMF was copied into this repository and given the canonical `.nmf` extension; the native material file was populated from the OBJ's authored diffuse and ambient colors. ModelViewer accepted the material when loaded from `media_soviet`. Its preview showed color separation, though its close camera and bright lighting are not a game-appearance check.
 
-Parking routes and road connections also remain unimplemented. They must be authored together with two real native parking slots after the model is converted. No in-game test was run. Stage 12.1 remains open until the user places the converted item and checks scale, orientation, access, entry/exit routing, save/reload and demolition in a disposable save.
+`scripts/Stage-EarthworksBuilding.ps1` stages the custom mesh/material and preview as Workshop item `9100000012/EarthworksDevelopmentFacility`. It retains the native construction-office class and support files, provides exactly two `$VEHICLE_PARKING` entries and a straight single-front `$CONNECTION_ROAD`, and keeps five worker places as a temporary test setting. The bay centers and connector are provisional coordinates in model space. This draft does not establish that the game will interpret approach direction or parking headings as intended.
+
+The inherited bounding-box/fire support files and construction-office type remain prototype scaffolding. The building-specific UI and dynamic worker capacity are not implemented in 12.1; those are later 12.2/12.3 work. The tank is decorative. No game test was run. Follow [the Stage 12.1 test instructions](STAGE12_1_TESTING.md); 12.1 remains open until placement, access, routing, save/reload and demolition are checked by the user.
 
 ### Native routing evidence
 
 - The `construction_office3.ini` donor has 16 `$VEHICLE_PARKING` entries, per-slot advanced waypoint records for some parking IDs, a road connector and dead-road connector records. It is not suitable unchanged for this two-bay footprint.
 - The native `muddy_construction.ini` is a `$TYPE_CONSTRUCTION_OFFICE` with four `$VEHICLE_PARKING` lines, no advanced waypoints, and one straight `$CONNECTION_ROAD` across its frontage. This confirms that the game's native format supports a small, direct-route office layout.
-- The generated footprint places the two bays side by side with their open edges facing the same single frontage. The likely first route experiment is one parking position per bay and a single straight road connector across that frontage. Exact coordinates and connector orientation are intentionally not committed yet: ModelViewer has no targetable window in this session, and the game must resolve route direction and parked orientation in the disposable-save check.
-- The existing development item still uses the old construction-office model, 20-worker test value and inherited 16 parking positions. Do not use it to judge the custom model or assume it meets the Stage 12 requirements.
+- The custom item places the two bays side by side with their open edges facing one frontage. Its initial route experiment uses positions `(0.7, 0, 0)` and `(13.3, 0, 0)`, each oriented toward negative Z, with a straight connector spanning the fronts at Z `-14.5`. Verify the frontage, road snapping, entry, parking orientation, exit, and interaction between bays in game.
+- The previous large-office model, 20-worker test value and inherited 16 parking points are no longer used by the Stage 12 item. It uses a temporary five-worker value and two native parking entries; dynamic worker limits and final values remain unimplemented.

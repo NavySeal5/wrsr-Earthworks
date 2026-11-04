@@ -1,97 +1,126 @@
 [CmdletBinding()]
 param()
 
-$ErrorActionPreference='Stop'
+$ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$root=Split-Path $PSScriptRoot -Parent
-$game=Split-Path $root -Parent
-$media=Join-Path $game 'media_soviet'
-$id='9100000012'
-$object='EarthworksDevelopmentFacility'
-$name='Earthworks Development Facility (test)'
-$donor='construction_office3'
-$source=Join-Path $media 'buildings_types'
-$output=Join-Path $root 'build\earthworks-workshop'
-$item=Join-Path $output $id
-$objectDir=Join-Path $item $object
-$targetRoot=Join-Path $media 'workshop_wip'
-$target=Join-Path $targetRoot $id
-$marker='.earthworks-generated'
 
-$baseline=Get-Content -LiteralPath (Join-Path $root 'docs\game-baseline.json') -Raw | ConvertFrom-Json
-foreach($binary in $baseline.binaries) {
-    $path=Join-Path $game $binary.name
-    if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $binary.sha256) {
+$root = Split-Path $PSScriptRoot -Parent
+$game = Split-Path $root -Parent
+$media = Join-Path $game 'media_soviet'
+$id = '9100000012'
+$object = 'EarthworksDevelopmentFacility'
+$name = 'Earthworks Facility (prototype)'
+$source = Join-Path $media 'buildings_types'
+$native = Join-Path $root 'assets\building\native'
+$output = Join-Path $root 'build\earthworks-workshop'
+$item = Join-Path $output $id
+$objectDir = Join-Path $item $object
+$targetRoot = Join-Path $media 'workshop_wip'
+$target = Join-Path $targetRoot $id
+$marker = '.earthworks-generated'
+
+$baseline = Get-Content -LiteralPath (Join-Path $root 'docs\game-baseline.json') -Raw | ConvertFrom-Json
+foreach ($binary in $baseline.binaries) {
+    $path = Join-Path $game $binary.name
+    if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $binary.sha256) {
         throw "Installed game differs from the inspected baseline: $path"
     }
 }
 
-if(Test-Path -LiteralPath $target) {
-    if(-not (Test-Path -LiteralPath (Join-Path $target $marker))) {
-        throw "Refusing to overwrite an existing WIP item without the Earthworks marker: $target"
+if (Test-Path -LiteralPath $target) {
+    if (-not (Test-Path -LiteralPath (Join-Path $target $marker))) {
+        throw "Refusing to overwrite an existing Workshop item without the Earthworks marker: $target"
     }
 }
+
+foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previewimage.png')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $native $file))) {
+        throw "Missing authored facility asset: $file"
+    }
+}
+
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
+Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
+Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
+Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
-$required=@(
-    @{Path="buildings\$donor.nmf";Dest="$object\model.nmf"},
-    @{Path="buildings_types\$donor.bbox";Dest="$object\building.bbox"},
-    @{Path="buildings_types\$donor.fire";Dest="$object\building.fire"},
-    @{Path="editor\tool_$donor.png";Dest="$object\imagegui.png"},
-    @{Path="buildings_types\$donor.ini";Dest="$object\building.ini"},
-    @{Path="buildings\$donor.mtl";Dest='material.mtl'}
-)
-foreach($file in $required) {
-    if(-not (Test-Path -LiteralPath (Join-Path $media $file.Path))) { throw "Missing native donor asset: $($file.Path)" }
+# This first placeable fixture retains the native construction-office class and
+# frame data, but replaces the donor parking coordinates with two canopy bays.
+# Exact approach orientation and vehicle flow must be checked by the user in game.
+foreach ($file in @(
+    @{ Source = 'construction_office3.bbox'; Destination = 'building.bbox' },
+    @{ Source = 'construction_office3.fire'; Destination = 'building.fire' }
+)) {
+    $sourcePath = Join-Path $source $file.Source
+    if (-not (Test-Path -LiteralPath $sourcePath)) { throw "Missing native building support file: $($file.Source)" }
+    Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $objectDir $file.Destination) -Force
 }
-foreach($file in $required | Where-Object { $_.Dest -ne "$object\building.ini" -and $_.Dest -ne 'material.mtl' }) {
-    $destination=Join-Path $item $file.Dest
-    New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $media $file.Path) -Destination $destination -Force
-}
-Copy-Item -LiteralPath (Join-Path $media "editor\tool_$donor.png") -Destination (Join-Path $item 'previewimage.png') -Force
 
-function Copy-RewrittenMaterial([string]$sourceFile,[string]$destination) {
-    $lines=Get-Content -LiteralPath $sourceFile
-    $rewritten=@(foreach($line in $lines) {
-        if($line -match '^(?<prefix>.*)\$TEXTURE_MTL\s+(?<slot>\S+)\s+(?<path>\S+)\s*$') {
-            "$($Matches.prefix)`$TEXTURE $($Matches.slot) buildings/$($Matches.path)"
-        } else {$line}
-    })
-    [IO.File]::WriteAllLines($destination,$rewritten,[Text.UTF8Encoding]::new($false))
-}
-Copy-RewrittenMaterial (Join-Path $media "buildings\$donor.mtl") (Join-Path $item 'material.mtl')
-$emissive=Test-Path -LiteralPath (Join-Path $media "buildings\${donor}_e.mtl")
-if($emissive) { Copy-RewrittenMaterial (Join-Path $media "buildings\${donor}_e.mtl") (Join-Path $item 'material_e.mtl') }
+$donorIni = Get-Content -LiteralPath (Join-Path $source 'muddy_construction.ini')
+$retained = @($donorIni | Where-Object {
+    $_ -match '^\s*\$(?:TYPE_CONSTRUCTION_OFFICE|NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT|RESOURCE_SOURCE_[A-Z_]+)(?:\s|$)'
+})
+$custom = [Collections.Generic.List[string]]::new()
+$custom.Add("`$NAME_STR `"$name`"")
+$custom.Add('$WORKERS_NEEDED 5')
+$custom.Add('$WORKING_VEHICLES_NEEDED 2')
+$custom.Add('')
+$custom.AddRange([string[]]$retained)
+$custom.Add('')
+# Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
+# Their heading points toward the single frontage at negative Z.
+$custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 -10.0000')
+$custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 -10.0000')
+$custom.Add('')
+# One straight road connector spans the two open bay fronts.
+$custom.Add('$CONNECTION_ROAD')
+$custom.Add('-7.0000 0.0000 -14.5000')
+$custom.Add('21.0000 0.0000 -14.5000')
+$custom.Add('')
+$custom.Add('end')
+[IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
 
-$donorIni=@(Get-Content -LiteralPath (Join-Path $media "buildings_types\$donor.ini") | Where-Object { $_ -notmatch '^\s*\$NAME(?:\s|$)' })
-$custom=@("`$NAME_STR `"$name`"","`$WORKERS_NEEDED 20",'')+$donorIni
-[IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'),$custom,[Text.UTF8Encoding]::new($false))
-
-$render=@('$TYPE_WORKSHOP',' MODEL model.nmf',' MATERIAL ../material.mtl')
-if($emissive){$render+=' MATERIALEMISSIVE ../material_e.mtl'}
-$render+=@(' LIFE 3000.000000',' EXPLOSION_GROUP 0',' DERBIS_FALLING_FX buildingfall1 1.000000',
-    ' DERBIS_FALLED_FX buildingfall2 1.400000',' DERBIS_FALLED_SFX collapse',' DERBIS_NUM 20',
-    ' DERBIS_FALLING_FX_MAXTIME 3.000000',' DERBIS_SCALE 1.000000',
+$render = @(
+    '$TYPE_WORKSHOP',
+    ' MODEL model.nmf',
+    ' MATERIAL ../material.mtl',
+    ' LIFE 3000.000000',
+    ' EXPLOSION_GROUP 0',
+    ' DERBIS_FALLING_FX buildingfall1 1.000000',
+    ' DERBIS_FALLED_FX buildingfall2 1.400000',
+    ' DERBIS_FALLED_SFX collapse',
+    ' DERBIS_NUM 20',
+    ' DERBIS_FALLING_FX_MAXTIME 3.000000',
+    ' DERBIS_SCALE 1.000000',
     ' DERBIS_MESH buildings/buildingwreck1.nmf buildings/buildingwreck.mtl',
-    ' DERBIS_MESH buildings/buildingwreck2.nmf buildings/buildingwreck.mtl',' END')
-[IO.File]::WriteAllLines((Join-Path $objectDir 'renderconfig.ini'),$render,[Text.UTF8Encoding]::new($false))
+    ' DERBIS_MESH buildings/buildingwreck2.nmf buildings/buildingwreck.mtl',
+    ' END'
+)
+[IO.File]::WriteAllLines((Join-Path $objectDir 'renderconfig.ini'), $render, [Text.UTF8Encoding]::new($false))
 
-$config=@"
+$config = @"
 `$ITEM_ID $id
 `$OWNER_ID 0
 `$ITEM_TYPE WORKSHOP_ITEMTYPE_BUILDING
 `$VISIBILITY 0
 `$OBJECT_BUILDING $object
 `$ITEM_NAME "$name"
-`$ITEM_DESC "Temporary Earthworks test prototype. 20 worker places and 16 parking points inherited from the construction-office template. Not a final facility capacity."
+`$ITEM_DESC "Stage 12 prototype facility. Two vehicle bays; model, staffing and road access are being checked. Decorative tank only."
 `$END
 "@
-[IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'),$config,[Text.UTF8Encoding]::new($false))
-[IO.File]::WriteAllText((Join-Path $item $marker),'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Temporary Stage 9 fixture: 20 worker places and 16 inherited parking points; do not publish.',[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'), $config, [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $item $marker), 'Generated locally by scripts/Stage-EarthworksBuilding.ps1. Stage 12 model and access prototype.', [Text.UTF8Encoding]::new($false))
 
-if(-not (Test-Path -LiteralPath $target)) { New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null; New-Item -ItemType Directory -Path $target | Out-Null }
+if (-not (Test-Path -LiteralPath $target)) {
+    New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $target | Out-Null
+}
+Get-ChildItem -LiteralPath $target -Force | Remove-Item -Recurse -Force
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
-Write-Host "Staged dedicated Earthworks content item $id at $target"
-Write-Host 'Temporary Stage 9 settings: 20 worker places; the construction_office3 template has 16 vehicle-parking points, not two.'
-Write-Host 'The plugin recognizes this facility by its unique internal asset name. Ordinary construction offices remain unaffected.'
+
+$parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
+if ($parkingCount -ne 2) { throw "Expected exactly two parking slots, found $parkingCount" }
+Write-Host "Staged Stage 12 Earthworks facility at $target"
+Write-Host 'The native construction-office type is retained; the custom model/material and two provisional parking routes replace the donor presentation.'
+Write-Host 'The five-worker value and single-frontage routing are prototype settings pending the relevant Stage 12 checks.'
