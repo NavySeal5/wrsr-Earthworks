@@ -10,6 +10,7 @@ PNG review render. The mesh is original project content.
 from pathlib import Path
 import math
 import bpy
+import bmesh
 from mathutils import Vector
 
 
@@ -258,10 +259,49 @@ def set_camera_and_render():
 
 
 def export_obj():
+    # Keep the editable Blender scene organized into small named parts, but
+    # export a compact set of material-grouped meshes for ModelViewer. The
+    # game's model tool expects triangles and has a per-object vertex limit.
+    by_material = {}
+    export_copies = []
+    for source in EXPORT_OBJECTS:
+        bpy.ops.object.select_all(action="DESELECT")
+        source.select_set(True)
+        bpy.context.view_layer.objects.active = source
+        bpy.ops.object.duplicate()
+        copy = bpy.context.object
+        copy.name = f"export_{source.name}"
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        if not copy.data.materials:
+            continue
+        key = copy.data.materials[0].name
+        by_material.setdefault(key, []).append(copy)
+        export_copies.append(copy)
+
+    grouped = []
+    for material_name, copies in by_material.items():
+        bpy.ops.object.select_all(action="DESELECT")
+        for obj in copies:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = copies[0]
+        if len(copies) > 1:
+            bpy.ops.object.join()
+        obj = bpy.context.object
+        obj.name = f"mesh_{material_name}"
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0001)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+        bm.to_mesh(obj.data)
+        bm.free()
+        obj.data.update()
+        grouped.append(obj)
+
     bpy.ops.object.select_all(action="DESELECT")
-    for obj in EXPORT_OBJECTS:
+    for obj in grouped:
         obj.select_set(True)
-    bpy.context.view_layer.objects.active = EXPORT_OBJECTS[0]
+    bpy.context.view_layer.objects.active = grouped[0]
     bpy.ops.wm.obj_export(
         filepath=str(OBJ),
         export_selected_objects=True,
@@ -270,6 +310,11 @@ def export_obj():
         up_axis="Y",
         apply_modifiers=True,
     )
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in grouped:
+        obj.select_set(True)
+    bpy.ops.object.delete(use_global=False)
 
 
 def main():

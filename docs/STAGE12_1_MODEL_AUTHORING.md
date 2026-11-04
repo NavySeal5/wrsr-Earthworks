@@ -10,6 +10,7 @@ The approved target is the initial two-bay canopy, a single road-facing entrance
 - Dispatch office with front windows, door, plinth, shallow roof, and restrained red trim.
 - A vertical decorative tank is visible beside the office. It has no pump or hose and makes no fuel-service promise.
 - The model is authored from named low-poly objects using Blender, with separate material groups. Generated OBJ/MTL is intended for ModelViewer import; the `.blend` file and generator remain editable project source.
+- The ModelViewer export is reduced to 10 material-group meshes, 3,590 vertices total and 6,596 triangles; the exported OBJ contains no quads/ngons. The official modelling notes recommend triangles and cite an approximate 19,000-vertex per-object limit: [Modelviewer](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer), [Modelling](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling).
 
 Files:
 
@@ -26,7 +27,7 @@ tools\runtime\blender-5.2.3\blender-5.2.3-windows-x64\blender.exe --background -
 
 ## Remaining 12.1 work and limits
 
-The ModelViewer conversion to the game's native model and material formats has not been completed, so there is not yet a placeable item. The computer-use request to operate ModelViewer was denied by the app-use gate. The native item script still uses the old construction-office donor and must not be treated as this model's item.
+The ModelViewer conversion to the game's native model and material formats has not been completed, so there is not yet a placeable item. After the user authorized desktop use, the computer-use tool tried to launch `ModelViewer.exe` twice; both launches exited without exposing a targetable window. The native item script still uses the old construction-office donor and must not be treated as this model's item.
 
 Parking routes and road connections also remain unimplemented. They must be authored together with two real native parking slots after the model is converted. No in-game test was run. Stage 12.1 remains open until the user places the converted item and checks scale, orientation, access, entry/exit routing, save/reload and demolition in a disposable save.
 
