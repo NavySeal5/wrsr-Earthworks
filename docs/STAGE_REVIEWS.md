@@ -32,6 +32,7 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 
 **Stage 12.1 material-binding diagnostic — 4 November 2026**
 - The user's next screenshot still looked effectively monochrome. File inspection confirmed the current MTL is copied byte-for-byte into the live Workshop item, but that alone does not prove the game binds its submaterials. Prepared an exaggerated temporary color palette for a decisive visual check. If the placed building remains gray, investigate NMF material-slot mapping and ModelViewer export/renderconfig association before further color tuning. No gameplay test was run.
+- The user reported the high-contrast palette still rendered the same. Updated the staged renderconfig to reference `material.mtl` beside `model.nmf`, and the staging script now copies the MTL there as well as at item root. This removes ambiguity in relative material-file resolution; it does not yet prove that the game binds per-submaterial entries.
 
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
