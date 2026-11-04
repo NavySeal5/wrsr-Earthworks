@@ -29,3 +29,10 @@ tools\runtime\blender-5.2.3\blender-5.2.3-windows-x64\blender.exe --background -
 The ModelViewer conversion to the game's native model and material formats has not been completed, so there is not yet a placeable item. The computer-use request to operate ModelViewer was denied by the app-use gate. The native item script still uses the old construction-office donor and must not be treated as this model's item.
 
 Parking routes and road connections also remain unimplemented. They must be authored together with two real native parking slots after the model is converted. No in-game test was run. Stage 12.1 remains open until the user places the converted item and checks scale, orientation, access, entry/exit routing, save/reload and demolition in a disposable save.
+
+### Native routing evidence
+
+- The `construction_office3.ini` donor has 16 `$VEHICLE_PARKING` entries, per-slot advanced waypoint records for some parking IDs, a road connector and dead-road connector records. It is not suitable unchanged for this two-bay footprint.
+- The native `muddy_construction.ini` is a `$TYPE_CONSTRUCTION_OFFICE` with four `$VEHICLE_PARKING` lines, no advanced waypoints, and one straight `$CONNECTION_ROAD` across its frontage. This confirms that the game's native format supports a small, direct-route office layout.
+- The generated footprint places the two bays side by side with their open edges facing the same single frontage. The likely first route experiment is one parking position per bay and a single straight road connector across that frontage. Exact coordinates and connector orientation are intentionally not committed yet: ModelViewer has no targetable window in this session, and the game must resolve route direction and parked orientation in the disposable-save check.
+- The existing development item still uses the old construction-office model, 20-worker test value and inherited 16 parking positions. Do not use it to judge the custom model or assume it meets the Stage 12 requirements.
