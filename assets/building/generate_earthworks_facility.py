@@ -110,6 +110,34 @@ def add_cylinder(name, center, radius, depth, mat, vertices=16, bevel=0.04):
     return obj
 
 
+def apply_cylinder_atlas_uvs(obj, material_name, center_xy):
+    """Unwrap a vertical cylinder around its circumference into an atlas patch."""
+    texture, (left, top, right, bottom), width, height = TEXTURED_ATLAS_REGIONS[material_name]
+    uv_layer = obj.data.uv_layers.active or obj.data.uv_layers.new(name="UVMap")
+    z_values = [obj.matrix_world @ vertex.co for vertex in obj.data.vertices]
+    z_min = min(point.z for point in z_values)
+    z_max = max(point.z for point in z_values)
+    u_min, u_max = left / width, right / width
+    v_min, v_max = 1.0 - bottom / height, 1.0 - top / height
+
+    for polygon in obj.data.polygons:
+        loop_angles = []
+        for loop_index in polygon.loop_indices:
+            vertex = obj.data.vertices[obj.data.loops[loop_index].vertex_index]
+            point = obj.matrix_world @ vertex.co
+            angle = math.atan2(point.y - center_xy[1], point.x - center_xy[0])
+            loop_angles.append(angle if angle >= 0.0 else angle + 2.0 * math.pi)
+        # Keep a polygon crossing the 0/2π seam locally continuous.
+        if loop_angles and max(loop_angles) - min(loop_angles) > math.pi:
+            loop_angles = [angle + (2.0 * math.pi if angle < math.pi else 0.0) for angle in loop_angles]
+        for loop_index, angle in zip(polygon.loop_indices, loop_angles):
+            vertex = obj.data.vertices[obj.data.loops[loop_index].vertex_index]
+            point = obj.matrix_world @ vertex.co
+            u = u_min + (angle / (2.0 * math.pi)) * (u_max - u_min)
+            v_t = 0.5 if z_max - z_min < 1e-6 else (point.z - z_min) / (z_max - z_min)
+            uv_layer.data[loop_index].uv = (u, v_min + v_t * (v_max - v_min))
+
+
 def add_window(name, x, z, width, height, y=-8.74):
     add_box(name + "_glass", (x, y, z), (width, 0.08, height), GLASS, 0.025)
     t = 0.11
@@ -141,7 +169,7 @@ def make_building():
     add_window("office_window_2", -13.35, 3.35, 2.35, 1.95)
     add_box("office_door", (-8.85, -8.81, 2.36), (1.65, 0.15, 3.18), STEEL, 0.04)
     add_box("office_door_panel", (-8.85, -8.91, 2.42), (1.16, 0.05, 2.68), FRAME, 0.025)
-    add_box("office_door_handle", (-8.37, -8.98, 2.25), (0.07, 0.05, 0.27), TANK, 0.015)
+    add_box("office_door_handle", (-8.37, -8.98, 2.25), (0.07, 0.05, 0.27), FRAME, 0.015)
     add_box("office_entry_canopy", (-8.85, -9.63, 4.20), (2.65, 1.0, 0.18), STEEL, 0.04)
     for idx, step in enumerate((0.18, 0.40, 0.62)):
         add_box(f"office_entry_step_{idx+1}", (-8.85, -9.10 - idx * 0.47, step / 2), (2.3, 0.50, step), CONCRETE, 0.05)
@@ -212,22 +240,25 @@ def make_building():
         add_box(f"bay_number_pad_{idx+1}", (x, -1.5, 0.0525), (0.85, 0.85, 0.025), CONCRETE, 0.01)
 
 
-# Material atlases used by the vanilla firestation/garage models. These regions
-# provide the game's familiar concrete and corrugated-metal appearance. Atlas
-# coordinates are pixel rectangles measured from the upper-left of each DDS.
+# Material atlas regions used by vanilla building assets. Coordinates are pixel
+# rectangles measured from the upper-left of each DDS; each entry also records
+# its atlas dimensions because the construction-office sheet is 1024 square.
 TEXTURED_ATLAS_REGIONS = {
-    "parking_surface_concrete": ("buildings/firestation.dds", (8, 458, 628, 640)),
-    "dispatch_concrete": ("buildings/firestation.dds", (8, 458, 628, 640)),
-    "corrugated_galvanized_roof": ("buildings/garage.dds", (846, 646, 1284, 1018)),
-    "office_roof_graphite": ("buildings/firestation.dds", (8, 458, 628, 640)),
+    "parking_surface_concrete": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
+    # Pale, lightly mottled concrete field on the vanilla construction-office atlas.
+    "dispatch_concrete": ("buildings/construction_office.dds", (430, 520, 640, 1008), 1024.0, 1024.0),
+    # Restrict the garage sheet to the uninterrupted corrugated-metal area;
+    # the previous lower edge included window graphics and caused square artifacts.
+    "corrugated_galvanized_roof": ("buildings/garage.dds", (846, 646, 1284, 800), 2048.0, 2048.0),
+    "office_roof_graphite": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
+    # Banded weathered steel from the vanilla construction-office sheet, unwrapped cylindrically.
+    "decorative_tank_painted_steel": ("buildings/construction_office.dds", (4, 4, 208, 278), 1024.0, 1024.0),
 }
 
 
 def apply_atlas_uvs(obj, material_name):
     """Map a grouped mesh into the relevant vanilla DDS atlas region."""
-    _texture, (left, top, right, bottom) = TEXTURED_ATLAS_REGIONS[material_name]
-    width = 2048.0
-    height = 2048.0
+    _texture, (left, top, right, bottom), width, height = TEXTURED_ATLAS_REGIONS[material_name]
     bounds = obj.bound_box
     coords = [obj.matrix_world @ Vector(corner) for corner in bounds]
     minima = [min(point[axis] for point in coords) for axis in range(3)]
@@ -342,7 +373,9 @@ def export_obj():
         bm.to_mesh(obj.data)
         bm.free()
         obj.data.update()
-        if material_name in TEXTURED_ATLAS_REGIONS:
+        if material_name == "decorative_tank_painted_steel":
+            apply_cylinder_atlas_uvs(obj, material_name, (-21.35, -1.0))
+        elif material_name in TEXTURED_ATLAS_REGIONS:
             apply_atlas_uvs(obj, material_name)
         grouped.append(obj)
 
@@ -358,6 +391,10 @@ def export_obj():
         up_axis="Y",
         apply_modifiers=True,
     )
+    # Blender writes LF on Windows while this repository's exported OBJ uses
+    # CRLF. Preserve the established line endings so geometry diffs stay legible.
+    exported_obj = OBJ.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    OBJ.write_bytes(exported_obj)
 
     bpy.ops.object.select_all(action="DESELECT")
     for obj in grouped:

@@ -98,14 +98,14 @@ Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join
 $facilityMaterials = @(
     @{ Name = 'parking_surface_concrete'; Texture = 'buildings/firestation.dds' },
     @{ Name = 'foundation_concrete'; Color = @(150, 151, 146) },
-    @{ Name = 'dispatch_concrete'; Texture = 'buildings/firestation.dds' },
+    @{ Name = 'dispatch_concrete'; Texture = 'buildings/construction_office.dds' },
     @{ Name = 'office_roof_graphite'; Texture = 'buildings/firestation.dds' },
     @{ Name = 'window_frames'; Color = @(48, 57, 63) },
     @{ Name = 'safety_red'; Color = @(160, 48, 38) },
     @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
     @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
-    @{ Name = 'decorative_tank_painted_steel'; Color = @(122, 128, 123) },
     @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
+    @{ Name = 'decorative_tank_painted_steel'; Texture = 'buildings/construction_office.dds' },
     @{ Name = 'corrugated_galvanized_roof'; Texture = 'buildings/garage.dds' },
     @{ Name = 'roof_rib_highlight'; Color = @(205, 208, 204) }
 )
