@@ -70,28 +70,41 @@ $custom.Add("`$NAME_STR `"$name`"")
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
-# A small diagnostic phase registers every native NMF node and avoids the
-# zero-work/zero-cost blueprint state. This is not final construction balance.
+# Keep the native construction-office phase sequence, using the custom model's
+# node names. The large values are diagnostic only and make the build-menu
+# summary easy to inspect; they are not final construction balance.
 $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 100.0')
 foreach ($node in @(
     'mesh_foundation_concrete',
-    'mesh_dispatch_plaster_pale',
-    'mesh_window_frames',
-    'mesh_safety_red',
-    'mesh_office_window_glass',
-    'mesh_canopy_structural_steel',
-    'mesh_decorative_tank_painted_steel',
-    'mesh_parking_bay_markings',
-    'mesh_corrugated_galvanized_roof',
-    'mesh_roof_rib_highlight'
+    'mesh_parking_bay_markings'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
 $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
 $custom.Add('$COST_RESOURCE_AUTO ground_asphalt 100.0')
+$custom.Add('------------------')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 100.0')
+foreach ($node in @(
+    'mesh_dispatch_plaster_pale',
+    'mesh_window_frames',
+    'mesh_safety_red',
+    'mesh_office_window_glass'
+)) {
+    $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
+}
 $custom.Add('$COST_RESOURCE_AUTO wall_brick 100.0')
 $custom.Add('$COST_RESOURCE_AUTO wall_wood 100.0')
+$custom.Add('------------------')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 100.0')
+foreach ($node in @(
+    'mesh_canopy_structural_steel',
+    'mesh_decorative_tank_painted_steel',
+    'mesh_corrugated_galvanized_roof',
+    'mesh_roof_rib_highlight'
+)) {
+    $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
+}
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 100.0')
 $custom.Add('')
 $custom.AddRange([string[]]$resourceSources)
