@@ -44,18 +44,17 @@ def material(name, color, roughness=0.82, metallic=0.0):
     return mat
 
 
-# High-contrast diagnostic palette: this temporary set makes it obvious whether
-# the game binds the model's material groups to the custom material.mtl.
-PLASTER = material("dispatch_plaster_pale", (0.95, 0.77, 0.48))
-CONCRETE = material("foundation_concrete", (0.48, 0.50, 0.48))
-STEEL = material("canopy_structural_steel", (0.12, 0.23, 0.38), 0.56, 0.12)
-ROOF = material("corrugated_galvanized_roof", (0.22, 0.48, 0.82), 0.52, 0.12)
-ROOF_RIB = material("roof_rib_highlight", (0.48, 0.78, 0.95), 0.49, 0.12)
-SAFETY_RED = material("safety_red", (0.95, 0.025, 0.015), 0.65, 0.02)
-GLASS = material("office_window_glass", (0.015, 0.28, 0.95), 0.27, 0.05)
-FRAME = material("window_frames", (0.08, 0.13, 0.17), 0.7, 0.04)
-TANK = material("decorative_tank_painted_steel", (0.16, 0.52, 0.055), 0.65, 0.05)
-ROAD_PAINT = material("parking_bay_markings", (0.98, 0.92, 0.62), 0.95)
+# Muted industrial palette used by the facility preview and Workshop materials.
+PLASTER = material("dispatch_plaster_pale", (0.78, 0.72, 0.61))
+CONCRETE = material("foundation_concrete", (0.59, 0.59, 0.56))
+STEEL = material("canopy_structural_steel", (0.31, 0.33, 0.34), 0.72, 0.12)
+ROOF = material("corrugated_galvanized_roof", (0.72, 0.73, 0.72), 0.72, 0.12)
+ROOF_RIB = material("roof_rib_highlight", (0.80, 0.81, 0.79), 0.7, 0.08)
+SAFETY_RED = material("safety_red", (0.52, 0.12, 0.09), 0.72, 0.02)
+GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
+FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
+TANK = material("decorative_tank_painted_steel", (0.48, 0.50, 0.48), 0.72, 0.05)
+ROAD_PAINT = material("parking_bay_markings", (0.80, 0.77, 0.67), 0.95)
 
 
 EXPORT_OBJECTS = []

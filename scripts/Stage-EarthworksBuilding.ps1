@@ -82,43 +82,45 @@ foreach ($generatedFile in @('building.bbox', 'building.fire', 'material.mtl')) 
     $generatedPath = Join-Path $objectDir $generatedFile
     if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath -Force }
 }
+Remove-Item -LiteralPath (Join-Path $objectDir 'earthworks_facility_probe.mtl') -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $objectDir -Filter 'earthworks_probe_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
-# Diagnostic material check: use real Workshop-local BC1 textures, not only
-# MTL diffuse colors. This distinguishes a runtime material/submaterial bind
-# problem from a renderer that ignores diffuse color constants. Remove this
-# block once the finished-building material path is confirmed.
-$diagnosticMaterials = @(
-    @{ Name = 'foundation_concrete'; Color = @(230, 35, 35) },
-    @{ Name = 'dispatch_plaster_pale'; Color = @(255, 210, 25) },
-    @{ Name = 'window_frames'; Color = @(35, 80, 255) },
-    @{ Name = 'safety_red'; Color = @(255, 55, 15) },
-    @{ Name = 'office_window_glass'; Color = @(15, 220, 245) },
-    @{ Name = 'canopy_structural_steel'; Color = @(225, 25, 220) },
-    @{ Name = 'decorative_tank_painted_steel'; Color = @(30, 235, 45) },
-    @{ Name = 'parking_bay_markings'; Color = @(245, 245, 245) },
-    @{ Name = 'corrugated_galvanized_roof'; Color = @(255, 130, 20) },
-    @{ Name = 'roof_rib_highlight'; Color = @(25, 220, 245) }
+# Use Workshop-local BC1 textures so the colors render reliably in the
+# completed building. This muted palette follows the facility preview: pale
+# plaster, galvanized roofing, dark steel, blue glazing and restrained red
+# safety details.
+$facilityMaterials = @(
+    @{ Name = 'foundation_concrete'; Color = @(150, 151, 146) },
+    @{ Name = 'dispatch_plaster_pale'; Color = @(218, 205, 179) },
+    @{ Name = 'window_frames'; Color = @(48, 57, 63) },
+    @{ Name = 'safety_red'; Color = @(160, 48, 38) },
+    @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
+    @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
+    @{ Name = 'decorative_tank_painted_steel'; Color = @(122, 128, 123) },
+    @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
+    @{ Name = 'corrugated_galvanized_roof'; Color = @(183, 187, 185) },
+    @{ Name = 'roof_rib_highlight'; Color = @(205, 208, 204) }
 )
-$probeMtl = [Collections.Generic.List[string]]::new()
-foreach ($material in $diagnosticMaterials) {
-    $textureName = 'earthworks_probe_' + $material.Name + '.dds'
+$facilityMtl = [Collections.Generic.List[string]]::new()
+foreach ($material in $facilityMaterials) {
+    $textureName = 'earthworks_' + $material.Name + '.dds'
     Write-SolidDds (Join-Path $objectDir $textureName) $material.Color[0] $material.Color[1] $material.Color[2]
-    $probeMtl.Add('$SUBMATERIAL ' + $material.Name)
-    $probeMtl.Add('$TEXTURE_MTL 0 ' + $textureName)
-    $probeMtl.Add('$TEXTURE 1 blankspecular.dds')
-    $probeMtl.Add('$TEXTURE 2 blankbump.dds')
-    $probeMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
-    $probeMtl.Add('$SPECULARCOLOR 0.0 0.0 0.0 1.0')
-    $probeMtl.Add('$AMBIENTCOLOR 1.0 1.0 1.0 1.0')
-    $probeMtl.Add('$SPECULARPOWER 2.0')
-    $probeMtl.Add('')
+    $facilityMtl.Add('$SUBMATERIAL ' + $material.Name)
+    $facilityMtl.Add('$TEXTURE_MTL 0 ' + $textureName)
+    $facilityMtl.Add('$TEXTURE 1 blankspecular.dds')
+    $facilityMtl.Add('$TEXTURE 2 blankbump.dds')
+    $facilityMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
+    $facilityMtl.Add('$SPECULARCOLOR 0.18 0.18 0.18 1.0')
+    $facilityMtl.Add('$AMBIENTCOLOR 1.0 1.0 1.0 1.0')
+    $facilityMtl.Add('$SPECULARPOWER 2.0')
+    $facilityMtl.Add('')
 }
-$probeMtl.Add('$END')
-[IO.File]::WriteAllLines((Join-Path $objectDir 'earthworks_facility_probe.mtl'), $probeMtl, [Text.UTF8Encoding]::new($false))
+$facilityMtl.Add('$END')
+[IO.File]::WriteAllLines((Join-Path $objectDir 'earthworks_facility_material.mtl'), $facilityMtl, [Text.UTF8Encoding]::new($false))
 
 # Do not copy the construction office donor's generated bbox/fire data onto this
 # unrelated NMF. The game generates these from the Workshop model; stale donor
@@ -196,7 +198,7 @@ $custom.Add('end')
 $render = @(
     '$TYPE_WORKSHOP',
     ' MODEL model.nmf',
-    ' MATERIAL earthworks_facility_probe.mtl',
+    ' MATERIAL earthworks_facility_material.mtl',
     ' LIFE 3000.000000',
     ' EXPLOSION_GROUP 0',
     ' DERBIS_FALLING_FX buildingfall1 1.000000',
@@ -241,6 +243,9 @@ if ($previousModelHash -ne $modelHash) {
 $targetObjectMaterial = Join-Path $target (Join-Path $object 'material.mtl')
 if (Test-Path -LiteralPath $targetObjectMaterial) { Remove-Item -LiteralPath $targetObjectMaterial -Force }
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
+$targetObject = Join-Path $target $object
+Remove-Item -LiteralPath (Join-Path $targetObject 'earthworks_facility_probe.mtl') -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $targetObject -Filter 'earthworks_probe_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 [IO.File]::WriteAllText($modelHashMarker, $modelHash, [Text.UTF8Encoding]::new($false))
 
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
@@ -248,5 +253,5 @@ if ($parkingCount -ne 2) { throw "Expected exactly two parking slots, found $par
 Write-Host "Staged Stage 12 Earthworks facility at $target"
 Write-Host 'The native construction-office type is retained; donor bbox/fire files are omitted so the game can generate data for the custom NMF.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
-Write-Host 'The custom model and item-level material are linked from renderconfig, with two provisional parking routes.'
+Write-Host 'The custom model uses a textured muted material palette, with two provisional parking routes.'
 Write-Host 'The five-worker value and single-frontage routing are prototype settings pending the relevant Stage 12 checks.'

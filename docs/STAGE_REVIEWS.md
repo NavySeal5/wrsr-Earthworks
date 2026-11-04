@@ -43,7 +43,8 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 **Stage 12.1 explicit-texture diagnostic — 4 November 2026**
 - User reports that a fresh in-game facility remains gray after the parent-relative MTL change. The available game log is from the corresponding 20:10 session and contains no Earthworks model/material path or failed-texture entries; it does not prove which material binding the finished building uses. RML confirms the correct test profile loaded and the world reached 1970.
 - Added a temporary material probe with a uniquely named renderconfig material and one valid 4×4 BC1/DXT1 Workshop-local diffuse texture per NMF submaterial. The exaggerated palette makes a completed model's material binding distinguishable from color-constant handling; construction overlays are not diagnostic. No game test was run by the agent.
-- The current staged item is ready for the user-run color-binding check in [Stage 12.1 instructions](STAGE12_1_TESTING.md). If it remains gray, continue investigating the game's finished-building material binding; do not tune the intended art palette yet.
+- User confirmed the finished in-game model displayed distinct colors with the diagnostic palette. This verifies that the game applies the custom renderconfig material and binds the NMF submaterials to Workshop-local compressed textures; the cause of the earlier grayscale-only material remains unproven.
+- Replaced the diagnostic palette with a muted industrial palette aligned with the facility preview: pale plaster, galvanized gray roof, dark steel, blue-gray glazing, neutral tank and restrained red safety details. The same explicit texture-binding route remains in place. Updated the Blender source palette, native ModelViewer MTL and user test instructions. This follow-up is staged locally for a fresh placement; user review of final appearance is pending.
 
 **Stage 12.1 ModelViewer comparison and local-material fallback — 4 November 2026**
 
