@@ -105,8 +105,10 @@ $facilityMaterials = @(
     @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
     @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
     @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
-    @{ Name = 'decorative_tank_painted_steel'; Texture = 'buildings/construction_office.dds' },
-    @{ Name = 'corrugated_galvanized_roof'; Texture = 'buildings/garage.dds' },
+    # Tint the pale atlas pixels toward the darker gray galvanized roof and
+    # weathered blue-gray CO tank seen in the vanilla reference.
+    @{ Name = 'decorative_tank_painted_steel'; Texture = 'buildings/construction_office.dds'; Tint = '0.42 0.48 0.50' },
+    @{ Name = 'corrugated_galvanized_roof'; Texture = 'buildings/garage.dds'; Tint = '0.55 0.58 0.60' },
     @{ Name = 'roof_rib_highlight'; Color = @(205, 208, 204) }
 )
 $facilityMtl = [Collections.Generic.List[string]]::new()
@@ -121,9 +123,10 @@ foreach ($material in $facilityMaterials) {
     }
     $facilityMtl.Add('$TEXTURE 1 blankspecular.dds')
     $facilityMtl.Add('$TEXTURE 2 blankbump.dds')
-    $facilityMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
+    $tint = if ($material.ContainsKey('Tint')) { $material.Tint } else { '1.0 1.0 1.0' }
+    $facilityMtl.Add('$DIFFUSECOLOR ' + $tint + ' 1.0')
     $facilityMtl.Add('$SPECULARCOLOR 0.18 0.18 0.18 1.0')
-    $facilityMtl.Add('$AMBIENTCOLOR 1.0 1.0 1.0 1.0')
+    $facilityMtl.Add('$AMBIENTCOLOR ' + $tint + ' 1.0')
     $facilityMtl.Add('$SPECULARPOWER 2.0')
     $facilityMtl.Add('')
 }
