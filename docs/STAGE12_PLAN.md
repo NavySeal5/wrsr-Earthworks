@@ -13,17 +13,17 @@ The selected concept is an open two-bay equipment canopy beside a compact dispat
 ### Work
 
 1. Prepare a visual proposal before committing the model. Show a game-scale concept with front/side/top views or an equivalent clear layout, including the canopy, dispatch office, two equipment bays, visible decorative tank, access/road-facing sides, footprint and approximate height. Retain the accepted middle concept; use the proposal to settle implementation details rather than reopen the basic concept.
-   - Initial single-frontage concept (superseded): [STAGE12_FACILITY_CONCEPT_PROPOSAL.png](mockups/STAGE12_FACILITY_CONCEPT_PROPOSAL.png).
-   - Revised through-access concept: [STAGE12_FACILITY_CONCEPT_THROUGH_ACCESS.png](mockups/STAGE12_FACILITY_CONCEPT_THROUGH_ACCESS.png). The user selected roads on the front and rear; final geometry remains subject to actual in-game routing.
+   - Current single-frontage concept: [STAGE12_FACILITY_CONCEPT_PROPOSAL.png](mockups/STAGE12_FACILITY_CONCEPT_PROPOSAL.png). The user asked to return to this initial road/bay layout after reviewing the through-access alternative. It has one road approach along the open bay fronts; final geometry remains subject to actual in-game routing.
+   - Through-access alternative (superseded): [STAGE12_FACILITY_CONCEPT_THROUGH_ACCESS.png](mockups/STAGE12_FACILITY_CONCEPT_THROUGH_ACCESS.png).
 2. Confirm the installed game's supported asset/export workflow and package requirements. The current development script copies a native construction-office model/materials and writes a Workshop item; it is a staging aid, not a custom-model pipeline. The game includes ModelViewer; see the [official ModelViewer guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer) and [official modelling notes](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling). The community workflow uses Blender-exported OBJ imported into ModelViewer to create NMF and material files; see the [community modding guide](https://workers-resources.fandom.com/wiki/General_modding).
 3. Build a low-poly model and materials that read clearly at normal camera distance and in the construction thumbnail. Prepare a unique item/asset identity and placeable preview icon.
-4. Design the vehicle access together with the parking layout. The current `construction_office3.ini` donor defines each `$VEHICLE_PARKING` slot and ordered `$VEHICLE_PARKING_ADVANCED_POINT_PID` waypoints, plus its road connections. Map exactly two slots and their entry/exit paths under the canopy; align the access driveway/road connectors so both machines can enter, leave and reach their bay without crossing structures or using the second bay as a dead-end.
+4. Design the vehicle access together with the parking layout. The current `construction_office3.ini` donor defines each `$VEHICLE_PARKING` slot and ordered `$VEHICLE_PARKING_ADVANCED_POINT_PID` waypoints, plus its road connections. Map exactly two slots and their entry/exit paths under the canopy; align the single-front road connector so both machines can enter, leave, and reach their bay without crossing structures or using the other bay as a dead-end. The actual route may require vehicles to reverse out; confirm that in-game before changing the concept.
 5. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Implement the vehicle-scaled worker cap as a Stage 12 prototype rule; defer coefficient/rate balancing to Stage 13.
 6. Keep footprint, road/access behavior, build cost, maintenance, and demolition behavior documented from native defaults or clearly marked as provisional. Do not invent release balance values during modeling.
 
 ### User-run check and gate
 
-Using a fresh disposable world, place and rotate the item. Check silhouette and scale at street and normal play zoom, footprint fit, access orientation, preview thumbnail, construction animation/cost, save/reload and demolition cleanup. With one eligible vehicle in each slot, observe that each follows its route into its bay, parks in the intended orientation, and can later exit. Repeat with the two vehicle slots occupied in the opposite order; check for blocked or crossing routes. Test connected road approaches on each intended access side before accepting the driveway layout. The user reviews the visual result before Stage 12.2.
+Using a fresh disposable world, place and rotate the item. Check silhouette and scale at street and normal play zoom, footprint fit, access orientation, preview thumbnail, construction animation/cost, save/reload and demolition cleanup. With one eligible vehicle in each slot, observe that each follows its route from the front road into its bay, parks in the intended orientation, and can later exit to the same road. Repeat with the two vehicle slots occupied in the opposite order; check for blocked or crossing routes and whether backing out blocks the other bay. The user reviews the visual result before Stage 12.2.
 
 ### Exit criteria
 
@@ -80,7 +80,7 @@ Final worker capacity, staffing/productivity balance, facility range, build/main
 
 ## Open decisions to resolve at the relevant checkpoint
 
-- Review the revised 12.1 through-access visual proposal, especially building orientation/access and visible scale, before model production.
+- Review the 12.1 single-frontage visual proposal, especially building orientation/access and visible scale, before model production.
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show live worker and eligible-machine counts per assigned facility when reliable readings are available; show a clear unavailable state instead of misleading zeroes (D86).
 - Do not set final worker capacity or throughput in Stage 12; make those decisions during Stage 13 balance review.
