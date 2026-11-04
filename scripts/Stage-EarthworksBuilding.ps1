@@ -60,12 +60,13 @@ foreach ($file in @(
 
 $donorIni = Get-Content -LiteralPath (Join-Path $source 'muddy_construction.ini')
 $retained = @($donorIni | Where-Object {
-    $_ -match '^\s*\$(?:TYPE_CONSTRUCTION_OFFICE|NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT|RESOURCE_SOURCE_[A-Z_]+)(?:\s|$)'
+    $_ -match '^\s*\$(?:TYPE_CONSTRUCTION_OFFICE|NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT)(?:\s|$)'
+})
+$resourceSources = @($donorIni | Where-Object {
+    $_ -match '^\s*\$RESOURCE_SOURCE_[A-Z_]+(?:\s|$)'
 })
 $custom = [Collections.Generic.List[string]]::new()
 $custom.Add("`$NAME_STR `"$name`"")
-$custom.Add('$WORKERS_NEEDED 5')
-$custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
@@ -92,6 +93,11 @@ $custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.0')
 $custom.Add('$COST_RESOURCE_AUTO wall_brick 1.0')
 $custom.Add('$COST_RESOURCE_AUTO wall_wood 1.0')
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 1.0')
+$custom.Add('')
+$custom.AddRange([string[]]$resourceSources)
+$custom.Add('')
+$custom.Add('$WORKERS_NEEDED 5')
+$custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
 # Their heading points toward the single frontage at negative Z.
