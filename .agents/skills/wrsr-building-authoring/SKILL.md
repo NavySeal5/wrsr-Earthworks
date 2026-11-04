@@ -1,42 +1,59 @@
 ---
 name: wrsr-building-authoring
-description: Create, stage, and troubleshoot custom building assets for Workers & Resources: Soviet Republic using Blender, ModelViewer, native building scripts, and Workshop WIP files.
+description: Design, model, configure, and package custom building assets for Workers & Resources: Soviet Republic, from an approved concept through user-run in-game review.
 ---
 
 # Workers & Resources building authoring
 
-Use this skill when creating or changing a custom building model, material, construction script, Workshop item, or local test package for Workers & Resources: Soviet Republic (WRSR).
+Use this skill for any WRSR mod that creates or changes a building. Follow repository instructions first; do not assume every mod uses the same model generator, staging script, item layout, or test policy.
 
-## Start with the project state
+## Work from concept to testable asset
 
-For this repository, read `AGENTS.md`, `IMPLEMENTATION_PLAN.md`, `docs/DECISIONS.md`, and the Stage 12 section of `docs/STAGE_REVIEWS.md` before changing the Earthworks building. Read the detailed [Earthworks Stage 12 case study](references/earthworks-stage12-case-study.md) for the real asset layout, current values, proven material route, failure history, and remaining checks.
+### 1. Establish what the building is for
 
-Separate three kinds of information in notes and proposals:
+Find out the rough building type and gameplay purpose. Use the user's description when it already answers this. Identify the intended player, setting, and any related game systems or vanilla assets that should guide the design. Inspect the target mod's instructions and current source before proposing implementation details.
 
-- **User-approved design**: fixed requirements such as the compact dispatch office, open two-bay canopy, decorative visible tank, and the currently approved single-front road arrangement.
-- **Prototype settings**: temporary values that are useful for testing but are not balance decisions, such as the current five worker places and construction coefficients.
-- **Unverified behavior**: matters such as vehicle pathing, save/reload, workforce scaling, and final palette acceptance that still need the user's in-game review.
+### 2. Propose and refine the visual concept
 
-Ask before changing a consequential visual or gameplay choice that is not already settled. Preserve superseded decisions in the project record when they explain why the current design differs.
+Prepare one or more visual proposals that communicate the overall form, layout, access, and distinctive features. Use mockups, image generation, sketches, or another available visual tool that fits the task. Present the proposals and revise them with the user's feedback until the user selects a concept. Do not treat a generated image as an implementation specification until the user approves it.
 
-## Author the model and game assets
+### 3. Resolve building properties before modeling
 
-1. **Keep source assets authoritative.** Edit `assets/building/generate_earthworks_facility.py` for geometry and Blender colors. Keep generated Blender/OBJ work under `assets/building/generated/`; the review render is written to `docs/mockups/`. Do not hand-edit ignored files in `build/` or the live `workshop_wip` item; change the source or staging script and regenerate them.
-2. **Use stable material and node names.** The generator groups exported geometry by its first material, names each group `mesh_<material-name>`, triangulates it, merges near-duplicate vertices and recalculates normals before OBJ export. Keep names synchronized among Blender materials, OBJ/NMF mesh nodes, native MTL submaterials, `building.ini` construction-node declarations, and runtime materials.
-3. **Convert through ModelViewer.** Import the generated OBJ with the game's ModelViewer and inspect it with object type set to Building. ModelViewer's NMF save dialog is restricted to `GAME_DIR/media_soviet`; saving directly to the mod repository (for example, `assets/building/native/`) fails with “file is outside of GAME_DIR/media_soviet”. Navigate to the object folder under `media_soviet/workshop_wip/...`, enter the filename stem without `.nmf` because the dialog appends it (`model.nmf` becomes `model.nmf.nmf`; enter `model`), save, and verify the reported and actual filename. Then copy the saved NMF into `assets/building/native/` with filesystem tools. Verify the copied file before staging. ModelViewer previews are useful, but they do not prove that the game uses the same runtime renderconfig/material binding.
-4. **Provide the complete WIP item.** Keep the Workshop item root and `$OBJECT_BUILDING` object directory consistent. The Earthworks stage script writes `workshopconfig.ini`, `building.ini`, `renderconfig.ini`, the preview images, the NMF, the runtime MTL, and its texture files. Follow that script rather than copying a donor building's unrelated geometry files.
-5. **Match construction phases to the NMF.** Every construction node in `building.ini` must be a real NMF mesh name. Assign the intended nodes to native construction phases, and attach the vehicle work station to a real node. Keep phase ordering consistent with a working vanilla script; in this project, construction phases precede `$RESOURCE_SOURCE_*` declarations.
-6. **Bind textures explicitly.** In this project, MTL diffuse-color constants and path-only changes did not produce the intended colors on the completed in-game building. The confirmed route uses a local MTL referenced from `renderconfig.ini`, `$TEXTURE_MTL 0` for custom-color submaterials, and BC1/DXT1 Workshop-local DDS files. For large surfaces where the player requested vanilla texture matching, the current pass instead references the native firestation/garage atlases with `$TEXTURE 0` and UVs targeting the relevant atlas regions. Preserve these distinct routes unless in-game evidence justifies changing them; atlas UV mapping is pending a fresh user-run review.
+Translate the approved concept into a concise spec. Cover the properties that matter for the building, such as:
 
-## Stage, inspect, and review
+- scale, footprint, height, orientation, and ground contact;
+- visual style, materials, texture sources, and colors;
+- building type, capacity, workforce, service or production behavior;
+- construction phases, work requirements, and material costs;
+- vehicle parking count/types and their approach, parking, and exit paths;
+- pedestrian access, entrances, and road connections;
+- placement preview, icon, and player-facing building UI needs.
 
-- Close the game and project-local RML before staging. `launch-prototype.cmd` checks that state, invokes `scripts/Stage-Diagnostics.ps1` (which builds/stages the plugin and invokes the building stager), then opens the project-local RML. Do not launch a second RML instance over a live session.
-- `scripts/Stage-EarthworksBuilding.ps1` checks the pinned game baseline and a project ownership marker before copying into `media_soviet/workshop_wip/9100000012`. Preserve these guards; never overwrite an unmarked Workshop item.
-- The script deliberately does not copy a donor `building.bbox` or `building.fire`. The game generates those for the current NMF. If the model hash changes, the staging script removes stale generated bounds; allow a full game restart for regenerated geometry to take effect before evaluating construction node costs.
-- Use a fresh/disposable save and a newly placed building when checking changed assets. Inspect the completed model for materials: placement ghosts and construction-phase tints are not evidence that the finished render has the intended colors.
-- In-game acceptance belongs to the user in this repository. Do not claim success from a build, ModelViewer preview, static inspection, or plugin log. Provide concise user-run instructions and record only outcomes the user reports. Do not edit a user save or perform gameplay tests without explicit authorization.
-- After each implementation stage or approved decision, make a local commit. Do not push to origin unless the user explicitly asks.
+Ask the user about consequential gameplay or UX choices that remain open. Do not ask them to re-confirm settled requirements. Clearly label assumptions and temporary prototype values.
 
-## Current project checkpoint
+### 4. Generate the assets from editable sources
 
-Stage 12.1 has a custom Blender source, ModelViewer NMF, two-slot local building item, native construction phases, local compressed runtime textures, and a muted palette staged in commit `0d3f0db`. The user confirmed that the previous high-contrast texture-binding diagnostic displayed in-game colors. The muted palette has not yet been accepted in game; scale, road snapping, both bay routes, save/reload, and demolition remain part of Stage 12.1 review. Stage 12.2 (native facility UI) and 12.3 (facility/Project integration) are not yet complete. Do not report Stage 12 as accepted.
+Once the concept and dependent properties are clear, create the model and related game files using the tools available in the project. This may include Blender or another modeler, scripts, image/texture tools, ModelViewer, and the game's native asset/config format. Prefer reproducible editable sources and generators over hand-editing generated or live staging files. Inspect installed vanilla assets and authoritative modding references for formats, material paths, construction nodes, connection points, and parking-route conventions; do not guess based only on a ModelViewer preview.
+
+Keep mesh, material, and construction-node names synchronized across model exports, native material files, construction configuration, render configuration, and staging scripts. Only copy donor configuration fields that are understood and relevant; do not copy a donor's bounds, fire, or route data onto unrelated geometry without verifying how they are generated and used.
+
+### 5. Use Computer Use only with permission
+
+Before controlling ModelViewer or another desktop application, ask the user for Computer Use permission unless permission for that specific activity is already active in the conversation. If permission is not granted, continue the file-based work that does not depend on desktop control and give the user clear manual instructions for the blocked steps, such as how to start ModelViewer, import the generated OBJ, choose the Building object type, save the NMF, and return the resulting file. Do not imply that a conversion or desktop action was completed when it was not.
+
+Use paths relative to the mod root (`MOD_ROOT`) for repository assets and scripts, and paths relative to the game install (`GAME_ROOT`) for native assets and Workshop staging. Do not put machine-specific absolute paths in this skill or its reusable instructions.
+
+**ModelViewer path and filename note:** On the installation used to develop the Earthworks case study, the NMF save dialog only accepted locations under `GAME_ROOT/media_soviet`; a repository destination outside that tree produced “file is outside of GAME_DIR/media_soviet”. Save to a temporary or WIP location under `GAME_ROOT/media_soviet`, then copy the file into the repository using filesystem tools. The dialog appended `.nmf`: entering `model.nmf` created `model.nmf.nmf`, so enter the filename stem (`model`) and verify the actual output filename. If another installation behaves differently, follow its observed dialog behavior while keeping paths relative to the appropriate root.
+
+### 6. Package and review in stages
+
+Follow the repository's build and staging scripts, preserve ownership and baseline guards, and stage a clearly identifiable candidate. Provide a concise checklist for the user to inspect in game. Check the completed building, not only placement ghosts or construction overlays, for materials, scale, ground contact, access, parking behavior, and construction progression. Treat static inspection, script completion, builds, and ModelViewer appearance as technical evidence, not in-game acceptance. Follow the repository's instructions about who performs in-game checks, how to record results, and when to commit or publish.
+
+## Earthworks example
+
+The [Earthworks Stage 12 case study](references/earthworks-stage12-case-study.md) records one mod's approved design, source layout, construction configuration, ModelViewer lessons, texture-binding diagnosis, and corrections. Treat its values and conventions as evidence from that project, not defaults for other buildings or mods.
+
+## Modding references
+
+- [Official General modding guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/General_modding)
+- [Official Modelling guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling)

@@ -1,6 +1,6 @@
 # Earthworks facility: workflow, review, and lessons learned
 
-This is a project-specific record for Stage 12. It distinguishes validated results from the prototype's remaining in-game checks. The repository's current source of truth is `scripts/Stage-EarthworksBuilding.ps1`, `assets/building/generate_earthworks_facility.py`, and the Stage 12 decision/review documents.
+This is an Earthworks-specific case study, not a default specification for another WRSR building. Paths in this reference are relative to `MOD_ROOT` (the mod/repository root) unless they begin with `GAME_ROOT` (the installed game's root). It distinguishes validated results from this prototype's remaining in-game checks. Its current source of truth is `MOD_ROOT/scripts/Stage-EarthworksBuilding.ps1`, `MOD_ROOT/assets/building/generate_earthworks_facility.py`, and the Stage 12 decision/review documents.
 
 ## Accepted target and current limits
 
@@ -20,15 +20,15 @@ These resource values are **coefficients**, not final item counts. The game calc
 
 | Role | Project path |
 |---|---|
-| Editable model and OBJ exporter | `assets/building/generate_earthworks_facility.py` |
-| Generated Blender, OBJ, source MTL | `assets/building/generated/` |
-| Game NMF, ModelViewer MTL, preview | `assets/building/native/` |
-| WIP item generator/stager | `scripts/Stage-EarthworksBuilding.ps1` |
-| User-run launch/staging wrapper | `launch-prototype.cmd` |
-| User-run model review | `docs/STAGE12_1_TESTING.md` |
-| Construction cost reference | `docs/STAGE12_CONSTRUCTION_COSTS.md` |
+| Editable model and OBJ exporter | `MOD_ROOT/assets/building/generate_earthworks_facility.py` |
+| Generated Blender, OBJ, source MTL | `MOD_ROOT/assets/building/generated/` |
+| Game NMF, ModelViewer MTL, preview | `MOD_ROOT/assets/building/native/` |
+| WIP item generator/stager | `MOD_ROOT/scripts/Stage-EarthworksBuilding.ps1` |
+| User-run launch/staging wrapper | `MOD_ROOT/launch-prototype.cmd` |
+| User-run model review | `MOD_ROOT/docs/STAGE12_1_TESTING.md` |
+| Construction cost reference | `MOD_ROOT/docs/STAGE12_CONSTRUCTION_COSTS.md` |
 
-The local item is `media_soviet/workshop_wip/9100000012`, with root `workshopconfig.ini`, `previewimage.png`, and `material.mtl`, and object folder `EarthworksDevelopmentFacility`. Its `renderconfig.ini` currently references `model.nmf` and the object-local `earthworks_facility_material.mtl`; runtime BC1 textures sit beside that MTL. `$OBJECT_BUILDING` must match the folder name. `imagegui.png` is copied into the object folder for the game catalog.
+The local item is `GAME_ROOT/media_soviet/workshop_wip/9100000012`, with root `workshopconfig.ini`, `previewimage.png`, and `material.mtl`, and object folder `EarthworksDevelopmentFacility`. Its `renderconfig.ini` currently references `model.nmf` and the object-local `earthworks_facility_material.mtl`; runtime BC1 textures sit beside that MTL. `$OBJECT_BUILDING` must match the folder name. `imagegui.png` is copied into the object folder for the game catalog.
 
 The stage script emits three construction phases, two `$VEHICLE_PARKING` entries and a single `$CONNECTION_ROAD` at the open front. Bay centers and connector coordinates are prototype coordinates; native pathing has not been accepted yet.
 
@@ -96,8 +96,8 @@ In game, check the menu cost summary, construction resources/work progression, f
 ## Current review status
 
 - **Confirmed by the user:** the high-contrast local-texture diagnostic renders the separate material colors on a completed in-game facility; construction requirements and progression work after the bounds/order fixes.
-- **Staged but not yet accepted:** muted intended colors from commit `0d3f0db`.
-- **Still needed for Stage 12.1:** fresh-placement review of the muted palette, scale/footprint/ground contact, road snap and vehicle entry/exit for both slots, save/reload, demolition, plus any missing material warnings.
+- **Staged but not yet accepted:** the vanilla-atlas surface update and flush parking apron from commit `a865bb4`; the previous explicit texture-binding route remains available for custom-color parts.
+- **Still needed for Stage 12.1:** fresh-placement review of the concrete/metal atlas mapping, flush grade, remaining palette, scale/footprint, road snap and vehicle entry/exit for both slots, save/reload, demolition, plus any missing material warnings.
 - **Not implemented yet:** purpose-built native facility panel (Stage 12.2), Project/facility integration (Stage 12.3), dynamic Strength/Level staffing rule, final visual polish/balance. The five-worker value is not the approved final formula.
 
 ## References
