@@ -69,6 +69,25 @@ $custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
+# A zero-work, no-resource diagnostic phase registers every native NMF node
+# with the building renderer. Final construction costs/phases remain undecided.
+$custom.Add('-------')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
+foreach ($node in @(
+    'mesh_foundation_concrete',
+    'mesh_dispatch_plaster_pale',
+    'mesh_window_frames',
+    'mesh_safety_red',
+    'mesh_office_window_glass',
+    'mesh_canopy_structural_steel',
+    'mesh_decorative_tank_painted_steel',
+    'mesh_parking_bay_markings',
+    'mesh_corrugated_galvanized_roof',
+    'mesh_roof_rib_highlight'
+)) {
+    $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
+}
+$custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
 # Their heading points toward the single frontage at negative Z.
 $custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 -10.0000')

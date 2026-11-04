@@ -46,6 +46,12 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - Installed Workshop building items commonly place the MTL beside `renderconfig.ini` and `model.nmf` and reference it as `MATERIAL material.mtl`. The current staged item has a nested object folder; the previous iteration referenced the parent MTL. Updated the staging script to keep a root MTL copy for the preview and also place a copy beside the model, with the renderconfig using the local file. This is a targeted compatibility check, not yet verified in game.
 - Once ModelViewer and the game/RML are closed, run `launch-prototype.cmd` to stage the local-material variant, then place a new facility in-game and inspect it after construction finishes. Stage 12.1 remains pending user review.
 
+**Stage 12.1 construction-node rendering diagnostic — 4 November 2026**
+
+- The user reports that the gray instance was placed immediately before the screenshot; this is a fresh instance using the local-material layout. The material-path change therefore did not resolve the in-game appearance.
+- The user noted the prototype has no construction stages or resource requirements. The current generated `building.ini` indeed contains no `$COST_WORK` or `$COST_WORK_BUILDING_NODE` entries. The official [Modelling guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling) says mesh node names are needed to define construction phases and properly render the model. This makes unassigned NMF mesh nodes a plausible cause, though it is not proven.
+- Added a single zero-work, no-resource Groundworks phase assigning all ten NMF mesh nodes. This keeps construction costs undecided and is intended only to check whether explicit node assignment lets the placed building use its authored materials. No game test or staging was performed; the user should close ModelViewer, game and project-local RML, then run `launch-prototype.cmd` before the next in-game check.
+
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
 | Preparation | Complete | Toolchain installed, DLL built/loaded outside game, RML discovery inspected | Preparation is not an in-game stage acceptance |
