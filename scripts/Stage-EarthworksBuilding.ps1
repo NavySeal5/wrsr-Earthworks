@@ -73,7 +73,7 @@ $custom.Add('')
 # node names. The large values are diagnostic only and make the build-menu
 # summary easy to inspect; they are not final construction balance.
 $custom.Add('-------')
-$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 100.0')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
     'mesh_foundation_concrete',
     'mesh_parking_bay_markings'
@@ -81,9 +81,9 @@ foreach ($node in @(
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
 $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
-$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 100.0')
+$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.5')
 $custom.Add('------------------')
-$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 100.0')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 1.0')
 foreach ($node in @(
     'mesh_dispatch_plaster_pale',
     'mesh_window_frames',
@@ -92,10 +92,10 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO wall_brick 100.0')
-$custom.Add('$COST_RESOURCE_AUTO wall_wood 100.0')
+$custom.Add('$COST_RESOURCE_AUTO wall_brick 0.7')
+$custom.Add('$COST_RESOURCE_AUTO wall_wood 0.3')
 $custom.Add('------------------')
-$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 100.0')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 1.0')
 foreach ($node in @(
     'mesh_canopy_structural_steel',
     'mesh_decorative_tank_painted_steel',
@@ -104,7 +104,7 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 100.0')
+$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
 $custom.Add('')
 $custom.AddRange([string[]]$resourceSources)
 $custom.Add('')
