@@ -22,6 +22,10 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - The staging script replaces the temporary large construction-office model and 16 inherited parking points with the custom model, two native parking entries and a provisional straight frontage connector. The item remains a construction-office type with inherited support/bounds files and a temporary five-worker setting. Dynamic worker capacity is not implemented yet.
 - The user opened ModelViewer for this work. The model and native material loaded there; visual appearance, scale, placement, road snapping, vehicle routing, save/reload and demolition have not been checked in game. 12.1 is pending the user-run [test instructions](STAGE12_1_TESTING.md).
 
+**Stage 12.1 material-path correction — 4 November 2026**
+
+- The user reported a black model with atlas-like texture fragments in game. The installed game log showed ten failed reads of `media_soviet/buildings/blankdiffuse.dds`; the native blank diffuse file is at the media root. Corrected the MTL to reference root-level `blankdiffuse.dds` and restaged the Workshop item. No game was launched. The fix awaits a fresh in-game check.
+
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
 | Preparation | Complete | Toolchain installed, DLL built/loaded outside game, RML discovery inspected | Preparation is not an in-game stage acceptance |

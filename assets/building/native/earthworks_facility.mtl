@@ -1,5 +1,5 @@
 $SUBMATERIAL decorative_tank_painted_steel
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -9,7 +9,7 @@ $AMBIENTCOLOR 0.220000 0.220000 0.220000 1.000000
 $SPECULARPOWER 122.500015
 
 $SUBMATERIAL corrugated_galvanized_roof
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -19,7 +19,7 @@ $AMBIENTCOLOR 0.380000 0.380000 0.380000 1.000000
 $SPECULARPOWER 230.400024
 
 $SUBMATERIAL office_window_glass
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -29,7 +29,7 @@ $AMBIENTCOLOR 0.180000 0.180000 0.180000 1.000000
 $SPECULARPOWER 532.900024
 
 $SUBMATERIAL dispatch_plaster_pale
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -39,7 +39,7 @@ $AMBIENTCOLOR 1.000000 1.000000 1.000000 1.000000
 $SPECULARPOWER 32.400002
 
 $SUBMATERIAL parking_bay_markings
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -49,7 +49,7 @@ $AMBIENTCOLOR 1.000000 1.000000 1.000000 1.000000
 $SPECULARPOWER 2.500001
 
 $SUBMATERIAL safety_red
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -59,7 +59,7 @@ $AMBIENTCOLOR 0.100000 0.100000 0.100000 1.000000
 $SPECULARPOWER 122.500015
 
 $SUBMATERIAL roof_rib_highlight
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -69,7 +69,7 @@ $AMBIENTCOLOR 0.420000 0.420000 0.420000 1.000000
 $SPECULARPOWER 260.100006
 
 $SUBMATERIAL window_frames
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -79,7 +79,7 @@ $AMBIENTCOLOR 0.120000 0.120000 0.120000 1.000000
 $SPECULARPOWER 90.000000
 
 $SUBMATERIAL canopy_structural_steel
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 
@@ -89,7 +89,7 @@ $AMBIENTCOLOR 0.380000 0.380000 0.380000 1.000000
 $SPECULARPOWER 193.600006
 
 $SUBMATERIAL foundation_concrete
-$TEXTURE 0 buildings/blankdiffuse.dds
+$TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds
 $TEXTURE 2 buildings/blankbump.dds
 

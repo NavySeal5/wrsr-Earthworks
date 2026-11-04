@@ -11,8 +11,8 @@ This is a user-run check. The agent has not launched the game or edited a save. 
 ## Place and inspect
 
 1. In the construction-office category, find **Earthworks Facility (prototype)**. Confirm its preview shows the canopy, dispatch office and tank.
-2. Place and rotate it on level ground. Check the ghost preview, footprint, scale from normal zoom, ground contact, office/tank placement, and whether the two canopy bays are open toward the road-facing edge.
-3. Finish construction and open the building window. Confirm the facility loads without missing-model/material warnings and the normal Earthworks controls still recognize it automatically.
+2. Place and rotate it on level ground. Check the ghost preview, footprint, scale from normal zoom, ground contact, office/tank placement, and whether the two canopy bays are open toward the road-facing edge. The MTL diffuse path was corrected after the first run; confirm the black surfaces and atlas-like texture fragments are gone.
+3. Finish construction and open the building window. Confirm the facility loads without missing-model/material warnings and the normal Earthworks controls still recognize it automatically. If the material still looks wrong, close the game and send the latest `log.html` entries mentioning `blankdiffuse`, `material.mtl`, or the Earthworks model.
 
 ## Check road access and parking
 
