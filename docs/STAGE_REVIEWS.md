@@ -34,6 +34,12 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - The user's next screenshot still looked effectively monochrome. File inspection confirmed the current MTL is copied byte-for-byte into the live Workshop item, but that alone does not prove the game binds its submaterials. Prepared an exaggerated temporary color palette for a decisive visual check. If the placed building remains gray, investigate NMF material-slot mapping and ModelViewer export/renderconfig association before further color tuning. No gameplay test was run.
 - The user reported the high-contrast palette still rendered the same. Updated the staged renderconfig to reference `material.mtl` beside `model.nmf`, and the staging script now copies the MTL there as well as at item root. This removes ambiguity in relative material-file resolution; it does not yet prove that the game binds per-submaterial entries.
 
+**Stage 12.1 renderconfig material-path correction — 4 November 2026**
+
+- The user confirmed the placed model remained grayscale after a fresh game launch. Read-only inspection showed the game log had no Earthworks asset-load diagnostics, while ModelViewer displayed the expected distinct palette from the same staged NMF/MTL pair.
+- Compared the Workshop layout with local modding reference documentation and working Workshop item structure: shared `material.mtl` belongs at the Workshop item root, and the object's `renderconfig.ini` points to it as `MATERIAL ../material.mtl`. The current Earthworks staging script instead pointed at a duplicate beside the NMF. Changed the source staging script to the canonical parent-relative reference and stopped copying the duplicate. This is a targeted path-resolution fix, not yet staged or verified in game because the game is open.
+- After the user closes the game, rerun `scripts/Stage-EarthworksBuilding.ps1`; then the user should launch a fresh game and place a new facility. Verify that the finished building shows distinct roof, office, tank and trim colors. If it remains grayscale, capture the game log after that run and continue investigating NMF material-slot binding.
+
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
 | Preparation | Complete | Toolchain installed, DLL built/loaded outside game, RML discovery inspected | Preparation is not an in-game stage acceptance |

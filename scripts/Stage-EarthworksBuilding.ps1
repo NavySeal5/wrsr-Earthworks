@@ -42,7 +42,6 @@ foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previ
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
-Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $objectDir 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
@@ -85,7 +84,7 @@ $custom.Add('end')
 $render = @(
     '$TYPE_WORKSHOP',
     ' MODEL model.nmf',
-    ' MATERIAL material.mtl',
+    ' MATERIAL ../material.mtl',
     ' LIFE 3000.000000',
     ' EXPLOSION_GROUP 0',
     ' DERBIS_FALLING_FX buildingfall1 1.000000',
@@ -123,5 +122,5 @@ Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
 if ($parkingCount -ne 2) { throw "Expected exactly two parking slots, found $parkingCount" }
 Write-Host "Staged Stage 12 Earthworks facility at $target"
-Write-Host 'The native construction-office type is retained; the custom model/material and two provisional parking routes replace the donor presentation.'
+Write-Host 'The native construction-office type is retained; the custom model and item-level material are linked from renderconfig, and two provisional parking routes replace the donor presentation.'
 Write-Host 'The five-worker value and single-frontage routing are prototype settings pending the relevant Stage 12 checks.'
