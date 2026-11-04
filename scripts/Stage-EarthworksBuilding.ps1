@@ -105,17 +105,21 @@ $facilityMaterials = @(
     @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
     @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
     @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
-    # Tint the pale atlas pixels toward the darker gray galvanized roof and
-    # weathered blue-gray CO tank seen in the vanilla reference.
-    @{ Name = 'decorative_tank_painted_steel'; Texture = 'buildings/construction_office.dds'; Tint = '0.42 0.48 0.50' },
-    @{ Name = 'corrugated_galvanized_roof'; Texture = 'buildings/garage.dds'; Tint = '0.55 0.58 0.60' },
-    @{ Name = 'roof_rib_highlight'; Color = @(205, 208, 204) }
+    # The Blender authoring step bakes these atlas patches into local BC1 DDS
+    # files so darkening does not depend on a material tint in the game.
+    @{ Name = 'decorative_tank_painted_steel'; TextureMtl = 'earthworks_tank_steel.dds' },
+    @{ Name = 'corrugated_galvanized_roof'; TextureMtl = 'earthworks_corrugated_roof.dds' },
+    # Ribs are deliberately close in value to the roof sheet so sunlit edges
+    # do not turn into repeated white stripes at normal camera distance.
+    @{ Name = 'roof_rib_highlight'; Color = @(145, 151, 154) }
 )
 $facilityMtl = [Collections.Generic.List[string]]::new()
 foreach ($material in $facilityMaterials) {
     $facilityMtl.Add('$SUBMATERIAL ' + $material.Name)
     if ($material.ContainsKey('Texture')) {
         $facilityMtl.Add('$TEXTURE 0 ' + $material.Texture)
+    } elseif ($material.ContainsKey('TextureMtl')) {
+        $facilityMtl.Add('$TEXTURE_MTL 0 ' + $material.TextureMtl)
     } else {
         $textureName = 'earthworks_' + $material.Name + '.dds'
         Write-SolidDds (Join-Path $objectDir $textureName) $material.Color[0] $material.Color[1] $material.Color[2]
@@ -123,15 +127,21 @@ foreach ($material in $facilityMaterials) {
     }
     $facilityMtl.Add('$TEXTURE 1 blankspecular.dds')
     $facilityMtl.Add('$TEXTURE 2 blankbump.dds')
-    $tint = if ($material.ContainsKey('Tint')) { $material.Tint } else { '1.0 1.0 1.0' }
-    $facilityMtl.Add('$DIFFUSECOLOR ' + $tint + ' 1.0')
+    $facilityMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
     $facilityMtl.Add('$SPECULARCOLOR 0.18 0.18 0.18 1.0')
-    $facilityMtl.Add('$AMBIENTCOLOR ' + $tint + ' 1.0')
+    $facilityMtl.Add('$AMBIENTCOLOR 1.0 1.0 1.0 1.0')
     $facilityMtl.Add('$SPECULARPOWER 2.0')
     $facilityMtl.Add('')
 }
 $facilityMtl.Add('$END')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'earthworks_facility_material.mtl'), $facilityMtl, [Text.UTF8Encoding]::new($false))
+foreach ($textureName in @('earthworks_corrugated_roof.dds', 'earthworks_tank_steel.dds')) {
+    $bakedTexture = Join-Path $root (Join-Path 'assets\building\generated' $textureName)
+    if (-not (Test-Path -LiteralPath $bakedTexture)) { throw "Missing baked material texture: $bakedTexture" }
+    Copy-Item -LiteralPath $bakedTexture -Destination $native -Force
+    Copy-Item -LiteralPath $bakedTexture -Destination $objectDir -Force
+    Copy-Item -LiteralPath $bakedTexture -Destination $item -Force
+}
 
 # Do not copy the construction office donor's generated bbox/fire data onto this
 # unrelated NMF. The game generates these from the Workshop model; stale donor

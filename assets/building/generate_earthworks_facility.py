@@ -9,6 +9,7 @@ PNG review render. The mesh is original project content.
 
 from pathlib import Path
 import math
+import sys
 import bpy
 import bmesh
 from mathutils import Vector
@@ -20,6 +21,8 @@ OUT.mkdir(parents=True, exist_ok=True)
 BLEND = OUT / "earthworks_facility.blend"
 OBJ = OUT / "earthworks_facility.obj"
 PREVIEW = ROOT / "docs" / "mockups" / "STAGE12_FACILITY_MODEL_PREVIEW.png"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bake_atlas_patches import bake_patch
 
 
 def clear_scene():
@@ -49,13 +52,13 @@ PLASTER = material("dispatch_concrete", (0.64, 0.63, 0.59))
 CONCRETE = material("foundation_concrete", (0.59, 0.59, 0.56))
 PARKING_SURFACE = material("parking_surface_concrete", (0.52, 0.53, 0.51))
 STEEL = material("canopy_structural_steel", (0.31, 0.33, 0.34), 0.72, 0.12)
-ROOF = material("corrugated_galvanized_roof", (0.55, 0.58, 0.60), 0.72, 0.12)
+ROOF = material("corrugated_galvanized_roof", (1.00, 1.00, 1.00), 0.88, 0.02)
 OFFICE_ROOF = material("office_roof_graphite", (0.35, 0.37, 0.38), 0.76, 0.08)
-ROOF_RIB = material("roof_rib_highlight", (0.80, 0.81, 0.79), 0.7, 0.08)
+ROOF_RIB = ROOF
 SAFETY_RED = material("safety_red", (0.52, 0.12, 0.09), 0.72, 0.02)
 GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
 FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
-TANK = material("decorative_tank_painted_steel", (0.42, 0.48, 0.50), 0.72, 0.05)
+TANK = material("decorative_tank_painted_steel", (1.00, 1.00, 1.00), 0.90, 0.01)
 ROAD_PAINT = material("parking_bay_markings", (0.80, 0.77, 0.67), 0.95)
 
 
@@ -117,8 +120,11 @@ def apply_cylinder_atlas_uvs(obj, material_name, center_xy):
     z_values = [obj.matrix_world @ vertex.co for vertex in obj.data.vertices]
     z_min = min(point.z for point in z_values)
     z_max = max(point.z for point in z_values)
-    u_min, u_max = left / width, right / width
-    v_min, v_max = 1.0 - bottom / height, 1.0 - top / height
+    if material_name in BAKED_ATLAS_TEXTURES:
+        u_min, u_max, v_min, v_max = 0.0, 1.0, 0.0, 1.0
+    else:
+        u_min, u_max = left / width, right / width
+        v_min, v_max = 1.0 - bottom / height, 1.0 - top / height
 
     for polygon in obj.data.polygons:
         loop_angles = []
@@ -186,7 +192,9 @@ def make_building():
     add_box("tank_support_pad", (-21.35, -1.0, 0.27), (3.6, 3.6, 0.50), CONCRETE, 0.08)
     add_cylinder("decorative_tank_body", (-21.35, -1.0, 3.35), 1.38, 5.75, TANK, 20, 0.10)
     add_cylinder("tank_top_dome", (-21.35, -1.0, 6.28), 1.31, 0.22, TANK, 20, 0.08)
-    add_cylinder("tank_red_band", (-21.35, -1.0, 3.15), 1.405, 0.42, SAFETY_RED, 20, 0.025)
+    # Keep the shell visually continuous, matching the subdued steel tanks on
+    # vanilla construction offices; a red belt made this decorative tank read
+    # like a high-contrast fuel drum.
     add_cylinder("tank_top_neck", (-21.35, -1.0, 6.48), 0.27, 0.28, FRAME, 12, 0.03)
     add_cylinder("tank_vent_cap", (-21.35, -1.0, 6.66), 0.39, 0.08, CONCRETE, 12, 0.02)
     for idx, x in enumerate((-22.15, -20.55)):
@@ -247,13 +255,39 @@ TEXTURED_ATLAS_REGIONS = {
     "parking_surface_concrete": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
     # Pale, lightly mottled concrete field on the vanilla construction-office atlas.
     "dispatch_concrete": ("buildings/construction_office.dds", (430, 520, 640, 1008), 1024.0, 1024.0),
-    # Restrict the garage sheet to the uninterrupted corrugated-metal area;
-    # the previous lower edge included window graphics and caused square artifacts.
-    "corrugated_galvanized_roof": ("buildings/garage.dds", (846, 646, 1284, 800), 2048.0, 2048.0),
+    # The construction-office warehouse atlas has the tighter, more subdued
+    # galvanized roof used by the vanilla office reference.
+    "corrugated_galvanized_roof": ("buildings/construction_office_warehouse.dds", (970, 30, 2000, 438), 2048.0, 2048.0),
     "office_roof_graphite": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
-    # Banded weathered steel from the vanilla construction-office sheet, unwrapped cylindrically.
-    "decorative_tank_painted_steel": ("buildings/construction_office.dds", (4, 4, 208, 278), 1024.0, 1024.0),
+    # Weathered gray-green tank shell from the matching CO warehouse atlas,
+    # unwrapped cylindrically. The old strip was unrelated pale banded metal.
+    "decorative_tank_painted_steel": ("buildings/construction_office_warehouse.dds", (1230, 1225, 1670, 1460), 2048.0, 2048.0),
 }
+
+BAKED_ATLAS_TEXTURES = {
+    "corrugated_galvanized_roof": "earthworks_corrugated_roof.dds",
+    "decorative_tank_painted_steel": "earthworks_tank_steel.dds",
+}
+
+
+def bake_facility_textures():
+    """Bake darker vanilla atlas patches into local, opaque BC1 textures."""
+    media = ROOT.parent / "media_soviet" / "buildings"
+    bake_patch(
+        media / "construction_office_warehouse.dds",
+        OUT / BAKED_ATLAS_TEXTURES["corrugated_galvanized_roof"],
+        (970, 30, 2000, 438),
+        (0.90, 0.91, 0.92),
+        contrast=0.48,
+    )
+    bake_patch(
+        media / "construction_office_warehouse.dds",
+        OUT / BAKED_ATLAS_TEXTURES["decorative_tank_painted_steel"],
+        (1230, 1225, 1670, 1460),
+        (0.90, 0.94, 0.96),
+        contrast=0.62,
+        lift=24.0,
+    )
 
 
 def apply_atlas_uvs(obj, material_name):
@@ -273,8 +307,11 @@ def apply_atlas_uvs(obj, material_name):
             axis_u, axis_v = 1, 2
         else:
             axis_u, axis_v = 0, 2
-        ranges = ((left / width, right / width),
-                  (1.0 - bottom / height, 1.0 - top / height))
+        if material_name in BAKED_ATLAS_TEXTURES:
+            ranges = ((0.0, 1.0), (0.0, 1.0))
+        else:
+            ranges = ((left / width, right / width),
+                      (1.0 - bottom / height, 1.0 - top / height))
         axes = (axis_u, axis_v)
         for loop_index in polygon.loop_indices:
             point = obj.matrix_world @ obj.data.vertices[obj.data.loops[loop_index].vertex_index].co
@@ -403,6 +440,7 @@ def export_obj():
 
 
 def main():
+    bake_facility_textures()
     clear_scene()
     make_building()
     set_camera_and_render()
