@@ -108,7 +108,7 @@ $facilityMaterials = @(
     # The Blender authoring step bakes these atlas patches into local BC1 DDS
     # files so darkening does not depend on a material tint in the game.
     @{ Name = 'decorative_tank_painted_steel'; TextureMtl = 'earthworks_tank_steel.dds' },
-    @{ Name = 'corrugated_galvanized_roof'; TextureMtl = 'earthworks_corrugated_roof.dds' },
+    @{ Name = 'corrugated_galvanized_roof'; TextureMtl = 'earthworks_corrugated_roof.dds' }
 )
 $facilityMtl = [Collections.Generic.List[string]]::new()
 foreach ($material in $facilityMaterials) {
