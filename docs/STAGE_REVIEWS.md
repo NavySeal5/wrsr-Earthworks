@@ -30,6 +30,9 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 **Stage 12.1 color response revision — 4 November 2026**
 - The next user screenshot showed the whole model reading as gray. Kept the authored per-part diffuse palette and matched each ambient color to it, while reducing neutral specular brightness that could wash out the saturated colors under game lighting. Restaged for another user-run visual check; cause and result remain unconfirmed until checked in game.
 
+**Stage 12.1 material-binding diagnostic — 4 November 2026**
+- The user's next screenshot still looked effectively monochrome. File inspection confirmed the current MTL is copied byte-for-byte into the live Workshop item, but that alone does not prove the game binds its submaterials. Prepared an exaggerated temporary color palette for a decisive visual check. If the placed building remains gray, investigate NMF material-slot mapping and ModelViewer export/renderconfig association before further color tuning. No gameplay test was run.
+
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
 | Preparation | Complete | Toolchain installed, DLL built/loaded outside game, RML discovery inspected | Preparation is not an in-game stage acceptance |
