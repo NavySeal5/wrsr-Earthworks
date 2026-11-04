@@ -87,6 +87,7 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
+$custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
 $custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.0')
 $custom.Add('$COST_RESOURCE_AUTO wall_brick 1.0')
 $custom.Add('$COST_RESOURCE_AUTO wall_wood 1.0')
