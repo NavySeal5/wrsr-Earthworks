@@ -42,6 +42,7 @@ foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previ
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
+Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $objectDir 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
@@ -84,7 +85,7 @@ $custom.Add('end')
 $render = @(
     '$TYPE_WORKSHOP',
     ' MODEL model.nmf',
-    ' MATERIAL ../material.mtl',
+    ' MATERIAL material.mtl',
     ' LIFE 3000.000000',
     ' EXPLOSION_GROUP 0',
     ' DERBIS_FALLING_FX buildingfall1 1.000000',

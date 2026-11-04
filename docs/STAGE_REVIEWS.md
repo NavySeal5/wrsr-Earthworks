@@ -40,6 +40,12 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - Compared the Workshop layout with local modding reference documentation and working Workshop item structure: shared `material.mtl` belongs at the Workshop item root, and the object's `renderconfig.ini` points to it as `MATERIAL ../material.mtl`. The current Earthworks staging script instead pointed at a duplicate beside the NMF. Changed the source staging script to the canonical parent-relative reference and stopped copying the duplicate. This is a targeted path-resolution fix, not yet staged or verified in game because the game is open.
 - After the user closes the game, rerun `scripts/Stage-EarthworksBuilding.ps1`; then the user should launch a fresh game and place a new facility. Verify that the finished building shows distinct roof, office, tank and trim colors. If it remains grayscale, capture the game log after that run and continue investigating NMF material-slot binding.
 
+**Stage 12.1 ModelViewer comparison and local-material fallback — 4 November 2026**
+
+- The user loaded the exact staged `model.nmf` and item-root `material.mtl` in ModelViewer. The screenshot shows the palette correctly with Object type set to both Vehicle and Building, confirming that the NMF contains the expected material names and that this ModelViewer setting does not explain the in-game grayscale appearance.
+- Installed Workshop building items commonly place the MTL beside `renderconfig.ini` and `model.nmf` and reference it as `MATERIAL material.mtl`. The current staged item has a nested object folder; the previous iteration referenced the parent MTL. Updated the staging script to keep a root MTL copy for the preview and also place a copy beside the model, with the renderconfig using the local file. This is a targeted compatibility check, not yet verified in game.
+- Once ModelViewer and the game/RML are closed, run `launch-prototype.cmd` to stage the local-material variant, then place a new facility in-game and inspect it after construction finishes. Stage 12.1 remains pending user review.
+
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
 | Preparation | Complete | Toolchain installed, DLL built/loaded outside game, RML discovery inspected | Preparation is not an in-game stage acceptance |
