@@ -6,7 +6,7 @@
 
 Replace the temporary construction-office-derived test item with a distinctive, placeable Earthworks facility, then connect its native building behavior and player-facing facility controls to the existing Project/Site workflow. Preserve the accepted Earthworks rules: its own workforce and machine slots; only bulldozers, excavators, dumpers and buses; no ordinary construction jobs; automatic recognition; each facility assigned to at most one Project; multiple facilities may serve one Project.
 
-The selected concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible fuel tank. The tank is decorative in Stage 12. Do not add refuelling, fuel accounting, quarried-stone accounting or balance changes here. The previous test item used 20 workers for a Stage 9 test and accidentally inherited 16 vehicle parking points. The intended Stage 12 prototype is two machine slots; 20 workers may remain a clearly labelled test value. Neither worker capacity nor throughput is the final balance decision.
+The selected concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible fuel tank. The tank is decorative in Stage 12. Do not add refuelling, fuel accounting, quarried-stone accounting or balance changes here. The facility has exactly two vehicle slots. Worker capacity scales with the Strength/Level of parked groundworks machines: each machine level supports 0.5 workers (for example, Strength 4 supports at most two workers). Sum the capacity across parked groundworks machines, then round fractions up to a whole worker. With no bulldozer, excavator or dumper parked, worker capacity is zero. Verify which native field corresponds to Strength/Level before wiring this rule. The previous 20-worker value was only a Stage 9 test setting; it is not a fixed facility capacity.
 
 ## 12.1 — Building design, model and placeable item
 
@@ -15,7 +15,7 @@ The selected concept is an open two-bay equipment canopy beside a compact dispat
 1. Prepare a visual proposal before committing the model. Show a game-scale concept with front/side/top views or an equivalent clear layout, including the canopy, dispatch office, two equipment bays, visible decorative tank, access/road-facing side, footprint and approximate height. Retain the accepted middle concept; use the proposal to settle implementation details rather than reopen the basic concept.
 2. Confirm the installed game's supported asset/export workflow and package requirements. The current development script copies a native construction-office model/materials and writes a Workshop item; it is a staging aid, not a custom-model pipeline.
 3. Build a low-poly model and materials that read clearly at normal camera distance and in the construction thumbnail. Prepare a unique item/asset identity and placeable preview icon.
-4. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Use a provisional worker count only for testing; reserve final capacity for Stage 13.
+4. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Implement the vehicle-scaled worker cap as a Stage 12 prototype rule; defer coefficient/rate balancing to Stage 13.
 5. Keep footprint, road/access behavior, build cost, maintenance, and demolition behavior documented from native defaults or clearly marked as provisional. Do not invent release balance values during modeling.
 
 ### User-run check and gate
@@ -81,3 +81,4 @@ Final worker capacity, staffing/productivity balance, facility range, build/main
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show live worker and eligible-machine counts per assigned facility when reliable readings are available; show a clear unavailable state instead of misleading zeroes (D86).
 - Do not set final worker capacity or throughput in Stage 12; make those decisions during Stage 13 balance review.
+- The 0.5-worker-per-machine-level rule is selected for the first implementation; round the summed fractional capacity up. Confirm Strength/Level field mapping before the dependent runtime change. No groundworks machine means zero worker capacity (D87).
