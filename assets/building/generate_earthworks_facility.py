@@ -45,10 +45,12 @@ def material(name, color, roughness=0.82, metallic=0.0):
 
 
 # Muted industrial palette used by the facility preview and Workshop materials.
-PLASTER = material("dispatch_plaster_pale", (0.78, 0.72, 0.61))
+PLASTER = material("dispatch_concrete", (0.64, 0.63, 0.59))
 CONCRETE = material("foundation_concrete", (0.59, 0.59, 0.56))
+PARKING_SURFACE = material("parking_surface_concrete", (0.52, 0.53, 0.51))
 STEEL = material("canopy_structural_steel", (0.31, 0.33, 0.34), 0.72, 0.12)
 ROOF = material("corrugated_galvanized_roof", (0.72, 0.73, 0.72), 0.72, 0.12)
+OFFICE_ROOF = material("office_roof_graphite", (0.35, 0.37, 0.38), 0.76, 0.08)
 ROOF_RIB = material("roof_rib_highlight", (0.80, 0.81, 0.79), 0.7, 0.08)
 SAFETY_RED = material("safety_red", (0.52, 0.12, 0.09), 0.72, 0.02)
 GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
@@ -120,15 +122,15 @@ def add_window(name, x, z, width, height, y=-8.74):
 
 
 def make_building():
-    # Main ground slab: the road stays outside the building, with a short apron
-    # inside the front edge for the two vehicle bay entrances.
-    add_box("foundation_slab", (0.2, 0.0, 0.18), (40.0, 21.0, 0.36), CONCRETE, 0.12)
-    add_box("front_entry_apron", (7.0, -12.2, 0.11), (26.0, 4.4, 0.20), CONCRETE, 0.08)
+    # Keep the paved vehicle area flush with terrain, like the vanilla fire
+    # station forecourt. The thin surface is visual paving, not a raised pad.
+    add_box("parking_surface", (0.2, 0.0, 0.02), (40.0, 21.0, 0.04), PARKING_SURFACE)
+    add_box("front_entry_apron", (7.0, -12.2, 0.02), (26.0, 4.4, 0.04), PARKING_SURFACE)
     add_box("office_plinth", (-12.8, -0.8, 0.56), (13.6, 16.2, 0.42), CONCRETE, 0.08)
 
     # Compact dispatch office to the left of the canopy.
     add_box("dispatch_office_main_shell", (-12.8, -0.8, 3.05), (13.0, 15.6, 5.0), PLASTER, 0.09)
-    add_box("dispatch_office_roof", (-12.8, -0.8, 5.72), (14.0, 16.6, 0.42), CONCRETE, 0.08)
+    add_box("dispatch_office_roof", (-12.8, -0.8, 5.72), (14.0, 16.6, 0.42), OFFICE_ROOF, 0.08)
     add_box("office_roof_edge_front", (-12.8, -9.05, 5.72), (14.0, 0.28, 0.65), FRAME, 0.05)
     add_box("office_roof_edge_left", (-19.82, -0.8, 5.72), (0.28, 16.4, 0.65), FRAME, 0.04)
     add_box("office_roof_edge_right", (-5.78, -0.8, 5.72), (0.28, 16.4, 0.65), FRAME, 0.04)
@@ -168,7 +170,7 @@ def make_building():
     eave_z, ridge_z = 6.5, 7.25
     for side_name, y in (("front", y_front), ("back", y_back)):
         for idx, x in enumerate((x_left, x_mid, x_right)):
-            add_box(f"canopy_{side_name}_foot_{idx+1}", (x, y, 0.44), (1.05, 1.05, 0.50), CONCRETE, 0.08)
+            add_box(f"canopy_{side_name}_foot_{idx+1}", (x, y, 0.28), (1.05, 1.05, 0.56), CONCRETE, 0.08)
             add_box(f"canopy_{side_name}_post_{idx+1}", (x, y, 3.55), (0.48, 0.48, 6.05), STEEL, 0.035)
             add_box(f"canopy_{side_name}_safety_band_{idx+1}", (x, y - 0.26, 0.86), (0.50, 0.035, 0.80), SAFETY_RED, 0.015)
             # Two pale diagonal warning slashes on the post base.
@@ -205,9 +207,52 @@ def make_building():
 
     # Painted bay guides stop short of the front apron and help read the two slots.
     for idx, x in enumerate((x_left + 0.45, x_mid, x_right - 0.45)):
-        add_box(f"bay_line_{idx+1}", (x, 0.0, 0.385), (0.10, 15.2, 0.035), ROAD_PAINT, 0.01)
+        add_box(f"bay_line_{idx+1}", (x, 0.0, 0.046), (0.10, 15.2, 0.012), ROAD_PAINT, 0.004)
     for idx, x in enumerate(((x_left + x_mid) / 2.0, (x_mid + x_right) / 2.0)):
-        add_box(f"bay_number_pad_{idx+1}", (x, -1.5, 0.394), (0.85, 0.85, 0.025), CONCRETE, 0.02)
+        add_box(f"bay_number_pad_{idx+1}", (x, -1.5, 0.0525), (0.85, 0.85, 0.025), CONCRETE, 0.01)
+
+
+# Material atlases used by the vanilla firestation/garage models. These regions
+# provide the game's familiar concrete and corrugated-metal appearance. Atlas
+# coordinates are pixel rectangles measured from the upper-left of each DDS.
+TEXTURED_ATLAS_REGIONS = {
+    "parking_surface_concrete": ("buildings/firestation.dds", (8, 458, 628, 640)),
+    "dispatch_concrete": ("buildings/firestation.dds", (8, 458, 628, 640)),
+    "corrugated_galvanized_roof": ("buildings/garage.dds", (846, 646, 1284, 1018)),
+    "office_roof_graphite": ("buildings/firestation.dds", (8, 458, 628, 640)),
+}
+
+
+def apply_atlas_uvs(obj, material_name):
+    """Map a grouped mesh into the relevant vanilla DDS atlas region."""
+    _texture, (left, top, right, bottom) = TEXTURED_ATLAS_REGIONS[material_name]
+    width = 2048.0
+    height = 2048.0
+    bounds = obj.bound_box
+    coords = [obj.matrix_world @ Vector(corner) for corner in bounds]
+    minima = [min(point[axis] for point in coords) for axis in range(3)]
+    maxima = [max(point[axis] for point in coords) for axis in range(3)]
+    uv_layer = obj.data.uv_layers.active or obj.data.uv_layers.new(name="UVMap")
+
+    for polygon in obj.data.polygons:
+        normal = polygon.normal
+        if abs(normal.z) >= max(abs(normal.x), abs(normal.y)):
+            axis_u, axis_v = 0, 1
+        elif abs(normal.x) >= abs(normal.y):
+            axis_u, axis_v = 1, 2
+        else:
+            axis_u, axis_v = 0, 2
+        ranges = ((left / width, right / width),
+                  (1.0 - bottom / height, 1.0 - top / height))
+        axes = (axis_u, axis_v)
+        for loop_index in polygon.loop_indices:
+            point = obj.matrix_world @ obj.data.vertices[obj.data.loops[loop_index].vertex_index].co
+            uv = []
+            for dim, axis in enumerate(axes):
+                low, high = minima[axis], maxima[axis]
+                t = 0.5 if high - low < 1e-6 else (point[axis] - low) / (high - low)
+                uv.append(ranges[dim][0] + t * (ranges[dim][1] - ranges[dim][0]))
+            uv_layer.data[loop_index].uv = uv
 
 
 def set_camera_and_render():
@@ -297,6 +342,8 @@ def export_obj():
         bm.to_mesh(obj.data)
         bm.free()
         obj.data.update()
+        if material_name in TEXTURED_ATLAS_REGIONS:
+            apply_atlas_uvs(obj, material_name)
         grouped.append(obj)
 
     bpy.ops.object.select_all(action="DESELECT")

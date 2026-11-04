@@ -84,33 +84,41 @@ foreach ($generatedFile in @('building.bbox', 'building.fire', 'material.mtl')) 
 }
 Remove-Item -LiteralPath (Join-Path $objectDir 'earthworks_facility_probe.mtl') -Force -ErrorAction SilentlyContinue
 Get-ChildItem -LiteralPath $objectDir -Filter 'earthworks_probe_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+# Clear only textures owned by this generated facility, including material
+# names retired by a source revision, before writing the current set below.
+Get-ChildItem -LiteralPath $objectDir -Filter 'earthworks_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
-# Use Workshop-local BC1 textures so the colors render reliably in the
-# completed building. This muted palette follows the facility preview: pale
-# plaster, galvanized roofing, dark steel, blue glazing and restrained red
-# safety details.
+# Use Workshop-local BC1 textures for authored colors, and the installed
+# game's firestation/garage atlases for the large concrete and metal surfaces.
+# The Blender source UVs those surfaces into the corresponding atlas regions.
 $facilityMaterials = @(
+    @{ Name = 'parking_surface_concrete'; Texture = 'buildings/firestation.dds' },
     @{ Name = 'foundation_concrete'; Color = @(150, 151, 146) },
-    @{ Name = 'dispatch_plaster_pale'; Color = @(218, 205, 179) },
+    @{ Name = 'dispatch_concrete'; Texture = 'buildings/firestation.dds' },
+    @{ Name = 'office_roof_graphite'; Texture = 'buildings/firestation.dds' },
     @{ Name = 'window_frames'; Color = @(48, 57, 63) },
     @{ Name = 'safety_red'; Color = @(160, 48, 38) },
     @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
     @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
     @{ Name = 'decorative_tank_painted_steel'; Color = @(122, 128, 123) },
     @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
-    @{ Name = 'corrugated_galvanized_roof'; Color = @(183, 187, 185) },
+    @{ Name = 'corrugated_galvanized_roof'; Texture = 'buildings/garage.dds' },
     @{ Name = 'roof_rib_highlight'; Color = @(205, 208, 204) }
 )
 $facilityMtl = [Collections.Generic.List[string]]::new()
 foreach ($material in $facilityMaterials) {
-    $textureName = 'earthworks_' + $material.Name + '.dds'
-    Write-SolidDds (Join-Path $objectDir $textureName) $material.Color[0] $material.Color[1] $material.Color[2]
     $facilityMtl.Add('$SUBMATERIAL ' + $material.Name)
-    $facilityMtl.Add('$TEXTURE_MTL 0 ' + $textureName)
+    if ($material.ContainsKey('Texture')) {
+        $facilityMtl.Add('$TEXTURE 0 ' + $material.Texture)
+    } else {
+        $textureName = 'earthworks_' + $material.Name + '.dds'
+        Write-SolidDds (Join-Path $objectDir $textureName) $material.Color[0] $material.Color[1] $material.Color[2]
+        $facilityMtl.Add('$TEXTURE_MTL 0 ' + $textureName)
+    }
     $facilityMtl.Add('$TEXTURE 1 blankspecular.dds')
     $facilityMtl.Add('$TEXTURE 2 blankbump.dds')
     $facilityMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
@@ -147,6 +155,7 @@ $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
     'mesh_foundation_concrete',
+    'mesh_parking_surface_concrete',
     'mesh_parking_bay_markings'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
@@ -156,7 +165,7 @@ $custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.5')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 1.0')
 foreach ($node in @(
-    'mesh_dispatch_plaster_pale',
+    'mesh_dispatch_concrete',
     'mesh_window_frames',
     'mesh_safety_red',
     'mesh_office_window_glass'
@@ -171,6 +180,7 @@ foreach ($node in @(
     'mesh_canopy_structural_steel',
     'mesh_decorative_tank_painted_steel',
     'mesh_corrugated_galvanized_roof',
+    'mesh_office_roof_graphite',
     'mesh_roof_rib_highlight'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
@@ -246,6 +256,8 @@ Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 $targetObject = Join-Path $target $object
 Remove-Item -LiteralPath (Join-Path $targetObject 'earthworks_facility_probe.mtl') -Force -ErrorAction SilentlyContinue
 Get-ChildItem -LiteralPath $targetObject -Filter 'earthworks_probe_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+Get-ChildItem -LiteralPath $targetObject -Filter 'earthworks_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+Copy-Item -Path (Join-Path $objectDir 'earthworks_*.dds') -Destination $targetObject -Force
 [IO.File]::WriteAllText($modelHashMarker, $modelHash, [Text.UTF8Encoding]::new($false))
 
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
