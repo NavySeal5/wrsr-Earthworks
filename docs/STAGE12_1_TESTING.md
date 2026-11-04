@@ -6,7 +6,7 @@ This is a user-run check. The agent has not launched the game or edited a save. 
 
 1. Close the game and the project-local RML window. Keep Steam open.
 2. Run `launch-prototype.cmd` from the `earthworks-mod` folder. The launcher stages the current plugin and Earthworks Workshop item, then opens the isolated RML. Start the game from that RML window.
-3. Use a fresh or disposable save. Do not use a normal republic save for this test.
+3. Confirm the local development item **Earthworks Facility (prototype)** is enabled in RML. Use a fresh or disposable save; do not use a normal republic save for this test.
 
 ## Place and inspect
 
