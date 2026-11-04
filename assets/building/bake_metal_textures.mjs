@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const [source, outputDir, objFile] = process.argv.slice(2);
 if (!source || !outputDir) throw new Error('Usage: node bake_metal_textures.mjs <warehouse.dds> <output-dir> [facility.obj]');
@@ -53,6 +54,15 @@ function writeDds(file, width, height, pixels) {
   header.writeUInt32LE(32, 76); header.writeUInt32LE(4, 80); header.write('DXT1', 84); header.writeUInt32LE(0x1000, 108);
   fs.writeFileSync(file, Buffer.concat([header, payload]));
 }
+function writePng(file, width, height, pixels) {
+  const crcTable = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1); crcTable[n] = c >>> 0; }
+  const crc32 = data => { let c = 0xffffffff; for (const b of data) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const name = Buffer.from(type), body = Buffer.concat([name, data]), out = Buffer.alloc(body.length + 8); out.writeUInt32BE(data.length, 0); body.copy(out, 4); out.writeUInt32BE(crc32(body), body.length + 4); return out; };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const rows = Buffer.alloc(height * (1 + width * 3)); for (let y = 0; y < height; y++) { const row = y * (1 + width * 3); rows[row] = 0; Buffer.from(pixels.buffer, pixels.byteOffset + y * width * 3, width * 3).copy(rows, row + 1); }
+  fs.writeFileSync(file, Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]));
+}
 function cropAndTone(atlas, rect, output, { contrast, lift, tint }) {
   const [x0, y0, x1, y1] = rect, width = (x1 - x0 + 3) & ~3, height = (y1 - y0 + 3) & ~3;
   const pixels = new Uint8Array(width * height * 3);
@@ -62,28 +72,40 @@ function cropAndTone(atlas, rect, output, { contrast, lift, tint }) {
   }
   writeDds(path.join(outputDir, output), width, height, pixels);
 }
-function muteTankBand(file) {
+function stripMaterialMesh(file, materialName) {
   if (!file) return;
-  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/), vertices = [], output = [];
-  let object = '', material = '';
+  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  const removed = { v: 0, vt: 0, vn: 0 };
+  let object = '';
   for (const line of lines) {
-    const fields = line.trim().split(/\s+/);
-    if (fields[0] === 'v') vertices.push(fields.slice(1, 4).map(Number));
-    if (fields[0] === 'o') object = fields[1] || '';
-    if (fields[0] === 'usemtl') material = fields[1] || '';
-    if (object === 'mesh_safety_red' && fields[0] === 'f') {
-      const points = fields.slice(1).map(f => vertices[Number(f.split('/')[0]) - 1]);
-      if (points.length && points.every(p => p && p[1] >= 2.91 && p[1] <= 3.39 && Math.abs(Math.hypot(p[0] + 21.35, p[2] + 1.0) - 1.405) < 0.055)) {
-        if (material !== 'decorative_tank_painted_steel') { output.push('usemtl decorative_tank_painted_steel'); material = 'decorative_tank_painted_steel'; }
-      } else if (material !== 'safety_red') { output.push('usemtl safety_red'); material = 'safety_red'; }
-    }
-    output.push(line);
+    const f = line.trim().split(/\s+/);
+    if (f[0] === 'o') object = f[1] || '';
+    if (object === `mesh_${materialName}` && Object.hasOwn(removed, f[0])) removed[f[0]]++;
   }
-  fs.writeFileSync(file, output.join('\n'));
+  const output = [];
+  object = '';
+  let skip = false;
+  for (const line of lines) {
+    const f = line.trim().split(/\s+/);
+    if (f[0] === 'o') { object = f[1] || ''; skip = object === `mesh_${materialName}`; }
+    if (skip) continue;
+    if (f[0] === 'f') {
+      const fields = f.slice(1).map(value => value.split('/').map((part, i) => {
+        if (!part) return part;
+        const decrement = i === 0 ? removed.v : i === 1 ? removed.vt : removed.vn;
+        const index = Number(part);
+        return String(index > 0 ? index - decrement : index + decrement);
+      }).join('/'));
+      output.push(`${f[0]} ${fields.join(' ')}`);
+    } else output.push(line);
+  }
+  fs.writeFileSync(file, output.join('\r\n'));
+  console.log(`Removed ${materialName} mesh (${removed.v} vertices, ${removed.vt} UVs, ${removed.vn} normals)`);
 }
 fs.mkdirSync(outputDir, { recursive: true });
 const atlas = decodeDds(source);
-cropAndTone(atlas, [970, 30, 2000, 438], 'earthworks_corrugated_roof.dds', { contrast: 0.48, lift: 0, tint: [0.9, 0.91, 0.92] });
+if (process.argv[5]) writePng(process.argv[5], atlas.width, atlas.height, atlas.pixels);
+cropAndTone(atlas, [970, 30, 2000, 438], 'earthworks_corrugated_roof.dds', { contrast: 1.0, lift: 0, tint: [1, 1, 1] });
 cropAndTone(atlas, [1230, 1225, 1670, 1460], 'earthworks_tank_steel.dds', { contrast: 0.62, lift: 24, tint: [0.9, 0.94, 0.96] });
-muteTankBand(objFile);
+stripMaterialMesh(objFile, 'roof_rib_highlight');
 console.log(`Baked muted roof and tank DDS textures from ${source}`);

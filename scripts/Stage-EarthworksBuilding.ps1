@@ -109,9 +109,6 @@ $facilityMaterials = @(
     # files so darkening does not depend on a material tint in the game.
     @{ Name = 'decorative_tank_painted_steel'; TextureMtl = 'earthworks_tank_steel.dds' },
     @{ Name = 'corrugated_galvanized_roof'; TextureMtl = 'earthworks_corrugated_roof.dds' },
-    # Ribs are deliberately close in value to the roof sheet so sunlit edges
-    # do not turn into repeated white stripes at normal camera distance.
-    @{ Name = 'roof_rib_highlight'; Color = @(145, 151, 154) }
 )
 $facilityMtl = [Collections.Generic.List[string]]::new()
 foreach ($material in $facilityMaterials) {
@@ -193,8 +190,7 @@ foreach ($node in @(
     'mesh_canopy_structural_steel',
     'mesh_decorative_tank_painted_steel',
     'mesh_corrugated_galvanized_roof',
-    'mesh_office_roof_graphite',
-    'mesh_roof_rib_highlight'
+    'mesh_office_roof_graphite'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }

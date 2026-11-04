@@ -54,7 +54,6 @@ PARKING_SURFACE = material("parking_surface_concrete", (0.52, 0.53, 0.51))
 STEEL = material("canopy_structural_steel", (0.31, 0.33, 0.34), 0.72, 0.12)
 ROOF = material("corrugated_galvanized_roof", (1.00, 1.00, 1.00), 0.88, 0.02)
 OFFICE_ROOF = material("office_roof_graphite", (0.35, 0.37, 0.38), 0.76, 0.08)
-ROOF_RIB = ROOF
 SAFETY_RED = material("safety_red", (0.52, 0.12, 0.09), 0.72, 0.02)
 GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
 FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
@@ -224,7 +223,8 @@ def make_building():
         add_beam(f"{name}_truss_web_left", (x_left + 3.0, y, eave_z - 0.15), (x_mid, y, ridge_z - 0.25), 0.16, 0.18, STEEL)
         add_beam(f"{name}_truss_web_right", (x_mid, y, ridge_z - 0.25), (x_right - 3.0, y, eave_z - 0.15), 0.16, 0.18, STEEL)
 
-    # A muted pitched roof, with raised longitudinal corrugation ribs.
+    # A muted pitched roof. Its vanilla atlas texture carries the corrugation;
+    # separate modeled ribs caused a doubled, bright striped appearance.
     roof_front = y_front - 0.35
     roof_back = y_back + 0.35
     for side, xa, xb, za, zb in (("left", x_left - 0.45, x_mid, eave_z, ridge_z), ("right", x_mid, x_right + 0.45, ridge_z, eave_z)):
@@ -235,11 +235,6 @@ def make_building():
         roof = bpy.data.objects.new(f"canopy_roof_{side}", mesh)
         bpy.context.collection.objects.link(roof)
         EXPORT_OBJECTS.append(roof)
-        for ridx in range(1, 27):
-            t = ridx / 27.0
-            x = xa + (xb - xa) * t
-            z = za + (zb - za) * t + 0.035
-            add_beam(f"roof_{side}_corrugation_{ridx:02d}", (x, roof_front, z), (x, roof_back, z), 0.045, 0.055, ROOF_RIB, 0.01)
 
     # Painted bay guides stop short of the front apron and help read the two slots.
     for idx, x in enumerate((x_left + 0.45, x_mid, x_right - 0.45)):
@@ -277,8 +272,8 @@ def bake_facility_textures():
         media / "construction_office_warehouse.dds",
         OUT / BAKED_ATLAS_TEXTURES["corrugated_galvanized_roof"],
         (970, 30, 2000, 438),
-        (0.90, 0.91, 0.92),
-        contrast=0.48,
+        (1.0, 1.0, 1.0),
+        contrast=1.0,
     )
     bake_patch(
         media / "construction_office_warehouse.dds",
