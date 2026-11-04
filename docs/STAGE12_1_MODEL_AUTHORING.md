@@ -1,0 +1,31 @@
+# Stage 12.1 — First model draft
+
+The approved target is the initial two-bay canopy, a single road-facing entrance edge, a dispatch office at the left, and a visible decorative tank. The user approved this concept for modeling on 4 November 2026. The superseded through-access option is not used.
+
+## Draft geometry
+
+- Approximate footprint: 43 m wide by 25 m deep including the short front apron and tank pad.
+- Highest point: approximately 7.4 m above the foundation.
+- Two open vehicle bays under a pitched metal canopy, divided by a central support line.
+- Dispatch office with front windows, door, plinth, shallow roof, and restrained red trim.
+- A vertical decorative tank is visible beside the office. It has no pump or hose and makes no fuel-service promise.
+- The model is authored from named low-poly objects using Blender, with separate material groups. Generated OBJ/MTL is intended for ModelViewer import; the `.blend` file and generator remain editable project source.
+
+Files:
+
+- `assets/building/generate_earthworks_facility.py` — deterministic Blender authoring script.
+- `assets/building/generated/earthworks_facility.blend` — editable scene.
+- `assets/building/generated/earthworks_facility.obj` and `.mtl` — export for ModelViewer.
+- `docs/mockups/STAGE12_FACILITY_MODEL_PREVIEW.png` — offline render for design review.
+
+Regenerate with the project Blender runtime:
+
+```powershell
+tools\runtime\blender-5.2.3\blender-5.2.3-windows-x64\blender.exe --background --factory-startup --python assets/building/generate_earthworks_facility.py
+```
+
+## Remaining 12.1 work and limits
+
+The ModelViewer conversion to the game's native model and material formats has not been completed, so there is not yet a placeable item. The computer-use request to operate ModelViewer was denied by the app-use gate. The native item script still uses the old construction-office donor and must not be treated as this model's item.
+
+Parking routes and road connections also remain unimplemented. They must be authored together with two real native parking slots after the model is converted. No in-game test was run. Stage 12.1 remains open until the user places the converted item and checks scale, orientation, access, entry/exit routing, save/reload and demolition in a disposable save.

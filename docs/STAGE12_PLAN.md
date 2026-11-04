@@ -1,6 +1,6 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** Stage 12.1 visual concept proposal prepared; awaiting user review before model authoring. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
+**Status:** Stage 12.1 model draft generated from the approved single-frontage concept. Blender source, OBJ/MTL and a render are prepared. Native ModelViewer conversion and the placeable Workshop item are pending because the desktop app-use request was denied by the computer-use gate. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
 
 ## Goal
 
@@ -80,7 +80,7 @@ Final worker capacity, staffing/productivity balance, facility range, build/main
 
 ## Open decisions to resolve at the relevant checkpoint
 
-- Review the 12.1 single-frontage visual proposal, especially building orientation/access and visible scale, before model production.
+- Finish native ModelViewer conversion and staging for the 12.1 single-frontage model, then ask the user to review the placeable item in game before 12.2.
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show live worker and eligible-machine counts per assigned facility when reliable readings are available; show a clear unavailable state instead of misleading zeroes (D86).
 - Do not set final worker capacity or throughput in Stage 12; make those decisions during Stage 13 balance review.

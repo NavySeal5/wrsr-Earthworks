@@ -1,0 +1,287 @@
+"""Create the first Stage 12 Earthworks facility mesh and Blender preview.
+
+Run with the project portable Blender:
+  blender.exe --background --factory-startup --python assets/building/generate_earthworks_facility.py
+
+This creates a source .blend, a Wavefront OBJ/MTL for ModelViewer import, and a
+PNG review render. The mesh is original project content.
+"""
+
+from pathlib import Path
+import math
+import bpy
+from mathutils import Vector
+
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "assets" / "building" / "generated"
+OUT.mkdir(parents=True, exist_ok=True)
+BLEND = OUT / "earthworks_facility.blend"
+OBJ = OUT / "earthworks_facility.obj"
+PREVIEW = ROOT / "docs" / "mockups" / "STAGE12_FACILITY_MODEL_PREVIEW.png"
+
+
+def clear_scene():
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete(use_global=False)
+    # Materials are created at module import time, before main() clears the
+    # factory scene. Keep them alive while removing any prior scene geometry.
+    for datablocks in (bpy.data.meshes, bpy.data.curves, bpy.data.cameras, bpy.data.lights):
+        for datablock in list(datablocks):
+            if datablock.users == 0:
+                datablocks.remove(datablock)
+
+
+def material(name, color, roughness=0.82, metallic=0.0):
+    mat = bpy.data.materials.new(name)
+    mat.diffuse_color = (*color, 1.0)
+    mat.use_nodes = True
+    principled = mat.node_tree.nodes.get("Principled BSDF")
+    principled.inputs["Base Color"].default_value = (*color, 1.0)
+    principled.inputs["Roughness"].default_value = roughness
+    principled.inputs["Metallic"].default_value = metallic
+    return mat
+
+
+PLASTER = material("dispatch_plaster_pale", (0.63, 0.60, 0.51))
+CONCRETE = material("foundation_concrete", (0.40, 0.41, 0.39))
+STEEL = material("canopy_structural_steel", (0.16, 0.18, 0.17), 0.56, 0.38)
+ROOF = material("corrugated_galvanized_roof", (0.34, 0.37, 0.36), 0.52, 0.38)
+ROOF_RIB = material("roof_rib_highlight", (0.45, 0.47, 0.45), 0.49, 0.42)
+SAFETY_RED = material("safety_red", (0.48, 0.09, 0.055), 0.65, 0.1)
+GLASS = material("office_window_glass", (0.17, 0.25, 0.28), 0.27, 0.18)
+FRAME = material("window_frames", (0.31, 0.31, 0.28), 0.7, 0.12)
+TANK = material("decorative_tank_painted_steel", (0.55, 0.53, 0.45), 0.65, 0.22)
+ROAD_PAINT = material("parking_bay_markings", (0.72, 0.70, 0.63), 0.95)
+
+
+EXPORT_OBJECTS = []
+
+
+def add_box(name, center, size, mat, bevel=0.0):
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=center)
+    obj = bpy.context.object
+    obj.name = name
+    obj.dimensions = size
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    obj.data.materials.append(mat)
+    if bevel:
+        bevel_mod = obj.modifiers.new("small_game_asset_edge_bevel", "BEVEL")
+        bevel_mod.width = bevel
+        bevel_mod.segments = 1
+        bevel_mod.limit_method = "ANGLE"
+        bevel_mod.angle_limit = math.radians(28)
+        obj.modifiers.new("weighted_corner_normals", "WEIGHTED_NORMAL")
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=bevel_mod.name)
+        normal = obj.modifiers.get("weighted_corner_normals")
+        if normal:
+            bpy.ops.object.modifier_apply(modifier=normal.name)
+    EXPORT_OBJECTS.append(obj)
+    return obj
+
+
+def add_beam(name, start, end, width, depth, mat, bevel=0.025):
+    start = Vector(start)
+    end = Vector(end)
+    delta = end - start
+    obj = add_box(name, (start + end) * 0.5, (width, depth, delta.length), mat, bevel)
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = delta.to_track_quat("Z", "Y")
+    return obj
+
+
+def add_cylinder(name, center, radius, depth, mat, vertices=16, bevel=0.04):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth, location=center)
+    obj = bpy.context.object
+    obj.name = name
+    obj.data.materials.append(mat)
+    if bevel:
+        mod = obj.modifiers.new("soft_cylinder_edges", "BEVEL")
+        mod.width = bevel
+        mod.segments = 1
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    EXPORT_OBJECTS.append(obj)
+    return obj
+
+
+def add_window(name, x, z, width, height, y=-8.74):
+    add_box(name + "_glass", (x, y, z), (width, 0.08, height), GLASS, 0.025)
+    t = 0.11
+    add_box(name + "_frame_left", (x - width / 2 - t / 2, y - 0.04, z), (t, 0.15, height + 2 * t), FRAME, 0.025)
+    add_box(name + "_frame_right", (x + width / 2 + t / 2, y - 0.04, z), (t, 0.15, height + 2 * t), FRAME, 0.025)
+    add_box(name + "_frame_top", (x, y - 0.04, z + height / 2 + t / 2), (width + 2 * t, 0.15, t), FRAME, 0.02)
+    add_box(name + "_frame_bottom", (x, y - 0.04, z - height / 2 - t / 2), (width + 2 * t, 0.15, t), FRAME, 0.02)
+    add_box(name + "_mullion_v", (x, y - 0.10, z), (0.07, 0.08, height), FRAME)
+    add_box(name + "_mullion_h", (x, y - 0.10, z), (width, 0.08, 0.07), FRAME)
+
+
+def make_building():
+    # Main ground slab: the road stays outside the building, with a short apron
+    # inside the front edge for the two vehicle bay entrances.
+    add_box("foundation_slab", (0.2, 0.0, 0.18), (40.0, 21.0, 0.36), CONCRETE, 0.12)
+    add_box("front_entry_apron", (7.0, -12.2, 0.11), (26.0, 4.4, 0.20), CONCRETE, 0.08)
+    add_box("office_plinth", (-12.8, -0.8, 0.56), (13.6, 16.2, 0.42), CONCRETE, 0.08)
+
+    # Compact dispatch office to the left of the canopy.
+    add_box("dispatch_office_main_shell", (-12.8, -0.8, 3.05), (13.0, 15.6, 5.0), PLASTER, 0.09)
+    add_box("dispatch_office_roof", (-12.8, -0.8, 5.72), (14.0, 16.6, 0.42), CONCRETE, 0.08)
+    add_box("office_roof_edge_front", (-12.8, -9.05, 5.72), (14.0, 0.28, 0.65), FRAME, 0.05)
+    add_box("office_roof_edge_left", (-19.82, -0.8, 5.72), (0.28, 16.4, 0.65), FRAME, 0.04)
+    add_box("office_roof_edge_right", (-5.78, -0.8, 5.72), (0.28, 16.4, 0.65), FRAME, 0.04)
+    add_box("office_base_red_trim", (-12.8, -0.8, 0.94), (13.1, 15.7, 0.32), SAFETY_RED, 0.035)
+
+    # Front facade, windows and entrance door.
+    add_window("office_window_1", -17.0, 3.35, 2.35, 1.95)
+    add_window("office_window_2", -13.35, 3.35, 2.35, 1.95)
+    add_box("office_door", (-8.85, -8.81, 2.36), (1.65, 0.15, 3.18), STEEL, 0.04)
+    add_box("office_door_panel", (-8.85, -8.91, 2.42), (1.16, 0.05, 2.68), FRAME, 0.025)
+    add_box("office_door_handle", (-8.37, -8.98, 2.25), (0.07, 0.05, 0.27), TANK, 0.015)
+    add_box("office_entry_canopy", (-8.85, -9.63, 4.20), (2.65, 1.0, 0.18), STEEL, 0.04)
+    for idx, step in enumerate((0.18, 0.40, 0.62)):
+        add_box(f"office_entry_step_{idx+1}", (-8.85, -9.10 - idx * 0.47, step / 2), (2.3, 0.50, step), CONCRETE, 0.05)
+    # A restrained red dispatch mark with three angled stripes.
+    add_box("dispatch_mark", (-13.8, -8.93, 4.92), (5.5, 0.08, 0.34), SAFETY_RED, 0.03)
+    for idx, x in enumerate((-11.0, -10.55, -10.10)):
+        add_box(f"dispatch_mark_slash_{idx+1}", (x, -9.01, 4.92), (0.12, 0.04, 0.34), ROAD_PAINT, 0.01)
+
+    # Small chimney and a modest exhaust stack.
+    add_box("office_chimney_lower", (-16.9, 3.7, 6.16), (1.25, 1.25, 0.75), PLASTER, 0.05)
+    add_box("office_chimney_cap", (-16.9, 3.7, 6.58), (1.55, 1.55, 0.12), CONCRETE, 0.04)
+
+    # Decorative vertical tank at the office's outer left edge. No pump or hose.
+    add_box("tank_support_pad", (-21.35, -1.0, 0.27), (3.6, 3.6, 0.50), CONCRETE, 0.08)
+    add_cylinder("decorative_tank_body", (-21.35, -1.0, 3.35), 1.38, 5.75, TANK, 20, 0.10)
+    add_cylinder("tank_top_dome", (-21.35, -1.0, 6.28), 1.31, 0.22, TANK, 20, 0.08)
+    add_cylinder("tank_red_band", (-21.35, -1.0, 3.15), 1.405, 0.42, SAFETY_RED, 20, 0.025)
+    add_cylinder("tank_top_neck", (-21.35, -1.0, 6.48), 0.27, 0.28, FRAME, 12, 0.03)
+    add_cylinder("tank_vent_cap", (-21.35, -1.0, 6.66), 0.39, 0.08, CONCRETE, 12, 0.02)
+    for idx, x in enumerate((-22.15, -20.55)):
+        add_box(f"tank_support_{idx+1}", (x, -1.0, 0.79), (0.22, 2.5, 1.0), STEEL, 0.035)
+
+    # Open two-bay steel canopy. The three column lines create exactly two bays.
+    x_left, x_mid, x_right = -5.6, 7.0, 19.6
+    y_front, y_back = -9.2, 9.7
+    eave_z, ridge_z = 6.5, 7.25
+    for side_name, y in (("front", y_front), ("back", y_back)):
+        for idx, x in enumerate((x_left, x_mid, x_right)):
+            add_box(f"canopy_{side_name}_foot_{idx+1}", (x, y, 0.44), (1.05, 1.05, 0.50), CONCRETE, 0.08)
+            add_box(f"canopy_{side_name}_post_{idx+1}", (x, y, 3.55), (0.48, 0.48, 6.05), STEEL, 0.035)
+            add_box(f"canopy_{side_name}_safety_band_{idx+1}", (x, y - 0.26, 0.86), (0.50, 0.035, 0.80), SAFETY_RED, 0.015)
+            # Two pale diagonal warning slashes on the post base.
+            add_box(f"canopy_{side_name}_stripe_a_{idx+1}", (x - 0.10, y - 0.285, 0.86), (0.07, 0.025, 0.72), ROAD_PAINT, 0.01).rotation_euler[1] = math.radians(25)
+            add_box(f"canopy_{side_name}_stripe_b_{idx+1}", (x + 0.12, y - 0.285, 0.86), (0.07, 0.025, 0.72), ROAD_PAINT, 0.01).rotation_euler[1] = math.radians(25)
+
+    # Longitudinal roof rails on both outer edges and the center dividing line.
+    for idx, x in enumerate((x_left, x_mid, x_right)):
+        add_beam(f"canopy_longitudinal_rail_{idx+1}", (x, y_front, eave_z), (x, y_back, eave_z), 0.33, 0.40, STEEL, 0.04)
+    # Front/rear trusses and bracing, preserving the open vehicle approach.
+    for name, y in (("front", y_front), ("back", y_back)):
+        add_beam(f"{name}_truss_eave_left", (x_left, y, eave_z), (x_mid, y, ridge_z), 0.22, 0.28, STEEL)
+        add_beam(f"{name}_truss_eave_right", (x_mid, y, ridge_z), (x_right, y, eave_z), 0.22, 0.28, STEEL)
+        add_beam(f"{name}_truss_bottom", (x_left, y, eave_z - 0.18), (x_right, y, eave_z - 0.18), 0.20, 0.22, STEEL)
+        add_beam(f"{name}_truss_web_left", (x_left + 3.0, y, eave_z - 0.15), (x_mid, y, ridge_z - 0.25), 0.16, 0.18, STEEL)
+        add_beam(f"{name}_truss_web_right", (x_mid, y, ridge_z - 0.25), (x_right - 3.0, y, eave_z - 0.15), 0.16, 0.18, STEEL)
+
+    # A muted pitched roof, with raised longitudinal corrugation ribs.
+    roof_front = y_front - 0.35
+    roof_back = y_back + 0.35
+    for side, xa, xb, za, zb in (("left", x_left - 0.45, x_mid, eave_z, ridge_z), ("right", x_mid, x_right + 0.45, ridge_z, eave_z)):
+        verts = [(xa, roof_front, za), (xb, roof_front, zb), (xb, roof_back, zb), (xa, roof_back, za)]
+        mesh = bpy.data.meshes.new(f"canopy_roof_{side}_mesh")
+        mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
+        mesh.materials.append(ROOF)
+        roof = bpy.data.objects.new(f"canopy_roof_{side}", mesh)
+        bpy.context.collection.objects.link(roof)
+        EXPORT_OBJECTS.append(roof)
+        for ridx in range(1, 27):
+            t = ridx / 27.0
+            x = xa + (xb - xa) * t
+            z = za + (zb - za) * t + 0.035
+            add_beam(f"roof_{side}_corrugation_{ridx:02d}", (x, roof_front, z), (x, roof_back, z), 0.045, 0.055, ROOF_RIB, 0.01)
+
+    # Painted bay guides stop short of the front apron and help read the two slots.
+    for idx, x in enumerate((x_left + 0.45, x_mid, x_right - 0.45)):
+        add_box(f"bay_line_{idx+1}", (x, 0.0, 0.385), (0.10, 15.2, 0.035), ROAD_PAINT, 0.01)
+    for idx, x in enumerate(((x_left + x_mid) / 2.0, (x_mid + x_right) / 2.0)):
+        add_box(f"bay_number_pad_{idx+1}", (x, -1.5, 0.394), (0.85, 0.85, 0.025), CONCRETE, 0.02)
+
+
+def set_camera_and_render():
+    bpy.ops.object.camera_add(location=(-34.0, -42.0, 32.0))
+    camera = bpy.context.object
+    camera.name = "preview_camera"
+    target = Vector((-1.0, 0.0, 2.3))
+    camera.rotation_euler = (target - camera.location).to_track_quat("-Z", "Y").to_euler()
+    camera.data.type = "ORTHO"
+    camera.data.ortho_scale = 57.0
+    bpy.context.scene.camera = camera
+
+    for name, loc, energy, size in (
+        ("key", (-20, -25, 38), 8500, 18),
+        ("fill", (18, -4, 23), 5200, 14),
+        ("rim", (6, 24, 30), 6800, 12),
+    ):
+        bpy.ops.object.light_add(type="AREA", location=loc)
+        light = bpy.context.object
+        light.name = f"preview_{name}_light"
+        light.data.energy = energy
+        light.data.shape = "DISK"
+        light.data.size = size
+        light.rotation_euler = (Vector((0, 0, 2)) - light.location).to_track_quat("-Z", "Y").to_euler()
+
+    bpy.ops.mesh.primitive_plane_add(size=200.0, location=(0, 0, -0.02))
+    ground = bpy.context.object
+    ground.name = "preview_only_ground"
+    ground.data.materials.append(material("preview_ground", (0.25, 0.29, 0.25)))
+    ground.hide_set(True)
+
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples = 48
+    scene.render.resolution_x = 1400
+    scene.render.resolution_y = 1050
+    scene.render.resolution_percentage = 100
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.filepath = str(PREVIEW)
+    scene.world.use_nodes = True
+    scene.world.node_tree.nodes.get("Background").inputs["Color"].default_value = (0.22, 0.24, 0.25, 1.0)
+    scene.world.node_tree.nodes.get("Background").inputs["Strength"].default_value = 0.65
+    scene.view_settings.view_transform = "AgX"
+    scene.view_settings.look = "AgX - Medium High Contrast"
+    scene.view_settings.exposure = 0.65
+    scene.render.film_transparent = False
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.camera.data.lens = 55
+    bpy.ops.render.render(write_still=True)
+
+
+def export_obj():
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in EXPORT_OBJECTS:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = EXPORT_OBJECTS[0]
+    bpy.ops.wm.obj_export(
+        filepath=str(OBJ),
+        export_selected_objects=True,
+        export_materials=True,
+        forward_axis="NEGATIVE_Z",
+        up_axis="Y",
+        apply_modifiers=True,
+    )
+
+
+def main():
+    clear_scene()
+    make_building()
+    set_camera_and_render()
+    export_obj()
+    bpy.ops.wm.save_as_mainfile(filepath=str(BLEND))
+    print(f"STAGE12_MODEL_OBJ={OBJ}")
+    print(f"STAGE12_MODEL_PREVIEW={PREVIEW}")
+    print(f"STAGE12_MODEL_BLEND={BLEND}")
+
+
+if __name__ == "__main__":
+    main()
