@@ -446,3 +446,9 @@ A single user statement can accept the current result and authorize progression.
 - The user reported that the tank appeared to share the office-wall texture. The tank had a distinct material binding, but its local DDS was baked from a mottled rounded patch on the construction-office warehouse atlas, so its appearance was too similar to the wall.
 - Changed only the tank texture source to the broad-seamed steel region of the vanilla `explosive_factory_tank.dds` atlas, with a muted blue-gray bake and full mip chain. The Blender baker, standalone texture baker, authoring notes and WIP staging item were updated. The roof and mesh are unchanged; ModelViewer is not needed for this DDS-only change.
 - No in-game check was run. After restarting the game, compare a newly placed facility's tank against the vanilla CO tank.
+
+**Stage 12.1 fuel-tank texture iteration 2 — 5 November 2026**
+
+- The fresh placement still showed a pale, clean white/red tank, unlike the user's vanilla CO reference. The explosive-factory tank atlas was too bright and its banded finish was the wrong visual style.
+- Switched the tank DDS back to the weathered horizontal fuel-tank shell region in `construction_office_warehouse.dds` (pixels 1228,1238 through 1678,1480), using its source color and wear directly. The roof and model/NMF are unchanged; generated textures were restaged.
+- No in-game test was run. Check a newly placed facility after restart and compare tank color/weathering against the vanilla CO tank.

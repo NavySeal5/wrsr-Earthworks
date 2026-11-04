@@ -119,9 +119,8 @@ function stripMaterialMesh(file, materialName) {
 }
 fs.mkdirSync(outputDir, { recursive: true });
 const atlas = decodeDds(source);
-const tankAtlas = decodeDds(process.argv[6] || path.join(path.dirname(source), 'explosive_factory_tank.dds'));
 if (process.argv[5]) writePng(process.argv[5], atlas.width, atlas.height, atlas.pixels);
 cropAndTone(atlas, [970, 30, 2000, 438], 'earthworks_corrugated_roof.dds', { contrast: 1.0, lift: 0, tint: [1, 1, 1] });
-cropAndTone(tankAtlas, [512, 512, 1024, 1024], 'earthworks_tank_steel.dds', { contrast: 0.72, lift: 48, tint: [0.88, 0.94, 0.98] });
+cropAndTone(atlas, [1228, 1238, 1678, 1480], 'earthworks_tank_steel.dds', { contrast: 1.0, lift: 0, tint: [1, 1, 1] });
 stripMaterialMesh(objFile, 'roof_rib_highlight');
 console.log(`Baked muted roof and tank DDS textures from ${source}`);

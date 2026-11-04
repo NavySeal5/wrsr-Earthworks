@@ -254,9 +254,10 @@ TEXTURED_ATLAS_REGIONS = {
     # galvanized roof used by the vanilla office reference.
     "corrugated_galvanized_roof": ("buildings/construction_office_warehouse.dds", (970, 30, 2000, 438), 2048.0, 2048.0),
     "office_roof_graphite": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
-    # Broad horizontal steel seams from a vanilla industrial-tank atlas,
-    # unwrapped around the cylindrical fuel tank.
-    "decorative_tank_painted_steel": ("buildings/explosive_factory_tank.dds", (512, 512, 1024, 1024), 1024.0, 1024.0),
+    # Weathered steel from the horizontal fuel tank on the vanilla construction-
+    # office warehouse atlas. This matches the CO reference more closely than
+    # the clean, pale explosive-factory tank texture.
+    "decorative_tank_painted_steel": ("buildings/construction_office_warehouse.dds", (1228, 1238, 1678, 1480), 2048.0, 2048.0),
 }
 
 BAKED_ATLAS_TEXTURES = {
@@ -276,12 +277,11 @@ def bake_facility_textures():
         contrast=1.0,
     )
     bake_patch(
-        media / "explosive_factory_tank.dds",
+        media / "construction_office_warehouse.dds",
         OUT / BAKED_ATLAS_TEXTURES["decorative_tank_painted_steel"],
-        (512, 512, 1024, 1024),
-        (0.88, 0.94, 0.98),
-        contrast=0.72,
-        lift=48.0,
+        (1228, 1238, 1678, 1480),
+        (1.0, 1.0, 1.0),
+        contrast=1.0,
     )
 
 
