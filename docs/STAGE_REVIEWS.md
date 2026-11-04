@@ -434,3 +434,9 @@ A single user statement can accept the current result and authorize progression.
 - The regenerated test building has 20 worker places so the user can test two fully staffed machines and concurrent projects at one facility; it retains two machine stations and remains temporary test content.
 - `build.cmd` completed successfully, verifying x64 architecture and all three Tesmio exports. `git diff --check` passed. No tests were run and the game was not launched. Built/staged DLL SHA-256: `19b2dd39eb4f2c70ef3f78491eede658e10f2528de458feae8918e1b4676a0c6`.
 - The isolated project-local RML and dedicated facility content were staged; built and staged DLL hashes match. In-game test instructions are in [STAGE9_TESTING.md](STAGE9_TESTING.md).
+
+**Stage 12.1 canopy texture filtering correction — 4 November 2026**
+
+- The user reported that the canopy roof still looked pixelated. Comparing the DDS headers showed that the vanilla 2048×2048 construction-office atlas has 12 mip levels, while the extracted 1032×408 canopy crop had none. This mismatch can cause high-frequency corrugation to alias at game camera distances.
+- Updated both the Blender BC1 baker and the standalone DDS baker to write complete box-filtered mip chains and the required DDS mip-count/caps flags. Regenerated the canopy texture (11 levels) and tank texture (9 levels), then restaged the facility. The mesh, UV mapping and source texture crop did not change.
+- Header inspection confirms the staged textures now have mip chains. No in-game test was run; user review of a newly placed facility remains pending.

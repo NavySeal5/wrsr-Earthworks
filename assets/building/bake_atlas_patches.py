@@ -61,28 +61,49 @@ def _encode_bc1(width, height, pixels):
     return bytes(output)
 
 
+def _downsample(width, height, pixels):
+    """Create a box-filtered half-size RGB level for the DDS mip chain."""
+    next_width = max(1, width // 2)
+    next_height = max(1, height // 2)
+    reduced = []
+    for y in range(next_height):
+        for x in range(next_width):
+            samples = [
+                pixels[min(height - 1, y * 2 + dy) * width + min(width - 1, x * 2 + dx)]
+                for dy in range(2) for dx in range(2)
+            ]
+            reduced.append(tuple(sum(sample[channel] for sample in samples) // 4 for channel in range(3)))
+    return next_width, next_height, reduced
+
+
 def _write_dds(path, width, height, pixels):
-    blocks_x = (width + 3) // 4
-    blocks_y = (height + 3) // 4
-    linear_size = blocks_x * blocks_y * 8
-    # DDS_HEADER + opaque DXT1 payload; no mip chain is required for these assets.
+    levels = [(width, height, pixels)]
+    while width > 1 or height > 1:
+        width, height, pixels = _downsample(width, height, pixels)
+        levels.append((width, height, pixels))
+
+    top_blocks_x = (levels[0][0] + 3) // 4
+    top_blocks_y = (levels[0][1] + 3) // 4
+    linear_size = top_blocks_x * top_blocks_y * 8
+    # Match vanilla DDS usage: opaque DXT1 with a complete mip chain.
     header = struct.pack(
         "<7I",
         124,
-        0x00081007,  # CAPS | HEIGHT | WIDTH | PIXELFORMAT | LINEARSIZE
-        height,
-        width,
+        0x00A1007,  # CAPS | HEIGHT | WIDTH | PIXELFORMAT | MIPMAPCOUNT | LINEARSIZE
+        levels[0][1],
+        levels[0][0],
         linear_size,
         0,
-        0,
+        len(levels),
     )
     header += bytes(44)  # reserved1[11]
     header += struct.pack("<8I", 32, 0x4, int.from_bytes(b"DXT1", "little"), 0, 0, 0, 0, 0)
-    header += struct.pack("<5I", 0x1000, 0, 0, 0, 0)  # texture cap, no mipmaps
+    header += struct.pack("<5I", 0x401008, 0, 0, 0, 0)  # COMPLEX | TEXTURE | MIPMAP
     with open(path, "wb") as target:
         target.write(b"DDS ")
         target.write(header)
-        target.write(_encode_bc1(width, height, pixels))
+        for level_width, level_height, level_pixels in levels:
+            target.write(_encode_bc1(level_width, level_height, level_pixels))
 
 
 def bake_patch(source_path, output_path, rect, tint, contrast=1.0, lift=0.0, pad_to_block=True):

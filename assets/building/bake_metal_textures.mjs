@@ -27,7 +27,7 @@ function decodeDds(file) {
   return { width, height, pixels };
 }
 function enc565([r, g, b]) { return ((Math.round(r * 31 / 255) << 11) | (Math.round(g * 63 / 255) << 5) | Math.round(b * 31 / 255)); }
-function writeDds(file, width, height, pixels) {
+function encodeBc1(width, height, pixels) {
   const bx = Math.ceil(width / 4), by = Math.ceil(height / 4), payload = Buffer.alloc(bx * by * 8);
   let off = 0;
   for (let yb = 0; yb < by; yb++) for (let xb = 0; xb < bx; xb++) {
@@ -49,10 +49,36 @@ function writeDds(file, width, height, pixels) {
     });
     payload.writeUInt16LE(c0, off); payload.writeUInt16LE(c1, off + 2); payload.writeUInt32LE(bits >>> 0, off + 4); off += 8;
   }
-  const header = Buffer.alloc(128); header.write('DDS '); header.writeUInt32LE(124, 4); header.writeUInt32LE(0x00081007, 8);
-  header.writeUInt32LE(height, 12); header.writeUInt32LE(width, 16); header.writeUInt32LE(payload.length, 20);
-  header.writeUInt32LE(32, 76); header.writeUInt32LE(4, 80); header.write('DXT1', 84); header.writeUInt32LE(0x1000, 108);
-  fs.writeFileSync(file, Buffer.concat([header, payload]));
+  return payload;
+}
+function downsample(width, height, pixels) {
+  const nextWidth = Math.max(1, Math.floor(width / 2)), nextHeight = Math.max(1, Math.floor(height / 2));
+  const reduced = new Uint8Array(nextWidth * nextHeight * 3);
+  for (let y = 0; y < nextHeight; y++) for (let x = 0; x < nextWidth; x++) {
+    const dst = (y * nextWidth + x) * 3;
+    for (let c = 0; c < 3; c++) {
+      let sum = 0;
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+        const sx = Math.min(width - 1, x * 2 + dx), sy = Math.min(height - 1, y * 2 + dy);
+        sum += pixels[(sy * width + sx) * 3 + c];
+      }
+      reduced[dst + c] = Math.round(sum / 4);
+    }
+  }
+  return { width: nextWidth, height: nextHeight, pixels: reduced };
+}
+function writeDds(file, width, height, pixels) {
+  const levels = [{ width, height, pixels }];
+  while (width > 1 || height > 1) {
+    const next = downsample(width, height, pixels);
+    ({ width, height, pixels } = next);
+    levels.push(next);
+  }
+  const topBlocksX = Math.ceil(levels[0].width / 4), topBlocksY = Math.ceil(levels[0].height / 4);
+  const header = Buffer.alloc(128); header.write('DDS '); header.writeUInt32LE(124, 4); header.writeUInt32LE(0x00a1007, 8);
+  header.writeUInt32LE(levels[0].height, 12); header.writeUInt32LE(levels[0].width, 16); header.writeUInt32LE(topBlocksX * topBlocksY * 8, 20);
+  header.writeUInt32LE(levels.length, 28); header.writeUInt32LE(32, 76); header.writeUInt32LE(4, 80); header.write('DXT1', 84); header.writeUInt32LE(0x401008, 108);
+  fs.writeFileSync(file, Buffer.concat([header, ...levels.map(level => encodeBc1(level.width, level.height, level.pixels))]));
 }
 function writePng(file, width, height, pixels) {
   const crcTable = new Uint32Array(256);
