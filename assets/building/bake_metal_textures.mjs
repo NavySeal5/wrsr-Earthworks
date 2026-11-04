@@ -3,7 +3,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const [source, outputDir, objFile] = process.argv.slice(2);
-if (!source || !outputDir) throw new Error('Usage: node bake_metal_textures.mjs <warehouse.dds> <output-dir> [facility.obj]');
+if (!source || !outputDir) throw new Error('Usage: node bake_metal_textures.mjs <warehouse.dds> <output-dir> [facility.obj] [atlas-preview.png] [tank-texture.dds]');
 
 const rgb565 = value => [((value >> 11) & 31) * 255 / 31, ((value >> 5) & 63) * 255 / 63, (value & 31) * 255 / 31];
 function decodeDds(file) {
@@ -119,8 +119,9 @@ function stripMaterialMesh(file, materialName) {
 }
 fs.mkdirSync(outputDir, { recursive: true });
 const atlas = decodeDds(source);
+const tankAtlas = decodeDds(process.argv[6] || path.join(path.dirname(source), 'explosive_factory_tank.dds'));
 if (process.argv[5]) writePng(process.argv[5], atlas.width, atlas.height, atlas.pixels);
 cropAndTone(atlas, [970, 30, 2000, 438], 'earthworks_corrugated_roof.dds', { contrast: 1.0, lift: 0, tint: [1, 1, 1] });
-cropAndTone(atlas, [1230, 1225, 1670, 1460], 'earthworks_tank_steel.dds', { contrast: 0.62, lift: 24, tint: [0.9, 0.94, 0.96] });
+cropAndTone(tankAtlas, [512, 512, 1024, 1024], 'earthworks_tank_steel.dds', { contrast: 0.72, lift: 48, tint: [0.88, 0.94, 0.98] });
 stripMaterialMesh(objFile, 'roof_rib_highlight');
 console.log(`Baked muted roof and tank DDS textures from ${source}`);

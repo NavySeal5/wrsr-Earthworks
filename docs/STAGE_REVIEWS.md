@@ -440,3 +440,9 @@ A single user statement can accept the current result and authorize progression.
 - The user reported that the canopy roof still looked pixelated. Comparing the DDS headers showed that the vanilla 2048×2048 construction-office atlas has 12 mip levels, while the extracted 1032×408 canopy crop had none. This mismatch can cause high-frequency corrugation to alias at game camera distances.
 - Updated both the Blender BC1 baker and the standalone DDS baker to write complete box-filtered mip chains and the required DDS mip-count/caps flags. Regenerated the canopy texture (11 levels) and tank texture (9 levels), then restaged the facility. The mesh, UV mapping and source texture crop did not change.
 - Header inspection confirms the staged textures now have mip chains. No in-game test was run; user review of a newly placed facility remains pending.
+
+**Stage 12.1 fuel-tank texture correction — 5 November 2026**
+
+- The user reported that the tank appeared to share the office-wall texture. The tank had a distinct material binding, but its local DDS was baked from a mottled rounded patch on the construction-office warehouse atlas, so its appearance was too similar to the wall.
+- Changed only the tank texture source to the broad-seamed steel region of the vanilla `explosive_factory_tank.dds` atlas, with a muted blue-gray bake and full mip chain. The Blender baker, standalone texture baker, authoring notes and WIP staging item were updated. The roof and mesh are unchanged; ModelViewer is not needed for this DDS-only change.
+- No in-game check was run. After restarting the game, compare a newly placed facility's tank against the vanilla CO tank.
