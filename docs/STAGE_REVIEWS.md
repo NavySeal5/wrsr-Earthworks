@@ -25,6 +25,7 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 **Stage 12.1 material-path correction — 4 November 2026**
 
 - The user reported a black model with atlas-like texture fragments in game. The installed game log showed ten failed reads of `media_soviet/buildings/blankdiffuse.dds`; the native blank diffuse file is at the media root. Corrected the MTL to reference root-level `blankdiffuse.dds` and restaged the Workshop item. No game was launched. The fix awaits a fresh in-game check.
+- The user's follow-up screenshot showed the artifacts gone but the model reading as nearly uniform brown. Reordered native `$SUBMATERIAL` blocks to match OBJ/NMF order, added the native `$END` terminator, and increased contrast between roof/steel, light office/concrete, blue glass, olive tank, pale markings and safety red. Updated the Blender source palette and restaged. This iteration has not been checked in game.
 
 | Stage | Status | Technical evidence | In-game/user acceptance |
 |---|---|---|---|
