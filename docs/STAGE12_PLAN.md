@@ -1,6 +1,6 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** Planning. The user split this stage into three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects. Do not begin implementation until the plan and any required visual proposals are reviewed.
+**Status:** Stage 12.1 visual concept proposal prepared; awaiting user review before model authoring. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
 
 ## Goal
 
@@ -13,14 +13,16 @@ The selected concept is an open two-bay equipment canopy beside a compact dispat
 ### Work
 
 1. Prepare a visual proposal before committing the model. Show a game-scale concept with front/side/top views or an equivalent clear layout, including the canopy, dispatch office, two equipment bays, visible decorative tank, access/road-facing side, footprint and approximate height. Retain the accepted middle concept; use the proposal to settle implementation details rather than reopen the basic concept.
+   - Current proposal: [STAGE12_FACILITY_CONCEPT_PROPOSAL.png](mockups/STAGE12_FACILITY_CONCEPT_PROPOSAL.png). It shows two open bays and a single road frontage; this is provisional until the user reviews it and vehicle pathing is tested.
 2. Confirm the installed game's supported asset/export workflow and package requirements. The current development script copies a native construction-office model/materials and writes a Workshop item; it is a staging aid, not a custom-model pipeline.
 3. Build a low-poly model and materials that read clearly at normal camera distance and in the construction thumbnail. Prepare a unique item/asset identity and placeable preview icon.
-4. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Implement the vehicle-scaled worker cap as a Stage 12 prototype rule; defer coefficient/rate balancing to Stage 13.
-5. Keep footprint, road/access behavior, build cost, maintenance, and demolition behavior documented from native defaults or clearly marked as provisional. Do not invent release balance values during modeling.
+4. Design the vehicle access together with the parking layout. The current `construction_office3.ini` donor defines each `$VEHICLE_PARKING` slot and ordered `$VEHICLE_PARKING_ADVANCED_POINT_PID` waypoints, plus its road connections. Map exactly two slots and their entry/exit paths under the canopy; align the access driveway/road connectors so both machines can enter, leave and reach their bay without crossing structures or using the second bay as a dead-end.
+5. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Implement the vehicle-scaled worker cap as a Stage 12 prototype rule; defer coefficient/rate balancing to Stage 13.
+6. Keep footprint, road/access behavior, build cost, maintenance, and demolition behavior documented from native defaults or clearly marked as provisional. Do not invent release balance values during modeling.
 
 ### User-run check and gate
 
-Using a fresh disposable world, place and rotate the item. Check silhouette and scale at street and normal play zoom, footprint fit, access orientation, preview thumbnail, construction animation/cost, save/reload and demolition cleanup. Temporarily test the two parking slots and recognized vehicle classes if the native item can be loaded without the final plugin integration. The user reviews the visual result before Stage 12.2.
+Using a fresh disposable world, place and rotate the item. Check silhouette and scale at street and normal play zoom, footprint fit, access orientation, preview thumbnail, construction animation/cost, save/reload and demolition cleanup. With one eligible vehicle in each slot, observe that each follows its route into its bay, parks in the intended orientation, and can later exit. Repeat with the two vehicle slots occupied in the opposite order; check for blocked or crossing routes. Test connected road approaches on each intended access side before accepting the driveway layout. The user reviews the visual result before Stage 12.2.
 
 ### Exit criteria
 
