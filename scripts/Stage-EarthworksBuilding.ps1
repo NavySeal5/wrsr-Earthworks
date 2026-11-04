@@ -40,6 +40,43 @@ foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previ
 }
 $modelHash = (Get-FileHash -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Algorithm SHA256).Hash.ToLowerInvariant()
 
+function ConvertTo-Rgb565([int]$Red, [int]$Green, [int]$Blue) {
+    return [uint16]((($Red -band 0xF8) -shl 8) -bor (($Green -band 0xFC) -shl 3) -bor ($Blue -shr 3))
+}
+
+function Write-SolidDds([string]$Path, [int]$Red, [int]$Green, [int]$Blue) {
+    # A single BC1/DXT1 block is enough for a flat, unmistakable diagnostic
+    # color. The texture is deliberately tiny but uses the compressed format
+    # expected by the game's asset pipeline.
+    $header = [byte[]]::new(128)
+    [Array]::Copy([Text.Encoding]::ASCII.GetBytes('DDS '), 0, $header, 0, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]124)
+    [Array]::Copy($u32, 0, $header, 4, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]0x00081007)
+    [Array]::Copy($u32, 0, $header, 8, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]4)
+    [Array]::Copy($u32, 0, $header, 12, 4)
+    [Array]::Copy($u32, 0, $header, 16, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]8)
+    [Array]::Copy($u32, 0, $header, 20, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]32)
+    [Array]::Copy($u32, 0, $header, 76, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]4)
+    [Array]::Copy($u32, 0, $header, 80, 4)
+    [Array]::Copy([Text.Encoding]::ASCII.GetBytes('DXT1'), 0, $header, 84, 4)
+    $u32 = [BitConverter]::GetBytes([uint32]0x00001000)
+    [Array]::Copy($u32, 0, $header, 108, 4)
+
+    $color0 = ConvertTo-Rgb565 $Red $Green $Blue
+    $color1 = [uint16]0
+    if ($color0 -eq 0) { $color1 = [uint16]1 }
+    $block = [byte[]]::new(8)
+    [Array]::Copy([BitConverter]::GetBytes($color0), 0, $block, 0, 2)
+    [Array]::Copy([BitConverter]::GetBytes($color1), 0, $block, 2, 2)
+    # All sixteen 2-bit selectors are zero, selecting color0.
+    [IO.File]::WriteAllBytes($Path, $header + $block)
+}
+
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
 foreach ($generatedFile in @('building.bbox', 'building.fire', 'material.mtl')) {
     $generatedPath = Join-Path $objectDir $generatedFile
@@ -49,6 +86,39 @@ Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destinatio
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
+
+# Diagnostic material check: use real Workshop-local BC1 textures, not only
+# MTL diffuse colors. This distinguishes a runtime material/submaterial bind
+# problem from a renderer that ignores diffuse color constants. Remove this
+# block once the finished-building material path is confirmed.
+$diagnosticMaterials = @(
+    @{ Name = 'foundation_concrete'; Color = @(230, 35, 35) },
+    @{ Name = 'dispatch_plaster_pale'; Color = @(255, 210, 25) },
+    @{ Name = 'window_frames'; Color = @(35, 80, 255) },
+    @{ Name = 'safety_red'; Color = @(255, 55, 15) },
+    @{ Name = 'office_window_glass'; Color = @(15, 220, 245) },
+    @{ Name = 'canopy_structural_steel'; Color = @(225, 25, 220) },
+    @{ Name = 'decorative_tank_painted_steel'; Color = @(30, 235, 45) },
+    @{ Name = 'parking_bay_markings'; Color = @(245, 245, 245) },
+    @{ Name = 'corrugated_galvanized_roof'; Color = @(255, 130, 20) },
+    @{ Name = 'roof_rib_highlight'; Color = @(25, 220, 245) }
+)
+$probeMtl = [Collections.Generic.List[string]]::new()
+foreach ($material in $diagnosticMaterials) {
+    $textureName = 'earthworks_probe_' + $material.Name + '.dds'
+    Write-SolidDds (Join-Path $objectDir $textureName) $material.Color[0] $material.Color[1] $material.Color[2]
+    $probeMtl.Add('$SUBMATERIAL ' + $material.Name)
+    $probeMtl.Add('$TEXTURE_MTL 0 ' + $textureName)
+    $probeMtl.Add('$TEXTURE 1 blankspecular.dds')
+    $probeMtl.Add('$TEXTURE 2 blankbump.dds')
+    $probeMtl.Add('$DIFFUSECOLOR 1.0 1.0 1.0 1.0')
+    $probeMtl.Add('$SPECULARCOLOR 0.0 0.0 0.0 1.0')
+    $probeMtl.Add('$AMBIENTCOLOR 1.0 1.0 1.0 1.0')
+    $probeMtl.Add('$SPECULARPOWER 2.0')
+    $probeMtl.Add('')
+}
+$probeMtl.Add('$END')
+[IO.File]::WriteAllLines((Join-Path $objectDir 'earthworks_facility_probe.mtl'), $probeMtl, [Text.UTF8Encoding]::new($false))
 
 # Do not copy the construction office donor's generated bbox/fire data onto this
 # unrelated NMF. The game generates these from the Workshop model; stale donor
@@ -126,7 +196,7 @@ $custom.Add('end')
 $render = @(
     '$TYPE_WORKSHOP',
     ' MODEL model.nmf',
-    ' MATERIAL ../material.mtl',
+    ' MATERIAL earthworks_facility_probe.mtl',
     ' LIFE 3000.000000',
     ' EXPLOSION_GROUP 0',
     ' DERBIS_FALLING_FX buildingfall1 1.000000',
