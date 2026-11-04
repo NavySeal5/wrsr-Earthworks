@@ -75,32 +75,21 @@ function cropAndTone(atlas, rect, output, { contrast, lift, tint }) {
 function stripMaterialMesh(file, materialName) {
   if (!file) return;
   const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
-  const removed = { v: 0, vt: 0, vn: 0 };
+  const output = [];
   let object = '';
+  let removedFaces = 0;
   for (const line of lines) {
     const f = line.trim().split(/\s+/);
     if (f[0] === 'o') object = f[1] || '';
-    if (object === `mesh_${materialName}` && Object.hasOwn(removed, f[0])) removed[f[0]]++;
-  }
-  const output = [];
-  object = '';
-  let skip = false;
-  for (const line of lines) {
-    const f = line.trim().split(/\s+/);
-    if (f[0] === 'o') { object = f[1] || ''; skip = object === `mesh_${materialName}`; }
-    if (skip) continue;
-    if (f[0] === 'f') {
-      const fields = f.slice(1).map(value => value.split('/').map((part, i) => {
-        if (!part) return part;
-        const decrement = i === 0 ? removed.v : i === 1 ? removed.vt : removed.vn;
-        const index = Number(part);
-        return String(index > 0 ? index - decrement : index + decrement);
-      }).join('/'));
-      output.push(`${f[0]} ${fields.join(' ')}`);
-    } else output.push(line);
+    // OBJ references are global across objects. Keep all source vertex/UV/
+    // normal declarations in place and remove only the rib faces so later
+    // face indices remain valid for ModelViewer.
+    if (object === `mesh_${materialName}` && f[0] === 'f') { removedFaces++; continue; }
+    if (object === `mesh_${materialName}` && f[0] === 'usemtl') continue;
+    output.push(line);
   }
   fs.writeFileSync(file, output.join('\r\n'));
-  console.log(`Removed ${materialName} mesh (${removed.v} vertices, ${removed.vt} UVs, ${removed.vn} normals)`);
+  console.log(`Removed ${removedFaces} faces from ${materialName}; unused OBJ coordinates are retained to preserve global indices`);
 }
 fs.mkdirSync(outputDir, { recursive: true });
 const atlas = decodeDds(source);
