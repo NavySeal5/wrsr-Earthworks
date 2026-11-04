@@ -73,7 +73,7 @@ $custom.Add('')
 # A small diagnostic phase registers every native NMF node and avoids the
 # zero-work/zero-cost blueprint state. This is not final construction balance.
 $custom.Add('-------')
-$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 1.0')
+$custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 100.0')
 foreach ($node in @(
     'mesh_foundation_concrete',
     'mesh_dispatch_plaster_pale',
@@ -89,10 +89,10 @@ foreach ($node in @(
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
 $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
-$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.0')
-$custom.Add('$COST_RESOURCE_AUTO wall_brick 1.0')
-$custom.Add('$COST_RESOURCE_AUTO wall_wood 1.0')
-$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 1.0')
+$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 100.0')
+$custom.Add('$COST_RESOURCE_AUTO wall_brick 100.0')
+$custom.Add('$COST_RESOURCE_AUTO wall_wood 100.0')
+$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 100.0')
 $custom.Add('')
 $custom.AddRange([string[]]$resourceSources)
 $custom.Add('')
