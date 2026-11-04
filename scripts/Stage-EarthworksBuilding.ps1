@@ -41,13 +41,12 @@ foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previ
 $modelHash = (Get-FileHash -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Algorithm SHA256).Hash.ToLowerInvariant()
 
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
-foreach ($generatedFile in @('building.bbox', 'building.fire')) {
+foreach ($generatedFile in @('building.bbox', 'building.fire', 'material.mtl')) {
     $generatedPath = Join-Path $objectDir $generatedFile
     if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath -Force }
 }
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
-Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $objectDir 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
@@ -127,7 +126,7 @@ $custom.Add('end')
 $render = @(
     '$TYPE_WORKSHOP',
     ' MODEL model.nmf',
-    ' MATERIAL material.mtl',
+    ' MATERIAL ../material.mtl',
     ' LIFE 3000.000000',
     ' EXPLOSION_GROUP 0',
     ' DERBIS_FALLING_FX buildingfall1 1.000000',
@@ -169,6 +168,8 @@ if ($previousModelHash -ne $modelHash) {
         if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath -Force }
     }
 }
+$targetObjectMaterial = Join-Path $target (Join-Path $object 'material.mtl')
+if (Test-Path -LiteralPath $targetObjectMaterial) { Remove-Item -LiteralPath $targetObjectMaterial -Force }
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
 [IO.File]::WriteAllText($modelHashMarker, $modelHash, [Text.UTF8Encoding]::new($false))
 
