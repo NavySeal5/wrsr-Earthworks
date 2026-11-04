@@ -38,25 +38,24 @@ foreach ($file in @('earthworks_facility.nmf', 'earthworks_facility.mtl', 'previ
         throw "Missing authored facility asset: $file"
     }
 }
+$modelHash = (Get-FileHash -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Algorithm SHA256).Hash.ToLowerInvariant()
 
 New-Item -ItemType Directory -Path $objectDir -Force | Out-Null
+foreach ($generatedFile in @('building.bbox', 'building.fire')) {
+    $generatedPath = Join-Path $objectDir $generatedFile
+    if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath -Force }
+}
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $objectDir 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
 
-# This first placeable fixture retains the native construction-office class and
-# frame data, but replaces the donor parking coordinates with two canopy bays.
-# Exact approach orientation and vehicle flow must be checked by the user in game.
-foreach ($file in @(
-    @{ Source = 'construction_office3.bbox'; Destination = 'building.bbox' },
-    @{ Source = 'construction_office3.fire'; Destination = 'building.fire' }
-)) {
-    $sourcePath = Join-Path $source $file.Source
-    if (-not (Test-Path -LiteralPath $sourcePath)) { throw "Missing native building support file: $($file.Source)" }
-    Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $objectDir $file.Destination) -Force
-}
+# Do not copy the construction office donor's generated bbox/fire data onto this
+# unrelated NMF. The game generates these from the Workshop model; stale donor
+# files can leave the new construction nodes without a matching bbox. Preserve
+# generated files across restages while the NMF is unchanged, and invalidate
+# them whenever the model changes.
 
 $donorIni = Get-Content -LiteralPath (Join-Path $source 'muddy_construction.ini')
 $retained = @($donorIni | Where-Object {
@@ -160,11 +159,23 @@ if (-not (Test-Path -LiteralPath $target)) {
     New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
     New-Item -ItemType Directory -Path $target | Out-Null
 }
-Get-ChildItem -LiteralPath $target -Force | Remove-Item -Recurse -Force
+$modelHashMarker = Join-Path $target '.earthworks-model-hash'
+$previousModelHash = if (Test-Path -LiteralPath $modelHashMarker) {
+    (Get-Content -LiteralPath $modelHashMarker -Raw).Trim()
+} else { '' }
+if ($previousModelHash -ne $modelHash) {
+    foreach ($generatedFile in @('building.bbox', 'building.fire')) {
+        $generatedPath = Join-Path $target (Join-Path $object $generatedFile)
+        if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath -Force }
+    }
+}
 Copy-Item -Path (Join-Path $item '*') -Destination $target -Recurse -Force
+[IO.File]::WriteAllText($modelHashMarker, $modelHash, [Text.UTF8Encoding]::new($false))
 
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
 if ($parkingCount -ne 2) { throw "Expected exactly two parking slots, found $parkingCount" }
 Write-Host "Staged Stage 12 Earthworks facility at $target"
-Write-Host 'The native construction-office type is retained; the custom model and item-level material are linked from renderconfig, and two provisional parking routes replace the donor presentation.'
+Write-Host 'The native construction-office type is retained; donor bbox/fire files are omitted so the game can generate data for the custom NMF.'
+Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
+Write-Host 'The custom model and item-level material are linked from renderconfig, with two provisional parking routes.'
 Write-Host 'The five-worker value and single-frontage routing are prototype settings pending the relevant Stage 12 checks.'

@@ -5,8 +5,8 @@ This is a user-run check. The agent has not launched the game or edited a save. 
 ## Start
 
 1. Close the game and the project-local RML window. Keep Steam open.
-2. Run `launch-prototype.cmd` from the `earthworks-mod` folder. The launcher stages the current plugin and Earthworks Workshop item, then opens the isolated RML. Start the game from that RML window.
-3. Use a fresh or disposable save; do not use a normal republic save for this test. The RML Development checkbox controls an optional DLL payload, not whether the in-game local Workshop building is loaded.
+2. Run `launch-prototype.cmd` from the `earthworks-mod` folder and start the game from RML. The staging script removes the donor construction office's `building.bbox` and `building.fire`; the game needs one startup to generate those files for this custom model. Exit the game and RML fully after reaching the main menu.
+3. Run `launch-prototype.cmd` a second time and start the game again. The staging script preserves the game-generated bbox/fire data as long as the NMF model is unchanged. Use a fresh or disposable save; do not use a normal republic save for this test. The RML Development checkbox controls an optional DLL payload, not whether the in-game local Workshop building is loaded.
 
 ## Place and inspect
 
