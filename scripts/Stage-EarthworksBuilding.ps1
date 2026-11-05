@@ -223,11 +223,10 @@ $custom.Add('$WORKERS_NEEDED 5')
 $custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
-# The parking heading vector points toward the garage frontage, matching the
-# native construction-office convention (parking point first, access-facing
-# heading point second).
-$custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 10.0000')
-$custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 10.0000')
+# Move both parking anchors 5 m toward the rear of the bays so longer vehicles
+# sit farther beneath the canopy. Preserve the +Z heading toward the opening.
+$custom.Add('$VEHICLE_PARKING 0.7000 0.0000 -5.0000 0.7000 0.0000 5.0000')
+$custom.Add('$VEHICLE_PARKING 13.3000 0.0000 -5.0000 13.3000 0.0000 5.0000')
 $custom.Add('')
 # Put the side access at the lower-left garage corner in the in-game view, with
 # its connector axis pointing left toward the road shown by the user. The
