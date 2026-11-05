@@ -58,6 +58,7 @@ SAFETY_RED = material("safety_red", (0.52, 0.12, 0.09), 0.72, 0.02)
 GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
 FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
 TANK = material("decorative_tank_painted_steel", (1.00, 1.00, 1.00), 0.90, 0.01)
+TANK_TOP = material("tank_cap_steel", (0.28, 0.31, 0.28), 0.90, 0.01)
 ROAD_PAINT = material("parking_bay_markings", (0.80, 0.77, 0.67), 0.95)
 
 
@@ -190,12 +191,9 @@ def make_building():
     # Decorative vertical tank at the office's outer left edge. No pump or hose.
     add_box("tank_support_pad", (-21.35, -1.0, 0.27), (3.6, 3.6, 0.50), CONCRETE, 0.08)
     add_cylinder("decorative_tank_body", (-21.35, -1.0, 3.35), 1.38, 5.75, TANK, 20, 0.10)
-    add_cylinder("tank_top_dome", (-21.35, -1.0, 6.28), 1.31, 0.22, TANK, 20, 0.08)
-    # Keep the shell visually continuous, matching the subdued steel tanks on
-    # vanilla construction offices; a red belt made this decorative tank read
-    # like a high-contrast fuel drum.
-    add_cylinder("tank_top_neck", (-21.35, -1.0, 6.48), 0.27, 0.28, FRAME, 12, 0.03)
-    add_cylinder("tank_vent_cap", (-21.35, -1.0, 6.66), 0.39, 0.08, CONCRETE, 12, 0.02)
+    # Use a plain painted steel cap instead of projecting the side atlas across
+    # the upward-facing disk; omit the protruding vent that read as a white knob.
+    add_cylinder("tank_top_dome", (-21.35, -1.0, 6.28), 1.31, 0.22, TANK_TOP, 20, 0.08)
     for idx, x in enumerate((-22.15, -20.55)):
         add_box(f"tank_support_{idx+1}", (x, -1.0, 0.79), (0.22, 2.5, 1.0), STEEL, 0.035)
 

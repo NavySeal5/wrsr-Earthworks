@@ -452,3 +452,9 @@ A single user statement can accept the current result and authorize progression.
 - The fresh placement still showed a pale, clean white/red tank, unlike the user's vanilla CO reference. The explosive-factory tank atlas was too bright and its banded finish was the wrong visual style.
 - Switched the tank DDS back to the weathered horizontal fuel-tank shell region in `construction_office_warehouse.dds` (pixels 1228,1238 through 1678,1480), using its source color and wear directly. The roof and model/NMF are unchanged; generated textures were restaged.
 - No in-game test was run. Check a newly placed facility after restart and compare tank color/weathering against the vanilla CO tank.
+
+**Stage 12.1 tank-cap cleanup — 5 November 2026**
+
+- The user provided a close-up showing that the construction-office tank crop wrapped onto the upward-facing cap as a stretched, wavy atlas pattern. A separate white concrete vent cap and dark neck created the unwanted white knob.
+- Assigned the top cap a separate muted solid-steel material and removed the protruding neck/vent geometry. The side shell retains the weathered CO atlas patch.
+- Regenerated the Blender scene, preview and OBJ. ModelViewer did not remain open when launched, so the NMF has not yet been updated and the item has not been restaged. Needs ModelViewer conversion, restaging, then a fresh in-game placement check.
