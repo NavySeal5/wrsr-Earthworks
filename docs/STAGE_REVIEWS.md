@@ -493,3 +493,8 @@ A single user statement can accept the current result and authorize progression.
 
 - The user confirmed the connector orientation and location generally, but reported that the road endpoint overlapped the garage pillar instead of meeting the paved forecourt.
 - Moved both connector points 5 m farther into the forecourt along positive Z, preserving the confirmed left-facing orientation. The revised points are `(24.5, 0, 15)` and `(14.5, 0, 15)`. This is an INI-only adjustment; restage and verify with a newly placed building.
+
+**Stage 12.1 snap-point gap adjustment — 5 November 2026**
+
+- The user confirmed the connector orientation and described a small gap between the forecourt and road access snap point.
+- Shifted the anchored X coordinate 2 m toward the forecourt, from `24.5` to `22.5`, keeping Z `15` and the established left-facing vector. The new connector points are `(22.5, 0, 15)` and `(12.5, 0, 15)`. This is an INI-only adjustment; restage and check a newly placed building.
