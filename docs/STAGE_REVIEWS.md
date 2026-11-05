@@ -472,3 +472,9 @@ A single user statement can accept the current result and authorize progression.
 - Moved `$CONNECTION_ROAD` to the outer positive-X side of the bays, running along their depth (Z `-10` to `+10`). Kept the bay parking headings toward the garage frontage. Extended the ground-level paved apron from 4.4 m to 10 m deep in front of both bays.
 - Regenerated the Blender scene, OBJ/MTL and review preview. Restaging now copies the new OBJ/MTL into the ModelViewer-accessible WIP folder. The NMF still needs to be regenerated for the extended apron mesh; do not launch the game until the new NMF is copied to native source and restaged.
 - Follow the updated Stage 12.1 test instructions for the side connection and vehicle clearance. No in-game test was run for this revision.
+
+**Stage 12.1 side-connector placement correction — 5 November 2026**
+
+- The user tested the side connector and reported it appeared at the top-left facing up. They specified the intended placement as the bottom-left, facing left, as shown in their screenshot.
+- Moved the connector anchor from the upper end of the outer side to the lower-left garage corner in the in-game view, then rotated its axis to point left toward the road. This is an INI-only access change; the existing 10 m apron and NMF remain unchanged.
+- Restage the building config and check a newly placed facility. No game test was run by the agent.

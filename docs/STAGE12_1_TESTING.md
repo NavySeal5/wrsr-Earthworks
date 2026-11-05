@@ -18,9 +18,9 @@ This is a user-run check. The agent has not launched the game or edited a save. 
 
 ## Check road access and parking
 
-The updated config points both parking slots toward positive Z and places the road connector along the garage's outer positive-X side, matching the road position in the latest user screenshot. The paved apron extends farther in front of both bays to leave turning room. Verify the connector side and route in game; the preview model alone cannot confirm native routing.
+The updated config points both parking slots toward positive Z and places the road connector at the lower-left garage corner in the in-game view, pointing left toward the road shown by the user. The paved apron extends farther in front of both bays to leave turning room. Verify the connector side and route in game; the preview model alone cannot confirm native routing.
 
-1. Connect a road alongside the outer side of the garage bays. Check that the connection snaps beside the bays, away from the office door, and that the building does not require a second/rear connection.
+1. Connect a road to the lower-left access stub beside the garage bays. Check that the stub points left toward the road, stays away from the office door, and the building does not require a second/rear connection.
 2. Purchase or assign one allowed machine (bulldozer or excavator) to the facility. Watch it drive from the road into a bay and park without passing through the office, tank, columns or roof.
 3. Repeat with a second allowed machine in the other slot. Check both possible arrival orders, their final orientations, and whether one machine blocks the other's route.
 4. Send each machine back out. Confirm it can exit to the frontage road without getting trapped. If a vehicle reverses, blocks the other bay, or selects an unexpected road, note the road side and vehicle type.

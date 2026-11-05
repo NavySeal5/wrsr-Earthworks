@@ -211,11 +211,13 @@ $custom.Add('')
 $custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 10.0000')
 $custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 10.0000')
 $custom.Add('')
-# Side access follows the road shown beside the garage. The parking orientation
-# remains front-facing; the expanded paved apron gives vehicles room to turn in.
+# Put the side access at the lower-left garage corner in the in-game view, with
+# its connector axis pointing left toward the road shown by the user. The
+# parking orientation remains front-facing; the expanded apron gives vehicles
+# room to turn in.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('24.5000 0.0000 -10.0000')
 $custom.Add('24.5000 0.0000 10.0000')
+$custom.Add('34.5000 0.0000 10.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
