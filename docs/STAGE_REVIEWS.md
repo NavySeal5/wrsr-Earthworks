@@ -478,3 +478,8 @@ A single user statement can accept the current result and authorize progression.
 - The user tested the side connector and reported it appeared at the top-left facing up. They specified the intended placement as the bottom-left, facing left, as shown in their screenshot.
 - Moved the connector anchor from the upper end of the outer side to the lower-left garage corner in the in-game view, then rotated its axis to point left toward the road. This is an INI-only access change; the existing 10 m apron and NMF remain unchanged.
 - Restage the building config and check a newly placed facility. No game test was run by the agent.
+
+**Stage 12.1 side-connector direction correction — 5 November 2026**
+
+- The user confirmed the latest connector location was correct but its facing direction was reversed.
+- Reversed the two `$CONNECTION_ROAD` endpoints without changing their coordinates, preserving the access segment location while flipping its direction. Restage and check on a newly placed facility; no in-game test was run by the agent.
