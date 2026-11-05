@@ -173,6 +173,13 @@ $custom.Add('$CONNECTIONS_AIRPORT_DEAD_SQUARE')
 $custom.Add('-20.5000 8.5000')
 $custom.Add('-6.0000 18.5000')
 $custom.Add('')
+# In the game's area-surface mapping, pedestrian dead squares render the
+# gravel-like ground surface. Cover the tank flank while keeping its rectangle
+# adjacent to (not overlapping) the office's airport-concrete apron.
+$custom.Add('$CONNECTIONS_PEDESTRIAN_DEAD_SQUARE')
+$custom.Add('-25.5000 -8.5000')
+$custom.Add('-19.0000 8.5000')
+$custom.Add('')
 # Keep the native construction-office phase sequence, using the custom model's
 # node names. The large values are diagnostic only and make the build-menu
 # summary easy to inspect; they are not final construction balance.
