@@ -50,7 +50,6 @@ def material(name, color, roughness=0.82, metallic=0.0):
 # Muted industrial palette used by the facility preview and Workshop materials.
 PLASTER = material("dispatch_concrete", (0.64, 0.63, 0.59))
 CONCRETE = material("foundation_concrete", (0.59, 0.59, 0.56))
-PARKING_SURFACE = material("parking_surface_concrete", (0.52, 0.53, 0.51))
 STEEL = material("canopy_structural_steel", (0.31, 0.33, 0.34), 0.72, 0.12)
 ROOF = material("corrugated_galvanized_roof", (1.00, 1.00, 1.00), 0.88, 0.02)
 OFFICE_ROOF = material("office_roof_graphite", (0.35, 0.37, 0.38), 0.76, 0.08)
@@ -156,11 +155,8 @@ def add_window(name, x, z, width, height, y=-8.74):
 
 
 def make_building():
-    # Keep the paved vehicle area flush with terrain, like the vanilla fire
-    # station forecourt. The thin surface is visual paving, not a raised pad.
-    add_box("parking_surface", (0.2, 0.0, 0.02), (40.0, 21.0, 0.04), PARKING_SURFACE)
-    # Leave a deeper paved turning apron in front of both open garage bays.
-    add_box("front_entry_apron", (7.0, -15.0, 0.02), (26.0, 10.0, 0.04), PARKING_SURFACE)
+    # Native CONNECTIONS_ROAD_DEAD_SQUARE metadata supplies the finished
+    # asphalt surface for the vehicle court/forecourt. Keep ground out of mesh.
     add_box("office_plinth", (-12.8, -0.8, 0.56), (13.6, 16.2, 0.42), CONCRETE, 0.08)
 
     # Compact dispatch office to the left of the canopy.
@@ -248,7 +244,6 @@ def make_building():
 # rectangles measured from the upper-left of each DDS; each entry records its
 # source atlas dimensions because the vanilla sheets use different sizes.
 TEXTURED_ATLAS_REGIONS = {
-    "parking_surface_concrete": ("buildings/firestation.dds", (8, 458, 628, 640), 2048.0, 2048.0),
     # Pale, lightly mottled concrete field on the vanilla construction-office atlas.
     "dispatch_concrete": ("buildings/construction_office.dds", (430, 520, 640, 1008), 1024.0, 1024.0),
     # The construction-office warehouse atlas has the tighter, more subdued

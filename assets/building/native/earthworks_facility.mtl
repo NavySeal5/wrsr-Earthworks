@@ -1,13 +1,3 @@
-$SUBMATERIAL parking_surface_concrete
-$TEXTURE 0 buildings/firestation.dds
-$TEXTURE 1 buildings/blankspecular.dds
-$TEXTURE 2 buildings/blankbump.dds
-
-$DIFFUSECOLOR 1.000000 1.000000 1.000000 1.000000
-$SPECULARCOLOR 0.180000 0.180000 0.180000 1.000000
-$AMBIENTCOLOR 1.000000 1.000000 1.000000 1.000000
-$SPECULARPOWER 2.000000
-
 $SUBMATERIAL foundation_concrete
 $TEXTURE 0 blankdiffuse.dds
 $TEXTURE 1 buildings/blankspecular.dds

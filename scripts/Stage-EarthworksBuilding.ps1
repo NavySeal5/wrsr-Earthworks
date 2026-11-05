@@ -98,7 +98,6 @@ Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join
 # game's firestation/garage atlases for the large concrete and metal surfaces.
 # The Blender source UVs those surfaces into the corresponding atlas regions.
 $facilityMaterials = @(
-    @{ Name = 'parking_surface_concrete'; Texture = 'buildings/firestation.dds' },
     @{ Name = 'foundation_concrete'; Color = @(150, 151, 146) },
     @{ Name = 'dispatch_concrete'; Texture = 'buildings/construction_office.dds' },
     @{ Name = 'office_roof_graphite'; Texture = 'buildings/firestation.dds' },
@@ -161,6 +160,14 @@ $custom.Add("`$NAME_STR `"$name`"")
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
+# The Building Editor's all-floor-types comparison isolates the native
+# asphalt surface from the separate road connector. This dead-road rectangle
+# applies the finished asphalt ground under the vehicle forecourt; it is
+# intentionally not a $CONNECTION_ROAD and does not create a road link.
+$custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
+$custom.Add('5.5147 4.0049')
+$custom.Add('17.5180 17.9735')
+$custom.Add('')
 # Keep the native construction-office phase sequence, using the custom model's
 # node names. The large values are diagnostic only and make the build-menu
 # summary easy to inspect; they are not final construction balance.
@@ -168,7 +175,6 @@ $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
     'mesh_foundation_concrete',
-    'mesh_parking_surface_concrete',
     'mesh_parking_bay_markings'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
