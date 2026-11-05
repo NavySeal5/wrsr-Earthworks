@@ -88,6 +88,8 @@ Get-ChildItem -LiteralPath $objectDir -Filter 'earthworks_probe_*.dds' -File -Er
 # names retired by a source revision, before writing the current set below.
 Get-ChildItem -LiteralPath $objectDir -Filter 'earthworks_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.nmf') -Destination (Join-Path $objectDir 'model.nmf') -Force
+Copy-Item -LiteralPath (Join-Path $root 'assets\building\generated\earthworks_facility.obj') -Destination $objectDir -Force
+Copy-Item -LiteralPath (Join-Path $root 'assets\building\generated\earthworks_facility.mtl') -Destination $objectDir -Force
 Copy-Item -LiteralPath (Join-Path $native 'earthworks_facility.mtl') -Destination (Join-Path $item 'material.mtl') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $item 'previewimage.png') -Force
 Copy-Item -LiteralPath (Join-Path $native 'previewimage.png') -Destination (Join-Path $objectDir 'imagegui.png') -Force
@@ -203,14 +205,17 @@ $custom.Add('$WORKERS_NEEDED 5')
 $custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
-# Their heading points toward the single frontage at negative Z.
-$custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 -10.0000')
-$custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 -10.0000')
+# The parking heading vector points toward the garage frontage, matching the
+# native construction-office convention (parking point first, access-facing
+# heading point second).
+$custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 10.0000')
+$custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 10.0000')
 $custom.Add('')
-# One straight road connector spans the two open bay fronts.
+# One straight road apron spans both open bay fronts. Vehicles turn 90 degrees
+# from the apron into either bay; positive Z is the open frontage in this model.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('-7.0000 0.0000 -14.5000')
-$custom.Add('21.0000 0.0000 -14.5000')
+$custom.Add('-7.0000 0.0000 14.5000')
+$custom.Add('21.0000 0.0000 14.5000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))

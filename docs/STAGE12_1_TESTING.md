@@ -18,9 +18,9 @@ This is a user-run check. The agent has not launched the game or edited a save. 
 
 ## Check road access and parking
 
-The first config places both bays with their approach heading toward negative Z and puts the straight road connector across that frontage. Treat this as a hypothesis to check; if the road connection lands on another side, record which side the game expects.
+The updated config points both parking slots toward positive Z and places a straight road apron across the open bay frontage at positive Z. This follows the native construction-office convention: the `$VEHICLE_PARKING` heading point identifies the approach-facing direction, and the apron lets machines turn 90 degrees into either bay. Verify it in game; the preview model alone cannot confirm native routing.
 
-1. Connect a road along the open fronts of the bays. Check that a road connection snaps and the building does not require a second/rear connection.
+1. Connect a road to the frontage apron across the open fronts of the bays. Check that the connection snaps on the same side as the garage openings and office door, and that the building does not require a second/rear connection.
 2. Purchase or assign one allowed machine (bulldozer or excavator) to the facility. Watch it drive from the road into a bay and park without passing through the office, tank, columns or roof.
 3. Repeat with a second allowed machine in the other slot. Check both possible arrival orders, their final orientations, and whether one machine blocks the other's route.
 4. Send each machine back out. Confirm it can exit to the frontage road without getting trapped. If a vehicle reverses, blocks the other bay, or selects an unexpected road, note the road side and vehicle type.
@@ -33,4 +33,4 @@ The first config places both bays with their approach heading toward negative Z 
 
 ## Report
 
-For this focused materials check, report whether the finished facility has the expected muted palette and include a screenshot. If the game log reports missing files, include any lines containing `earthworks_`, `earthworks_facility_material.mtl`, or `model.nmf`. The road-facing side, chosen parking slots and vehicle entry/exit can be checked in the same run if convenient. A screenshot of the native building panel is useful. The five-worker value and route coordinates are provisional; do not treat the workforce rule as validated by this check.
+For this focused materials and access check, report whether the finished facility has the expected muted palette and include a screenshot. If the game log reports missing files, include any lines containing `earthworks_`, `earthworks_facility_material.mtl`, or `model.nmf`. Confirm the office door/steps face the frontage apron, both bays receive and release a machine, and vehicles turn into the bays from the frontage road. A screenshot of the native building panel is useful. The five-worker value and route coordinates are provisional; do not treat the workforce rule as validated by this check.

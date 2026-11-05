@@ -173,12 +173,14 @@ def make_building():
     # Front facade, windows and entrance door.
     add_window("office_window_1", -17.0, 3.35, 2.35, 1.95)
     add_window("office_window_2", -13.35, 3.35, 2.35, 1.95)
-    add_box("office_door", (-8.85, -8.81, 2.36), (1.65, 0.15, 3.18), STEEL, 0.04)
-    add_box("office_door_panel", (-8.85, -8.91, 2.42), (1.16, 0.05, 2.68), FRAME, 0.025)
-    add_box("office_door_handle", (-8.37, -8.98, 2.25), (0.07, 0.05, 0.27), FRAME, 0.015)
-    add_box("office_entry_canopy", (-8.85, -9.63, 4.20), (2.65, 1.0, 0.18), STEEL, 0.04)
+    # Put the entrance toward the garage/road approach end of the frontage.
+    entry_x = -7.65
+    add_box("office_door", (entry_x, -8.81, 2.36), (1.65, 0.15, 3.18), STEEL, 0.04)
+    add_box("office_door_panel", (entry_x, -8.91, 2.42), (1.16, 0.05, 2.68), FRAME, 0.025)
+    add_box("office_door_handle", (entry_x + 0.48, -8.98, 2.25), (0.07, 0.05, 0.27), FRAME, 0.015)
+    add_box("office_entry_canopy", (entry_x, -9.63, 4.20), (2.65, 1.0, 0.18), STEEL, 0.04)
     for idx, step in enumerate((0.18, 0.40, 0.62)):
-        add_box(f"office_entry_step_{idx+1}", (-8.85, -9.10 - idx * 0.47, step / 2), (2.3, 0.50, step), CONCRETE, 0.05)
+        add_box(f"office_entry_step_{idx+1}", (entry_x, -9.10 - idx * 0.47, step / 2), (2.3, 0.50, step), CONCRETE, 0.05)
     # A restrained red dispatch mark with three angled stripes.
     add_box("dispatch_mark", (-13.8, -8.93, 4.92), (5.5, 0.08, 0.34), SAFETY_RED, 0.03)
     for idx, x in enumerate((-11.0, -10.55, -10.10)):
