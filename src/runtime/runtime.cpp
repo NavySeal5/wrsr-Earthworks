@@ -49,11 +49,14 @@ using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
 using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
 VehicleSlotFn originalVehicleSlot = nullptr;
-constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40;
+using VehiclePurchaseUiFn = void (*)(void*,void*);
+VehiclePurchaseUiFn originalVehiclePurchaseUi = nullptr;
+constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40, VehiclePurchaseUiRva=0x80CC60;
 const unsigned char lateBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xE0,0xDB,0xFF,0xFF};
 const unsigned char loadBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x00,0x38,0xFF,0xFF};
 const unsigned char constructionAssignBytes[] = {0x48,0x8B,0xC4,0xF3,0x0F,0x11,0x58,0x20,0x4C,0x89,0x40,0x18,0x48,0x89,0x50,0x10,0x53,0x56};
 const unsigned char vehicleSlotBytes[] = {0x44,0x89,0x4C,0x24,0x20,0x53,0x56,0x41,0x54,0x41,0x55,0x41,0x56,0x48,0x83,0xEC,0x50};
+const unsigned char vehiclePurchaseUiBytes[] = {0x40,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x90,0xE5,0xFF,0xFF};
 bool ReadNative(Snapshot* out)
 {
     __try {
@@ -1088,6 +1091,46 @@ unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t 
     }
     return originalVehicleSlot(world,building,type,slotHint,slot);
 }
+void HookedVehiclePurchaseUi(void* ui,void* window)
+{
+    // Read-only probe for the native category picker.  The selected building
+    // and child window are inspected only when this is an Earthworks facility;
+    // the original game callback remains responsible for all UI behavior.
+    static ULONGLONG lastProbe=0;
+    void* selectedBuilding=nullptr;
+    void* childWindow=nullptr;
+    unsigned windowKind=0,windowMode=0,childKind=0,childMode=0,listCount=0;
+    uintptr_t listBegin=0,listEnd=0,childSelected=0;
+    __try {
+        auto* bytes=static_cast<unsigned char*>(window);
+        if(bytes) {
+            windowKind=*reinterpret_cast<unsigned*>(bytes+0x23C);
+            windowMode=*reinterpret_cast<unsigned*>(bytes+0x248);
+            selectedBuilding=*reinterpret_cast<void**>(bytes+0x240);
+            childWindow=*reinterpret_cast<void**>(bytes+0x5C8);
+            listBegin=*reinterpret_cast<uintptr_t*>(bytes+0x7C08);
+            listEnd=*reinterpret_cast<uintptr_t*>(bytes+0x7C10);
+            listCount=*reinterpret_cast<unsigned*>(bytes+0x7CB8);
+            if(childWindow) {
+                auto* child=static_cast<unsigned char*>(childWindow);
+                childKind=*reinterpret_cast<unsigned*>(child+0x23C);
+                childMode=*reinterpret_cast<unsigned*>(child+0x248);
+                childSelected=reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(child+0x240));
+            }
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) { selectedBuilding=nullptr; childWindow=nullptr; }
+    if(IsEarthworksFacility(selectedBuilding) || IsEarthworksFacility(reinterpret_cast<void*>(childSelected))) {
+        const ULONGLONG now=GetTickCount64();
+        if(now-lastProbe>=1000) {
+            lastProbe=now;
+            host->log("earthworks  UI probe purchase-window=%p selected=%p child=%p kind=%u mode=%u childKind=%u childMode=%u childSelected=%p vehicleRows=%u rowBytes=%llu",
+                window,selectedBuilding,childWindow,windowKind,windowMode,childKind,childMode,
+                reinterpret_cast<void*>(childSelected),listCount,
+                static_cast<unsigned long long>(listEnd>=listBegin?listEnd-listBegin:0));
+        }
+    }
+    originalVehiclePurchaseUi(ui,window);
+}
 using BoolFn = bool (*)(void*);
 using KeyFn = bool (*)(void*,int);
 using ButtonFn = bool (*)(void*,char*);
@@ -1256,11 +1299,13 @@ bool InstallRuntime()
     closeHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureClose@C3D_TERRAIN@@QEAAXXZ"));
     if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
         || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
+        || host->exeSize < VehiclePurchaseUiRva+sizeof(vehiclePurchaseUiBytes)
         || !host->findIatSlot || !host->patchIat || !host->installInlineHook
         || std::memcmp(host->exeBase+LateRva,lateBytes,sizeof(lateBytes)) != 0
         || std::memcmp(host->exeBase+LoadRva,loadBytes,sizeof(loadBytes)) != 0
         || std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0
-        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0) {
+        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0
+        || std::memcmp(host->exeBase+VehiclePurchaseUiRva,vehiclePurchaseUiBytes,sizeof(vehiclePurchaseUiBytes)) != 0) {
         host->log("earthworks  native preflight failed; planning disabled"); return false;
     }
     for (const auto& item:imports) if (!host->findIatSlot(host->exeModule,"C3DDLL64.dll",item.symbol)) {
@@ -1276,7 +1321,8 @@ bool InstallRuntime()
     if (!host->installInlineHook(host->exeBase+LoadRva,reinterpret_cast<void*>(HookedLoad),reinterpret_cast<void**>(&originalLoad),loadBytes,sizeof(loadBytes),"Earthworks world boundary")) return false;
     if (!host->installInlineHook(host->exeBase+ConstructionAssignRva,reinterpret_cast<void*>(HookedConstructionAssign),reinterpret_cast<void**>(&originalConstructionAssign),constructionAssignBytes,sizeof(constructionAssignBytes),"Earthworks office assignment filter")) return false;
     if (!host->installInlineHook(host->exeBase+VehicleSlotRva,reinterpret_cast<void*>(HookedVehicleSlot),reinterpret_cast<void**>(&originalVehicleSlot),vehicleSlotBytes,sizeof(vehicleSlotBytes),"Earthworks vehicle slot filter")) return false;
-    host->log("earthworks  bindings installed: 13 C3D input imports, DirectInput digit filter, frame, world-load, office assignment, and Earthworks vehicle slot filters");
+    if (!host->installInlineHook(host->exeBase+VehiclePurchaseUiRva,reinterpret_cast<void*>(HookedVehiclePurchaseUi),reinterpret_cast<void**>(&originalVehiclePurchaseUi),vehiclePurchaseUiBytes,sizeof(vehiclePurchaseUiBytes),"Earthworks read-only vehicle purchase UI probe")) return false;
+    host->log("earthworks  bindings installed: 13 C3D input imports, DirectInput digit filter, frame, world-load, office assignment, vehicle slot filter, and read-only vehicle purchase UI probe");
     BindTerrainProbe();
     BindNativeTerrainCallProbe();
     host->log("earthworks  terrain executor bindings %s",raiseLower&&heightQuery&&openHeightmap&&closeHeightmap?"available":"unavailable; projects remain queued");

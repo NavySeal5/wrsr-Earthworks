@@ -64,3 +64,14 @@ Run these checks after staging build `0.14.3-stage12-project-machine-status` wit
 5. Start multiple Sites under the Project and confirm capacity from both assigned facilities is scheduled by the existing priority rules. Worker staffing is not required. Confirm an ordinary construction office is neither recognized nor affected by Earthworks assignment controls.
 
 The native Road Depot purchase dialog may still display all vehicle categories. The restriction is enforced when purchasing/selecting for the facility; this stage changes the Project's live capacity display, not the native category-picker presentation.
+
+### Category-picker diagnostic build
+
+Build `0.14.4-stage12-category-ui-probe` adds a read-only, rate-limited probe to the native vehicle-purchase window. It does not filter or modify the UI. Use it to capture the purchase-window and child-window state while the category popup is open:
+
+1. Close the game and the project-local RML window, then run `launch-prototype.cmd`.
+2. Load the test save and open the Earthworks Facility's vehicle-purchase window.
+3. Open **Filter by type** and leave its category popup open for at least three seconds. Close the popup and purchase window normally.
+4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. The needed lines begin `earthworks  UI probe purchase-window=`. If there are no such lines, include the plugin initialization/preflight lines too.
+
+The probe only reports observed pointers, window kinds, child-window kinds and native vehicle-list sizing. It does not establish or reserve vehicles, block input, or change purchase behavior. No gameplay test was run by the agent.

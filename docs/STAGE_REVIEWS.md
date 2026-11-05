@@ -53,6 +53,12 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - Worker counts are omitted from this panel because D90 removed worker staffing from Earthworks operations. Facility ownership and scheduler behavior are pre-existing and unchanged.
 - Build `0.14.3-stage12-project-machine-status` is prepared for user-run review after compilation. No gameplay test was run by the agent.
 
+**Stage 12.2 native category-picker investigation — 5 November 2026**
+
+- Static tracing confirmed that the existing vehicle-slot hook only enforces the allowlist at vehicle selection/purchase; it does not build the native **Filter by type** popup. The installed building configuration also has no per-building vehicle-category list directive.
+- Traced the native vehicle-purchase window callback at EXE+0x80CC60 and its dispatch path. Added a prologue-checked, read-only hook that rate-limits observations to Earthworks facility purchase windows and records the native window/child-window kinds and vehicle-list sizing. It leaves native UI and purchase behavior unchanged.
+- Build `0.14.4-stage12-category-ui-probe` compiled and its x64 DLL exports were verified. No game test was run by the agent. The user should open the facility's **Filter by type** popup for three seconds and return `tools/runtime/rml/rml/logs/rml-runtime.log` using the instructions in [Stage 12.2 testing](STAGE12_1_TESTING.md#category-picker-diagnostic-build). The probe evidence will determine whether to filter the native popup in place or whether the purchase UI needs a dedicated Earthworks-specific selector.
+
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 
 - Reworked the dispatch wall, office roof, canopy roof and parking apron toward the vanilla firestation/garage surface appearance. Their OBJ UVs target selected regions in the installed firestation and garage DDS atlases; the parking apron is now a thin surface at grade instead of the raised slab. Other surfaces retain the established muted local BC1 textures.
