@@ -149,10 +149,13 @@ foreach ($textureName in @('earthworks_corrugated_roof.dds', 'earthworks_tank_st
 
 $donorIni = Get-Content -LiteralPath (Join-Path $source 'muddy_construction.ini')
 $retained = @($donorIni | Where-Object {
-    $_ -match '^\s*\$(?:TYPE_CONSTRUCTION_OFFICE|NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT)(?:\s|$)'
+    $_ -match '^\s*\$(?:NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT)(?:\s|$)'
 })
 $custom = [Collections.Generic.List[string]]::new()
 $custom.Add("`$NAME_STR `"$name`"")
+$custom.Add('')
+$custom.Add('$TYPE_ROADDEPO')
+$custom.Add('$STYLE_FLAG modern_industry')
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
@@ -221,16 +224,17 @@ foreach ($node in @(
 }
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
 $custom.Add('')
-# Earthworks does not consume construction materials or dispatch construction
-# jobs, so do not inherit the construction office's resource-source controls.
-# The native construction-assignment UI is type-bound and remains a separate
-# UI-hook investigation; the plugin blocks assignment behavior for this type.
-$custom.Add('$WORKERS_NEEDED 5')
-$custom.Add('$WORKING_VEHICLES_NEEDED 2')
+# Use the road-depot native panel for a vehicle-only facility. The two matching
+# vehicle stations route arrivals/departures along the bay axes. The 30-unit
+# fuel store copies the native construction-office capacity as a provisional
+# first check; native depot refuelling behavior still needs in-game review.
+$custom.Add('$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30')
 $custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
 # Move both parking anchors 5 m toward the rear of the bays so longer vehicles
 # sit farther beneath the canopy. Preserve the +Z heading toward the opening.
+$custom.Add('$VEHICLE_STATION 0.7000 0.0000 15.0000 0.7000 0.0000 5.0000')
+$custom.Add('$VEHICLE_STATION 13.3000 0.0000 15.0000 13.3000 0.0000 5.0000')
 $custom.Add('$VEHICLE_PARKING 0.7000 0.0000 -5.0000 0.7000 0.0000 5.0000')
 $custom.Add('$VEHICLE_PARKING 13.3000 0.0000 -5.0000 13.3000 0.0000 5.0000')
 $custom.Add('')
@@ -270,7 +274,7 @@ $config = @"
 `$VISIBILITY 0
 `$OBJECT_BUILDING $object
 `$ITEM_NAME "$name"
-`$ITEM_DESC "Stage 12 prototype facility. Two vehicle bays; model, staffing and road access are being checked. Decorative tank only."
+`$ITEM_DESC "Stage 12 vehicle-only Earthworks facility prototype. Two road-depot bays; 30 units of fuel storage are provisional. Decorative tank only."
 `$END
 "@
 [IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'), $config, [Text.UTF8Encoding]::new($false))
@@ -303,7 +307,7 @@ Copy-Item -Path (Join-Path $objectDir 'earthworks_*.dds') -Destination $targetOb
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
 if ($parkingCount -ne 2) { throw "Expected exactly two parking slots, found $parkingCount" }
 Write-Host "Staged Stage 12 Earthworks facility at $target"
-Write-Host 'The native construction-office type is retained; donor bbox/fire files are omitted so the game can generate data for the custom NMF.'
+Write-Host 'The native road-depot type is used; the vehicle allowlist and Earthworks project scheduler remain plugin-controlled.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
 Write-Host 'The custom model uses a textured muted material palette, with two provisional parking routes.'
-Write-Host 'The five-worker value and single-frontage routing are prototype settings pending the relevant Stage 12 checks.'
+Write-Host 'No workers are required for Earthworks output. Fuel storage capacity is provisionally 30; verify the native road-depot fuel UI and refuelling in game.'

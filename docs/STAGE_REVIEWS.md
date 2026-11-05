@@ -4,7 +4,7 @@ Updated 5 November 2026. A stage is accepted only when the user confirms the dem
 
 **Current position**
 
-The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist, Stage 4d vehicle allowlist, Stage 6 persistence and Stage 7 facility assignment are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains selected. The dedicated facility blocks ordinary jobs on the verified direct assignment route. D31 sets the productivity direction; native rate calibration, multi-machine allocation, worker/machine non-duplication and reservation remain open. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).
+The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist, Stage 4d vehicle allowlist, Stage 6 persistence and Stage 7 facility assignment are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains the previous test type. The dedicated facility blocks ordinary jobs on the verified direct assignment route. On 5 November the user changed the facility to vehicle-only work and selected the native `$TYPE_ROADDEPO` panel. Worker gating is removed under D90; see the Stage 12.2 entry below. Machine rate and native vehicle reservation remain provisional. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).
 
 Latest workflow correction: the user said "Dont do the tests yourself, just provide me with test instructions". The user has now explicitly authorized agent computer use for this Stage 8 readiness check only; other in-game checks remain user-run unless authorized. Stage 3's existing agent observations remain historical evidence. Version 0.4.0-worker-probe is compiled; the launch script stages it after the game and project-local RML are closed. The Stage 4 in-game checklist is in STAGE4_TESTING.md. No in-game check of 0.4.0 has been performed by the agent.
 
@@ -26,6 +26,13 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 
 - The user accepted the current Earthworks building model after the geometry, textures, entrance/road layout, and native ground-area treatment iterations. This accepts the visual/model design; it does not claim the latest apron-area addition or rear-shifted parking anchors have been checked in game.
 - Stage 12.2, the purpose-built building UI, is next. Stage 12.3 remains the integration between the facility UI and Earthworks Projects/Sites.
+
+**Stage 12.2 vehicle-only Road Depot prototype — 5 November 2026**
+
+- The user revised the facility operation: remove the worker requirement, with vehicles alone providing Earthworks capacity/output, and use `$TYPE_ROADDEPO` as the native building UI type.
+- Updated the generated building configuration to explicitly declare `$TYPE_ROADDEPO`, exactly two parking bays, matching vehicle stations and a provisional `$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30`. The visible mesh tank remains decorative; the native depot fuel store is a separate gameplay feature to inspect.
+- Removed worker checks from project start/scheduler requirements. Each eligible parked machine now contributes one provisional machine-rate unit; no eligible parked vehicle leaves Sites waiting for a machine.
+- Built as `0.14.0-stage12-road-depot-vehicle-only`; the Earthworks Workshop config is staged locally with one `$TYPE_ROADDEPO`, two parking slots, no worker declarations, and a 30-unit fuel store. The game was not launched or tested by the agent. Follow [Stage 12.2 test instructions](STAGE12_1_TESTING.md#stage-122-road-depot-panel-and-vehicle-only-work).
 
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 

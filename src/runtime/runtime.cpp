@@ -717,7 +717,7 @@ void Process(const Command& command)
                 Message("Assigned Earthworks facility is missing or unreadable.");break;
             }
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
-                ||!workforce.occupantsValid||!workforce.vehiclesValid||!workforce.parkedValid) {
+                ||!workforce.vehiclesValid||!workforce.parkedValid) {
                 Message("Assigned facility readings are incomplete. Try again when the building can be read.");break;
             }
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
@@ -886,7 +886,7 @@ void TickProjectRunner()
     const double elapsed=clockHour-lastSimulationHour;lastSimulationHour=clockHour;
     if(!std::isfinite(elapsed)||elapsed<=0)return;
     const double simulationElapsed=std::min(elapsed,1.0);
-    struct Allocation { SavedEarthwork* project=nullptr;double rate=0;unsigned workers=0,machines=0; };
+    struct Allocation { SavedEarthwork* project=nullptr;double rate=0;unsigned machines=0; };
     std::vector<uint64_t> processedProjects;
     std::vector<Allocation> allocations;
     bool schedulerStateChanged=false;
@@ -905,49 +905,42 @@ void TickProjectRunner()
             }
             Message("Started project has no facility assignment. Assign a facility before resuming.");continue;
         }
-        unsigned workersAvailable=0,machinesAvailable=0;bool facilityReadFailed=false;
+        unsigned machinesAvailable=0;bool facilityReadFailed=false;
         for(const auto facilityId:namedProject->facilityIds) {
             WorkforceView workforce{};
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
-                ||!workforce.occupantsValid||!workforce.parkedValid||!workforce.vehiclesValid) {
+                ||!workforce.parkedValid||!workforce.vehiclesValid) {
                 facilityReadFailed=true;break;
             }
-            workersAvailable=std::min(65536u,workersAvailable+std::min(workforce.occupants,65536u));
             machinesAvailable=std::min(static_cast<unsigned>(MaxSavedEarthworks),
                 machinesAvailable+std::min(workforce.eligibleMachineCandidates,static_cast<unsigned>(MaxSavedEarthworks)));
         }
         if(facilityReadFailed) {
             for(auto* job:jobs){job->status=ProjectStatus::Paused;job->needsReview=true;schedulerStateChanged=true;}
-            Message("A Project facility workforce or vehicle reading failed. Its Sites are paused for review.");continue;
+            Message("A Project facility vehicle reading failed. Its Sites are paused for review.");continue;
         }
         if(jobs.empty())continue;
-        int workersLeft=static_cast<int>(workersAvailable);
         unsigned machinesLeft=machinesAvailable;
         std::vector<Allocation> projectAllocations;
         projectAllocations.reserve(jobs.size());
-        for(auto* job:jobs)projectAllocations.push_back({job,0,0,0});
-        if(machinesLeft&&workersLeft>0) {
-            // Pool capacity from every facility assigned to this Project. Give
-            // one machine to each eligible Site in priority order, then give
-            // remaining capacity to earlier Sites, matching the Stage 9 rules.
-            for(auto& allocation:projectAllocations)if(machinesLeft&&workersLeft>0) {
-                const int staff=std::min(workersLeft,10);workersLeft-=staff;--machinesLeft;
-                allocation.rate+=MachineRate(staff,ReferenceGroundworksRating);
-                allocation.workers+=static_cast<unsigned>(staff);++allocation.machines;
+        for(auto* job:jobs)projectAllocations.push_back({job,0,0});
+        if(machinesLeft) {
+            // Machines alone provide capacity. Give one to each eligible Site
+            // in priority order, then send remaining machines to earlier Sites.
+            for(auto& allocation:projectAllocations)if(machinesLeft) {
+                --machinesLeft;
+                allocation.rate+=MachineRate(ReferenceGroundworksRating);
+                ++allocation.machines;
             }
-            for(auto& allocation:projectAllocations)while(machinesLeft&&workersLeft>0) {
-                const int staff=std::min(workersLeft,10);workersLeft-=staff;--machinesLeft;
-                allocation.rate+=MachineRate(staff,ReferenceGroundworksRating);
-                allocation.workers+=static_cast<unsigned>(staff);++allocation.machines;
+            for(auto& allocation:projectAllocations)while(machinesLeft) {
+                --machinesLeft;
+                allocation.rate+=MachineRate(ReferenceGroundworksRating);
+                ++allocation.machines;
             }
-        } else if(!machinesLeft&&workersLeft>0) {
-            // Worker-only effort shares the Project's pool with its highest-priority active Site.
-            projectAllocations.front().rate=WorkerOnlyRate(workersLeft);
-            projectAllocations.front().workers=static_cast<unsigned>(workersLeft);
         }
         for(auto& allocation:projectAllocations) {
             auto* job=allocation.project;
-            job->allocatedWorkers=allocation.workers;job->allocatedMachines=allocation.machines;
+            job->allocatedWorkers=0;job->allocatedMachines=allocation.machines;
             const auto next=allocation.rate>0?ProjectStatus::Running:ProjectStatus::Waiting;
             if(job->status!=next) {
                 job->status=next;schedulerStateChanged=true;

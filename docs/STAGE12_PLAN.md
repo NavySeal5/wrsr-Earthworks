@@ -1,12 +1,12 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** Stage 12.1 has a first placeable model/item staged from the approved single-frontage concept. Blender source, OBJ/MTL, native NMF/material, preview icon, two parking slots and a provisional road connector are prepared. The in-game visual/routing review is pending. This stage has three parts: the building model/design, the building's own UI, and integration with Earthworks facility management and Projects.
+**Status:** Stage 12.1's model is accepted by the user. The next 12.2 prototype switches the building's native type from Construction Office to `$TYPE_ROADDEPO`, removes Earthworks worker staffing/output, keeps two vehicle slots and adds a provisional 30-unit fuel store. Native panel, purchase/parking, fuel-store and Earthworks execution checks are pending user review. This stage has three parts: model/design, native building UI, and integration with Earthworks facility management and Projects.
 
 ## Goal
 
-Replace the temporary construction-office-derived test item with a distinctive, placeable Earthworks facility, then connect its native building behavior and player-facing facility controls to the existing Project/Site workflow. Preserve the accepted Earthworks rules: its own workforce and machine slots; only bulldozers, excavators, dumpers and buses; no ordinary construction jobs; automatic recognition; each facility assigned to at most one Project; multiple facilities may serve one Project.
+Replace the temporary construction-office-derived test item with a distinctive, placeable Earthworks facility, then connect its native building behavior and player-facing facility controls to the existing Project/Site workflow. The revised prototype is vehicle-only: its parked eligible machines provide Earthworks capacity/output without a worker requirement. Preserve the accepted vehicle classes (bulldozers, excavators, dumpers and buses), automatic recognition, no ordinary construction jobs, one Project per facility and multiple facilities per Project.
 
-The selected concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible fuel tank. The tank is decorative in Stage 12. Do not add refuelling, fuel accounting, quarried-stone accounting or balance changes here. The facility has exactly two vehicle slots. Worker capacity scales with the Strength/Level of parked groundworks machines: each machine level supports 0.5 workers (for example, Strength 4 supports at most two workers). Sum the capacity across parked groundworks machines, then round fractions up to a whole worker. With no bulldozer, excavator or dumper parked, worker capacity is zero. Verify which native field corresponds to Strength/Level before wiring this rule. The previous 20-worker value was only a Stage 9 test setting; it is not a fixed facility capacity.
+The selected concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible fuel tank. The mesh tank remains decorative; the native depot fuel store is an independent gameplay component. The facility has exactly two vehicle slots. Do not require workers or count labor toward output. Two eligible machine candidates give capacity; no eligible parked machine means no work. The machine-rate scale remains provisional under the existing rate decision. The earlier 0.5-worker-per-Strength rule (D87) is superseded by the user's vehicle-only direction; the previous 20-worker value was only a Stage 9 test setting.
 
 ## 12.1 — Building design, model and placeable item
 
@@ -18,7 +18,7 @@ The selected concept is an open two-bay equipment canopy beside a compact dispat
 2. Confirm the installed game's supported asset/export workflow and package requirements. The current development script copies a native construction-office model/materials and writes a Workshop item; it is a staging aid, not a custom-model pipeline. The game includes ModelViewer; see the [official ModelViewer guide](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer) and [official modelling notes](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling). The community workflow uses Blender-exported OBJ imported into ModelViewer to create NMF and material files; see the [community modding guide](https://workers-resources.fandom.com/wiki/General_modding).
 3. Build a low-poly model and materials that read clearly at normal camera distance and in the construction thumbnail. Prepare a unique item/asset identity and placeable preview icon.
 4. Design the vehicle access together with the parking layout. The current `construction_office3.ini` donor defines each `$VEHICLE_PARKING` slot and ordered `$VEHICLE_PARKING_ADVANCED_POINT_PID` waypoints, plus its road connections. Map exactly two slots and their entry/exit paths under the canopy; align the single-front road connector so both machines can enter, leave, and reach their bay without crossing structures or using the other bay as a dead-end. The actual route may require vehicles to reverse out; confirm that in-game before changing the concept.
-5. Configure the native Workshop building foundation from the verified office type, with exactly two vehicle parking positions and the accepted vehicle classes. Keep ordinary construction jobs blocked. Implement the vehicle-scaled worker cap as a Stage 12 prototype rule; defer coefficient/rate balancing to Stage 13.
+5. Configure the native Workshop building as `$TYPE_ROADDEPO` so it uses the depot's vehicle-only panel. Keep exactly two vehicle parking positions, the accepted vehicle classes, and ordinary construction jobs blocked. Add `$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30` as a provisional native fuel-store value; confirm its panel and actual behavior in game before treating the configuration as settled.
 6. Keep footprint, road/access behavior, build cost, maintenance, and demolition behavior documented from native defaults or clearly marked as provisional. Do not invent release balance values during modeling.
 
 ### User-run check and gate
@@ -43,7 +43,7 @@ Using a fresh disposable world, place and rotate the item. Check silhouette and 
 
 ### User-run check and gate
 
-Inspect an empty facility, then staff it and park representative allowed vehicles. Verify the native panel's labels, counts, interaction, and ordinary construction controls. Confirm its worker display behavior explicitly; the earlier Workshop-derived prototype showed workers arriving while the vanilla UI omitted worker occupation. Verify the player is not led to expect refuelling from the decorative tank. The user reviews the panel before Stage 12.3.
+Inspect an empty facility, then buy/park representative allowed vehicles. Verify the native depot panel, exactly two slots, vehicle purchase/return, fuel store display/supply, and that the facility has no worker requirement or ordinary construction-assignment controls. Check whether parked vehicles can use the facility's fuel; record the observation without changing the amount or balance. The visible tank is decoration and does not imply the native storage's behavior. The user reviews the panel before Stage 12.3.
 
 ### Exit criteria
 
@@ -58,14 +58,14 @@ Inspect an empty facility, then staff it and park representative allowed vehicle
 
 1. Update automatic facility recognition from the development asset name to the released item's unique descriptor. Confirm every placed instance is detected without per-session registration; ordinary construction offices remain unaffected.
 2. Connect the item to the existing facility-management area in the Earthworks Projects view. Preserve the user's direction: facility management remains below **New Site**, shows only facilities assigned to the selected Project with add/remove controls, and contains no flavor text.
-3. Show facility name/identity, live worker count, eligible parked machine counts, and missing/unreadable status in the assigned-facility section, but only when readings are reliable. If a reading is unavailable, label it unavailable rather than displaying a misleading zero. Do not expose technical inspector fields or add per-machine detail without confirmation.
+3. Show facility name/identity, eligible parked machine counts, and missing/unreadable status in the assigned-facility section, but only when readings are reliable. Do not show workers as a requirement or productivity input. If a vehicle reading is unavailable, label it unavailable rather than displaying a misleading zero. Do not expose technical inspector fields or add per-machine detail without confirmation.
 4. Preserve project ownership rules: multiple facilities per Project, no facility shared between Projects, explicit add/remove, reassignment only after removal, and saved assignments bound to stable building identity. A missing facility must remain visible as unavailable or clearly explain why capacity is absent; never silently assign a different building.
 5. Verify scheduler capacity aggregation with two facilities assigned to one Project, facility exclusivity across Projects, worker/machine counts and concurrent Sites. Verify removing/demolishing a facility follows existing missing-facility handling and preserves project progress.
 6. Add player UI only for demonstrated integration state. Keep developer inspector and terrain probes out of the player build.
 
 ### User-run check and gate
 
-On a fresh test save, place at least two Earthworks facilities and an ordinary construction office. Check automatic detection, add/remove assignment, cross-Project exclusivity, save/reload, worker/machine readings, concurrent Site allocation, and behavior after one assigned facility is removed. Confirm ordinary offices are unchanged and normal construction jobs cannot be assigned to either Earthworks facility. User reviews this as Stage 12's final acceptance.
+On a fresh test save, place at least two Earthworks facilities and an ordinary construction office. Check automatic detection, add/remove assignment, cross-Project exclusivity, save/reload, eligible-machine readings, concurrent Site allocation without workers, and behavior after one assigned facility is removed. Confirm ordinary offices are unchanged and ordinary construction jobs cannot be assigned to either Earthworks facility. User reviews this as Stage 12's final acceptance.
 
 ### Exit criteria
 
@@ -76,12 +76,12 @@ On a fresh test save, place at least two Earthworks facilities and an ordinary c
 
 ## Deferred to Stage 13 or later
 
-Final worker capacity, staffing/productivity balance, facility range, build/maintenance costs, fuel consumption/refuelling, quarried-stone accounting, and release settings. Stage 12 uses visibly provisional values where a test needs them. Vehicle reservations, machine animations, active-area construction prevention and non-rectangular Sites also remain outside this stage.
+Final machine productivity/balance, facility range, build/maintenance costs, fuel-store capacity and fuel consumption/refuelling rules, quarried-stone accounting, and release settings. Stage 12 uses visibly provisional values where a test needs them. Vehicle reservations, machine animations, active-area construction prevention and non-rectangular Sites also remain outside this stage.
 
 ## Open decisions to resolve at the relevant checkpoint
 
 - Finish native ModelViewer conversion and staging for the 12.1 single-frontage model, then ask the user to review the placeable item in game before 12.2.
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
-- For 12.3, show live worker and eligible-machine counts per assigned facility when reliable readings are available; show a clear unavailable state instead of misleading zeroes (D86).
-- Do not set final worker capacity or throughput in Stage 12; make those decisions during Stage 13 balance review.
-- The 0.5-worker-per-machine-level rule is selected for the first implementation; round the summed fractional capacity up. Confirm Strength/Level field mapping before the dependent runtime change. No groundworks machine means zero worker capacity (D87).
+- For 12.3, show eligible-machine counts per assigned facility when readings are reliable; show a clear unavailable state instead of misleading zeroes. Worker counts are no longer an operating prerequisite (D90).
+- Keep the machine-rate scale provisional through Stage 12 and review final productivity during Stage 13.
+- `$TYPE_ROADDEPO` and the 30-unit fuel-store declaration are a first native-panel/storage prototype. Check panel contents and vehicle fuel behavior in game before settling them (D91).
