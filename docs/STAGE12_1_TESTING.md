@@ -1,6 +1,6 @@
 # Stage 12.1 — model and access check
 
-This is a user-run check. The agent has not launched the game or edited a save. The prototype is staged as **Earthworks Facility (prototype)**, Workshop ID `9100000012`, with the custom model, preview icon, two parking entries and provisional frontage routing.
+This is a user-run check. The agent has not launched the game or edited a save. The prototype is staged as **Earthworks Facility (prototype)**, Workshop ID `9100000012`, with the custom model, preview icon, four parking entries and provisional frontage routing.
 
 **Retired diagnostic builds:** The 0.14.6–0.14.9 purchase-window/UI probes documented below have been removed. Keep `$TYPE_ROADDEPO` and the working slot-level filter: it rejects disallowed purchases, while the native picker continues to show its broad vehicle categories. No further UI-state probe is planned.
 
@@ -20,7 +20,7 @@ The user has accepted the current building model. If checking the current staged
 4. Open the building window. Confirm the facility loads without missing-model/material warnings and the normal Earthworks controls still recognize it automatically. If the material still looks wrong, close the game and send the latest `log.html` entries mentioning `blankdiffuse`, `material.mtl`, or the Earthworks model.
 5. After construction finishes, inspect the **finished** facility. The canopy has no separate modeled ribs; it uses the unmodified corrugated roof texture from the vanilla construction-office warehouse atlas. Compare it directly with the vanilla CO roofing. The tank should look like lighter weathered gray-green steel instead of near-black. The dispatch office walls should be light concrete; the office roof remains dark gray; the framing dark, glazing blue-gray, and safety details restrained red. The two central parking squares and all mesh parking bay markings have been removed; native asphalt now covers the full two-bay court and apron, concrete covers the office-side apron, and the pedestrian-square surface should appear as gravel along the tank-side strip. Construction overlays are not a reliable view of finished material colors.
 6. Check that the entry steps rise toward the office door, with the lowest tread furthest away and the highest nearest the threshold.
-7. Park a longer eligible vehicle in each bay. The two parking anchors have been moved 5 m toward the rear while retaining their heading toward the opening; confirm the vehicle body stays under the canopy and can enter/leave without hitting the columns.
+7. Park longer eligible vehicles in all four slots, two per bay. The parking anchors are toward the rear while retaining their heading toward the opening; confirm the vehicle bodies stay under the canopy and can enter/leave without hitting columns or each other.
 
 ## Check road access and parking
 
@@ -28,7 +28,7 @@ The updated config points both parking slots toward positive Z and anchors the r
 
 1. Connect a road to the lower-left access stub beside the garage bays. Check that the stub points left toward the road, stays away from the office door, and the building does not require a second/rear connection.
 2. Purchase or assign one allowed machine (bulldozer or excavator) to the facility. Watch it drive from the road into a bay and park without passing through the office, tank, columns or roof.
-3. Repeat with a second allowed machine in the other slot. Check both possible arrival orders, their final orientations, and whether one machine blocks the other's route.
+3. Fill the remaining two slots, keeping two vehicles in each bay. Check arrival order, final orientations, and whether one machine blocks its neighbor's route.
 4. Send each machine back out. Confirm it can exit to the frontage road without getting trapped. If a vehicle reverses, blocks the other bay, or selects an unexpected road, note the road side and vehicle type.
 5. Try one dumper and one bus only if convenient. This pass focuses on model and parking paths; the accepted vehicle allowlist was established earlier and is still enforced by the plugin.
 
@@ -43,15 +43,15 @@ For the original 12.1 model review, report whether the finished facility has the
 
 ## Stage 12.2 — Road Depot panel and vehicle-only work
 
-The current prototype uses `$TYPE_ROADDEPO` and two vehicle bays. Fuel storage is omitted; the mesh tank remains decorative. No workers should be required for Earthworks output. The game was not tested by the agent.
+The current prototype uses `$TYPE_ROADDEPO` and four vehicle slots, arranged as two parallel positions in each of the two garage bays. Fuel storage is omitted; the mesh tank remains decorative. No workers should be required for Earthworks output. The game was not tested by the agent.
 
 1. Close the game and project-local RML, then run `launch-prototype.cmd` and start the game from RML. Use a fresh test save or new placement; existing placed instances will retain their old native type.
 2. Find **Earthworks Facility (prototype)** in the Roads/Depots construction category. Check its build-menu card and construction phases still load and the item can be placed.
-3. Open its native window before buying vehicles. Confirm it shows a depot/vehicle-management panel, with two usable parking slots and no worker or ordinary construction-assignment controls.
-4. Verify the narrowed filter: buy an excavator and a bulldozer and confirm both can be placed in the facility's two slots. Attempt a dumper, a bus and another unrelated vehicle; each must be rejected by Earthworks. Confirm ordinary depots/vehicle facilities retain their usual purchase behavior. Return the allowed machines and check each can reach and park in a bay.
+3. Open its native window before buying vehicles. Confirm it shows a depot/vehicle-management panel with four usable parking slots (two per garage bay), and no worker or ordinary construction-assignment controls.
+4. Verify the narrowed filter: buy excavators and bulldozers and confirm they can be placed in all four slots. Attempt a dumper, a bus and another unrelated vehicle; each must be rejected by Earthworks. Confirm ordinary depots/vehicle facilities retain their usual purchase behavior. Return the allowed machines and check each can reach and park in its lane.
 5. Confirm there are no fuel-storage controls in the native panel. This is expected: the prototype has no fuel storage configured, and its visible tank is decorative.
 6. Create a Site with a noticeable target-height change, assign this facility to the Project, and explicitly start it. Confirm the Site waits with no eligible machine parked, then runs when an eligible machine is parked, even when no workers are assigned to the building. Check the displayed machine count/progress and confirm a non-Earthworks office's normal controls are unaffected.
-7. Save/reload once and confirm the facility is still recognized, its two slots and parked vehicle remain, and the Site resumes only under the normal explicit-start/pause rules.
+7. Save/reload once and confirm the facility is still recognized, its four slots and parked vehicles remain, and the Site resumes only under the normal explicit-start/pause rules.
 
 Report: screenshot of the native facility panel; allowed excavator/bulldozer and rejected dumper/bus purchase examples; how each bay routes; and whether a running Site progresses with an allowed machine but no workers. Fuel functionality is deferred. These checks are for prototype behavior, not final balance acceptance.
 
