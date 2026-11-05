@@ -166,12 +166,12 @@ $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
 $custom.Add('-6.5000 -10.0000')
 $custom.Add('20.5000 20.0000')
 $custom.Add('')
-# The adjacent office entrance apron uses the Building Editor's airport/tarmac
-# surface. Its inner edge slightly overlaps the asphalt rectangle to avoid a
-# seam, while remaining separate from the road access connector.
+# The office-side apron uses the Building Editor's airport/tarmac surface.
+# Extend it to the asphalt court's far Z edge and the gravel strip's near Z edge,
+# with only the existing small seam overlap at the asphalt boundary.
 $custom.Add('$CONNECTIONS_AIRPORT_DEAD_SQUARE')
-$custom.Add('-20.5000 8.5000')
-$custom.Add('-6.0000 18.5000')
+$custom.Add('-19.0000 -8.5000')
+$custom.Add('-6.0000 20.0000')
 $custom.Add('')
 # In the game's area-surface mapping, pedestrian dead squares render the
 # gravel-like ground surface. Cover the tank flank while keeping its rectangle
