@@ -41,14 +41,14 @@ For the original 12.1 model review, report whether the finished facility has the
 
 ## Stage 12.2 — Road Depot panel and vehicle-only work
 
-The current prototype uses `$TYPE_ROADDEPO`, two vehicle bays, and a provisional 30-unit native fuel store. The mesh tank remains decorative. No workers should be required for Earthworks output. The game was not tested by the agent.
+The current prototype uses `$TYPE_ROADDEPO` and two vehicle bays. Fuel storage is omitted; the mesh tank remains decorative. No workers should be required for Earthworks output. The game was not tested by the agent.
 
 1. Close the game and project-local RML, then run `launch-prototype.cmd` and start the game from RML. Use a fresh test save or new placement; existing placed instances will retain their old native type.
 2. Find **Earthworks Facility (prototype)** in the Roads/Depots construction category. Check its build-menu card and construction phases still load and the item can be placed.
 3. Open its native window before buying vehicles. Confirm it shows a depot/vehicle-management panel, with two usable parking slots and no worker or ordinary construction-assignment controls.
 4. Buy one allowed machine and one allowed vehicle type that should be rejected (for example, a road vehicle that is not a dumper or bus). Confirm allowed types can be bought, disallowed types remain blocked by Earthworks, and the allowed vehicle can reach and park in a bay. Return it and repeat in the other bay if practical.
-5. Check the native fuel interface: note whether the 30-unit store is shown, whether it accepts fuel deliveries, and whether an Earthworks vehicle can refuel there. Do not infer refuelling from the decorative tank mesh. Report exactly what the depot panel and vehicle behavior show.
+5. Confirm there are no fuel-storage controls in the native panel. This is expected: the prototype has no fuel storage configured, and its visible tank is decorative.
 6. Create a Site with a noticeable target-height change, assign this facility to the Project, and explicitly start it. Confirm the Site waits with no eligible machine parked, then runs when an eligible machine is parked, even when no workers are assigned to the building. Check the displayed machine count/progress and confirm a non-Earthworks office's normal controls are unaffected.
-7. Save/reload once and confirm the facility is still recognized, its two slots/parked vehicle and fuel store remain, and the Site resumes only under the normal explicit-start/pause rules.
+7. Save/reload once and confirm the facility is still recognized, its two slots and parked vehicle remain, and the Site resumes only under the normal explicit-start/pause rules.
 
-Report: screenshot of the native facility panel; eligible and rejected purchase examples; how each bay routes; fuel-store capacity/delivery/refuelling observations; and whether a running Site progresses with a machine but no workers. These checks are for prototype behavior, not final balance acceptance.
+Report: screenshot of the native facility panel; eligible and rejected purchase examples; how each bay routes; and whether a running Site progresses with a machine but no workers. Fuel functionality is deferred. These checks are for prototype behavior, not final balance acceptance.

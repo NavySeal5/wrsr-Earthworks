@@ -30,15 +30,15 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 **Stage 12.2 vehicle-only Road Depot prototype — 5 November 2026**
 
 - The user revised the facility operation: remove the worker requirement, with vehicles alone providing Earthworks capacity/output, and use `$TYPE_ROADDEPO` as the native building UI type.
-- Updated the generated building configuration to explicitly declare `$TYPE_ROADDEPO`, exactly two parking bays, matching vehicle stations and a provisional `$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30`. The visible mesh tank remains decorative; the native depot fuel store is a separate gameplay feature to inspect.
+- Updated the generated building configuration to explicitly declare `$TYPE_ROADDEPO`, exactly two parking bays and matching vehicle stations. The visible mesh tank remains decorative.
 - Removed worker checks from project start/scheduler requirements. Each eligible parked machine now contributes one provisional machine-rate unit; no eligible parked vehicle leaves Sites waiting for a machine.
-- Built as `0.14.0-stage12-road-depot-vehicle-only`; the Earthworks Workshop config is staged locally with one `$TYPE_ROADDEPO`, two parking slots, no worker declarations, and a 30-unit fuel store. The game was not launched or tested by the agent. Follow [Stage 12.2 test instructions](STAGE12_1_TESTING.md#stage-122-road-depot-panel-and-vehicle-only-work).
+- Initially built as `0.14.0-stage12-road-depot-vehicle-only`; the game was not launched or tested by the agent. Fuel storage was removed after the panel review as recorded below. Follow [Stage 12.2 test instructions](STAGE12_1_TESTING.md#stage-122-road-depot-panel-and-vehicle-only-work).
 
 **Stage 12.2 Road Depot fuel UI result — 5 November 2026**
 
 - User's in-game screenshot shows the native Road Depot panel with its two vehicle slots and no fuel indicator. This is direct evidence that `$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30` does not expose fuel in the `$TYPE_ROADDEPO` panel. The setting was present in the staged config; the game ignored it for this UI.
 - Native config comparison finds no `$STORAGE_FUEL` in the installed `road_depo.ini` or `road_depo_big.ini`, while fuel-bearing workplace types such as construction offices and distribution offices declare it. Official game documentation says road depots buy/sell and park vehicles, while workplace fuel is available to vehicles assigned to supported workplaces; it separately documents construction-office fuel storage ([Depot](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Depot), [Energy management](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Energy_management), [Construction office](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Construction_office)).
-- Do not claim Road Depot fuel storage or refuelling from the current prototype. The native-type choice now needs a user decision: retain the clean vehicle-only Road Depot panel and handle fuel at a separate station/workplace, investigate a fuel-bearing vehicle-workplace type with its extra native controls, or defer fuel UI until a custom panel/integration is feasible. No type switch has been made.
+- On the user's instruction, omit the `$STORAGE_FUEL` declaration for now. Fuel storage, consumption and refuelling are deferred; the visible tank remains decorative. The native `$TYPE_ROADDEPO` choice is retained, with exactly two vehicle slots. No in-game retest was performed after this configuration change.
 
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 

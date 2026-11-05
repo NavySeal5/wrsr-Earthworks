@@ -225,10 +225,8 @@ foreach ($node in @(
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
 $custom.Add('')
 # Use the road-depot native panel for a vehicle-only facility. The two matching
-# vehicle stations route arrivals/departures along the bay axes. The 30-unit
-# fuel store copies the native construction-office capacity as a provisional
-# first check; native depot refuelling behavior still needs in-game review.
-$custom.Add('$STORAGE_FUEL RESOURCE_TRANSPORT_OIL 30')
+# vehicle stations route arrivals/departures along the bay axes. Fuel storage
+# is omitted for now; the visible tank is decorative only.
 $custom.Add('')
 # Model coordinates: the canopy bays are centered at x=0.7 and x=13.3.
 # Move both parking anchors 5 m toward the rear of the bays so longer vehicles
@@ -274,7 +272,7 @@ $config = @"
 `$VISIBILITY 0
 `$OBJECT_BUILDING $object
 `$ITEM_NAME "$name"
-`$ITEM_DESC "Stage 12 vehicle-only Earthworks facility prototype. Two road-depot bays; 30 units of fuel storage are provisional. Decorative tank only."
+`$ITEM_DESC "Stage 12 vehicle-only Earthworks facility prototype. Two road-depot bays. Decorative tank only; fuel storage is not configured."
 `$END
 "@
 [IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'), $config, [Text.UTF8Encoding]::new($false))
@@ -310,4 +308,4 @@ Write-Host "Staged Stage 12 Earthworks facility at $target"
 Write-Host 'The native road-depot type is used; the vehicle allowlist and Earthworks project scheduler remain plugin-controlled.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
 Write-Host 'The custom model uses a textured muted material palette, with two provisional parking routes.'
-Write-Host 'No workers are required for Earthworks output. Fuel storage capacity is provisionally 30; verify the native road-depot fuel UI and refuelling in game.'
+Write-Host 'No workers are required for Earthworks output. Fuel storage is omitted; the visible tank is decorative.'
