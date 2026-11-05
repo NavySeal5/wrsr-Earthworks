@@ -65,13 +65,15 @@ Run these checks after staging build `0.14.3-stage12-project-machine-status` wit
 
 The native Road Depot purchase dialog may still display all vehicle categories. The restriction is enforced when purchasing/selecting for the facility; this stage changes the Project's live capacity display, not the native category-picker presentation.
 
-### Category-picker diagnostic build
+### Category-picker diagnostic builds
 
-Build `0.14.6-stage12-category-ui-state-probe` adds a read-only, rate-limited probe to the native vehicle-purchase callback. It does not filter or modify the UI. The previous probes loaded and ran, but the sampled purchase-window, child-window and shared UI object's first-level fields stayed unchanged while the popup was open. This build compares the first 4 KB of the shared UI context against a baseline and reports changed pointer-sized fields.
+Build `0.14.6-stage12-category-ui-state-probe` added a read-only scan of the shared UI object. It loaded, and the purchase window remained stable, but most shared-object changes were frame, position, or timing data. One flag at `ui+0xFC0` toggled twice during the popup interaction; this is a lead, not yet a confirmed popup-state field.
 
-1. Close the game and the project-local RML window, then run `launch-prototype.cmd`.
-2. Load the test save and open the Earthworks Facility's vehicle-purchase window. Leave **Filter by type** closed for two seconds.
-3. Open **Filter by type**, leave the popup open for at least three seconds, then close it and wait two seconds before closing the purchase window.
-4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. Look for `earthworks  UI probe shared-context changed` entries between the purchase-window lines. If the popup opens and closes without any such entries, that shared memory region does not hold its visible state. If there are no probe lines, include plugin initialization/preflight lines too.
+Build `0.14.7-stage12-purchase-window-probe` keeps logging that flag and compares the native purchase-window object and its child object directly. It reports changed pointer-like and small state values to filter out the continuous floating-point animation data. It does not change filtering or UI behavior. To capture the category list transition:
 
-The probe only reports observed pointers, window kinds, child-window kinds and native vehicle-list sizing. It does not establish or reserve vehicles, block input, or change purchase behavior. No gameplay test was run by the agent.
+1. Close the game and project-local RML window, then run `launch-prototype.cmd`.
+2. Load a save with an Earthworks facility and open its vehicle-purchase window.
+3. Leave **Filter by type** closed for about three seconds, open it for about five seconds, then close it for about five seconds. Keep the purchase window open throughout.
+4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. Include the lines containing `UI probe purchase-window`, `UI probe purchase-window changed`, and `UI probe child changed`.
+
+These probes are read-only diagnostics. They do not reserve vehicles, block purchase behavior, or modify the native UI. The player-facing category restriction remains unresolved until the popup's actual control state or construction path is identified. No in-game test was run by the agent.
