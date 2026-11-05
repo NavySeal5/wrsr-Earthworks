@@ -4,7 +4,7 @@
 
 ## Goal
 
-Replace the temporary construction-office-derived test item with a distinctive, placeable Earthworks facility, then connect its native building behavior and player-facing facility controls to the existing Project/Site workflow. The revised prototype is vehicle-only: its parked eligible machines provide Earthworks capacity/output without a worker requirement. Preserve the accepted vehicle classes (bulldozers, excavators, dumpers and buses), automatic recognition, no ordinary construction jobs, one Project per facility and multiple facilities per Project.
+Replace the temporary construction-office-derived test item with a distinctive, placeable Earthworks facility, then connect its native building behavior and player-facing facility controls to the existing Project/Site workflow. The revised prototype is vehicle-only: its parked eligible machines provide Earthworks capacity/output without a worker requirement. Accept only bulldozers and excavators; reject dumpers, buses and every other vehicle type (D92). Preserve automatic recognition, no ordinary construction jobs, one Project per facility and multiple facilities per Project.
 
 The selected concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible decorative tank. Fuel storage is not configured in this prototype. The facility has exactly two vehicle slots. Do not require workers or count labor toward output. Two eligible machine candidates give capacity; no eligible parked machine means no work. The machine-rate scale remains provisional under the existing rate decision. The earlier 0.5-worker-per-Strength rule (D87) is superseded by the user's vehicle-only direction; the previous 20-worker value was only a Stage 9 test setting.
 

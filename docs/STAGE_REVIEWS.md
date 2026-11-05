@@ -40,6 +40,12 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 - Native config comparison finds no `$STORAGE_FUEL` in the installed `road_depo.ini` or `road_depo_big.ini`, while fuel-bearing workplace types such as construction offices and distribution offices declare it. Official game documentation says road depots buy/sell and park vehicles, while workplace fuel is available to vehicles assigned to supported workplaces; it separately documents construction-office fuel storage ([Depot](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Depot), [Energy management](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Energy_management), [Construction office](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Construction_office)).
 - On the user's instruction, omit the `$STORAGE_FUEL` declaration for now. Fuel storage, consumption and refuelling are deferred; the visible tank remains decorative. The native `$TYPE_ROADDEPO` choice is retained, with exactly two vehicle slots. No in-game retest was performed after this configuration change.
 
+**Stage 12.2 vehicle filter narrowed — 5 November 2026**
+
+- User revised the facility allowlist to excavators and bulldozers only. Dumpers, buses and all other vehicle types must be rejected (D92).
+- The vehicle-slot filter now permits only readable native vehicle types categorized as road vehicles and whose internal names identify an excavator or bulldozer. The existing groundworks-machine classifier already uses these two classes, so the purchase/slot filter and executor eligibility now match.
+- Build `0.14.2-stage12-excavators-bulldozers-only` is staged for user-run checks. The game was not launched or tested by the agent.
+
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 
 - Reworked the dispatch wall, office roof, canopy roof and parking apron toward the vanilla firestation/garage surface appearance. Their OBJ UVs target selected regions in the installed firestation and garage DDS atlases; the parking apron is now a thin surface at grade instead of the raised slab. Other surfaces retain the established muted local BC1 textures.

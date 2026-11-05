@@ -26,17 +26,6 @@ bool ReadableTypeName(const unsigned char* type, char* name, unsigned size, unsi
     }
 }
 
-bool Contains(const char* text, const char* token)
-{
-    const size_t tokenSize = std::strlen(token);
-    for (const char* at = text; *at; ++at) {
-        size_t i = 0;
-        while (i < tokenSize && at[i] && static_cast<char>(std::tolower(static_cast<unsigned char>(at[i]))) == token[i]) ++i;
-        if (i == tokenSize) return true;
-    }
-    return false;
-}
-
 bool IsAsciiLetter(char value)
 {
     value = static_cast<char>(std::tolower(static_cast<unsigned char>(value)));
@@ -66,10 +55,7 @@ bool AllowEarthworksVehicleType(void* vehicleType, char* rejectedType, unsigned 
         const bool roadVehicle = category == 1 || category == 2;
         const bool bulldozer = roadVehicle && (ContainsWord(name, "bulldozer") || ContainsWord(name, "buldozer"));
         const bool excavator = roadVehicle && (ContainsWord(name, "excavator") || ContainsWord(name, "exvacator"));
-        const bool dumper = roadVehicle && (ContainsWord(name, "dumper") || ContainsWord(name, "dump_truck")
-            || ContainsWord(name, "dumptruck") || Contains(name, "gravel"));
-        const bool bus = category == 1 && (ContainsWord(name, "bus") || ContainsWord(name, "bust"));
-        allowed = bulldozer || excavator || dumper || bus;
+        allowed = bulldozer || excavator;
     }
     if (!allowed && rejectedType && rejectedTypeSize) {
         if (readable) strncpy_s(rejectedType, rejectedTypeSize, name, _TRUNCATE);
