@@ -67,11 +67,11 @@ The native Road Depot purchase dialog may still display all vehicle categories. 
 
 ### Category-picker diagnostic build
 
-Build `0.14.5-stage12-category-ui-root-probe` adds a read-only, rate-limited probe to the native vehicle-purchase callback. It does not filter or modify the UI. The previous `0.14.4` probe loaded and ran, but the sampled purchase-window and child-window fields stayed unchanged while the popup was open. This build also samples equivalent fields from the callback's other object to check whether the popup state lives in the shared UI context.
+Build `0.14.6-stage12-category-ui-state-probe` adds a read-only, rate-limited probe to the native vehicle-purchase callback. It does not filter or modify the UI. The previous probes loaded and ran, but the sampled purchase-window, child-window and shared UI object's first-level fields stayed unchanged while the popup was open. This build compares the first 4 KB of the shared UI context against a baseline and reports changed pointer-sized fields.
 
 1. Close the game and the project-local RML window, then run `launch-prototype.cmd`.
 2. Load the test save and open the Earthworks Facility's vehicle-purchase window. Leave **Filter by type** closed for two seconds.
 3. Open **Filter by type**, leave the popup open for at least three seconds, then close it and wait two seconds before closing the purchase window.
-4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. The needed lines begin `earthworks  UI probe purchase-window=` and now include `ui=`, `uiSelected=`, and `uiChild=` fields. If there are no such lines, include the plugin initialization/preflight lines too.
+4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. Look for `earthworks  UI probe shared-context changed` entries between the purchase-window lines. If the popup opens and closes without any such entries, that shared memory region does not hold its visible state. If there are no probe lines, include plugin initialization/preflight lines too.
 
 The probe only reports observed pointers, window kinds, child-window kinds and native vehicle-list sizing. It does not establish or reserve vehicles, block input, or change purchase behavior. No gameplay test was run by the agent.

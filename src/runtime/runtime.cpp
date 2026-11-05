@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -1093,11 +1094,15 @@ unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t 
 }
 void HookedVehiclePurchaseUi(void* ui,void* window)
 {
-    // Read-only probe for the native category picker. The first pass showed
-    // that the purchase window's child pointer did not change while the type
-    // dropdown was open, so also sample the callback's shared UI context.
-    // The original game callback remains responsible for all UI behavior.
+    // Read-only probe for the native category picker. The window/child fields
+    // and the shared UI object's first-level fields did not change in the
+    // previous pass. Keep a small baseline of the shared UI context and report
+    // qwords that change while the Earthworks purchase window is active.
     static ULONGLONG lastProbe=0;
+    static constexpr size_t SharedUiProbeBytes=0x1000;
+    static uintptr_t previousUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
+    static bool havePreviousUi=false;
+    static void* previousUiAddress=nullptr;
     void* selectedBuilding=nullptr;
     void* childWindow=nullptr;
     void* uiSelectedBuilding=nullptr;
@@ -1145,6 +1150,43 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
                 reinterpret_cast<void*>(childSelected),listCount,
                 static_cast<unsigned long long>(listEnd>=listBegin?listEnd-listBegin:0),
                 ui,uiSelectedBuilding,uiChildWindow,uiKind,uiMode,reinterpret_cast<void*>(uiChildSelected));
+            if(ui) {
+                uintptr_t currentUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
+                bool readable=false;
+                __try {
+                    std::memcpy(currentUi,ui,SharedUiProbeBytes);
+                    readable=true;
+                } __except(EXCEPTION_EXECUTE_HANDLER) { readable=false; }
+                if(readable) {
+                    if(!havePreviousUi || previousUiAddress!=ui) {
+                        std::memcpy(previousUi,currentUi,sizeof(previousUi));
+                        previousUiAddress=ui;
+                        havePreviousUi=true;
+                        host->log("earthworks  UI probe shared-context baseline ui=%p bytes=%llu",ui,
+                            static_cast<unsigned long long>(SharedUiProbeBytes));
+                    } else {
+                        char changed[1200]{};
+                        size_t used=0;
+                        unsigned changedCount=0;
+                        for(size_t i=0;i<sizeof(previousUi)/sizeof(previousUi[0]) && changedCount<20;++i) {
+                            if(previousUi[i]==currentUi[i])continue;
+                            const int written=_snprintf_s(changed+used,sizeof(changed)-used,_TRUNCATE,
+                                " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
+                                static_cast<unsigned long long>(previousUi[i]),static_cast<unsigned long long>(currentUi[i]));
+                            if(written>0)used+=static_cast<size_t>(written);
+                            ++changedCount;
+                        }
+                        if(changedCount) {
+                            host->log("earthworks  UI probe shared-context changed ui=%p fields=%u%s",ui,changedCount,changed);
+                            std::memcpy(previousUi,currentUi,sizeof(previousUi));
+                        }
+                    }
+                } else {
+                    havePreviousUi=false;
+                    previousUiAddress=nullptr;
+                    host->log("earthworks  UI probe shared-context unreadable ui=%p",ui);
+                }
+            }
         }
     }
     originalVehiclePurchaseUi(ui,window);
