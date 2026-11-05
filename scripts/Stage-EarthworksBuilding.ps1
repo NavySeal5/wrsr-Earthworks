@@ -151,9 +151,6 @@ $donorIni = Get-Content -LiteralPath (Join-Path $source 'muddy_construction.ini'
 $retained = @($donorIni | Where-Object {
     $_ -match '^\s*\$(?:TYPE_CONSTRUCTION_OFFICE|NO_LIFESPAN|AMBIENT_SFX|WATERSEWAGE_DISABLE|ELECTRIC_DISABLE|HEATING_DISABLE|COUNT_LIMIT)(?:\s|$)'
 })
-$resourceSources = @($donorIni | Where-Object {
-    $_ -match '^\s*\$RESOURCE_SOURCE_[A-Z_]+(?:\s|$)'
-})
 $custom = [Collections.Generic.List[string]]::new()
 $custom.Add("`$NAME_STR `"$name`"")
 $custom.Add('')
@@ -224,8 +221,10 @@ foreach ($node in @(
 }
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
 $custom.Add('')
-$custom.AddRange([string[]]$resourceSources)
-$custom.Add('')
+# Earthworks does not consume construction materials or dispatch construction
+# jobs, so do not inherit the construction office's resource-source controls.
+# The native construction-assignment UI is type-bound and remains a separate
+# UI-hook investigation; the plugin blocks assignment behavior for this type.
 $custom.Add('$WORKERS_NEEDED 5')
 $custom.Add('$WORKING_VEHICLES_NEEDED 2')
 $custom.Add('')
