@@ -58,7 +58,6 @@ GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
 FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
 TANK = material("decorative_tank_painted_steel", (1.00, 1.00, 1.00), 0.90, 0.01)
 TANK_TOP = material("tank_cap_steel", (0.28, 0.31, 0.28), 0.90, 0.01)
-ROAD_PAINT = material("parking_bay_markings", (0.80, 0.77, 0.67), 0.95)
 
 
 EXPORT_OBJECTS = []
@@ -176,12 +175,13 @@ def make_building():
     add_box("office_door_panel", (entry_x, -8.91, 2.42), (1.16, 0.05, 2.68), FRAME, 0.025)
     add_box("office_door_handle", (entry_x + 0.48, -8.98, 2.25), (0.07, 0.05, 0.27), FRAME, 0.015)
     add_box("office_entry_canopy", (entry_x, -9.63, 4.20), (2.65, 1.0, 0.18), STEEL, 0.04)
-    for idx, step in enumerate((0.18, 0.40, 0.62)):
+    # The lowest tread sits furthest from the doorway; the stair rises toward it.
+    for idx, step in enumerate((0.62, 0.40, 0.18)):
         add_box(f"office_entry_step_{idx+1}", (entry_x, -9.10 - idx * 0.47, step / 2), (2.3, 0.50, step), CONCRETE, 0.05)
     # A restrained red dispatch mark with three angled stripes.
     add_box("dispatch_mark", (-13.8, -8.93, 4.92), (5.5, 0.08, 0.34), SAFETY_RED, 0.03)
     for idx, x in enumerate((-11.0, -10.55, -10.10)):
-        add_box(f"dispatch_mark_slash_{idx+1}", (x, -9.01, 4.92), (0.12, 0.04, 0.34), ROAD_PAINT, 0.01)
+        add_box(f"dispatch_mark_slash_{idx+1}", (x, -9.01, 4.92), (0.12, 0.04, 0.34), CONCRETE, 0.01)
 
     # Small chimney and a modest exhaust stack.
     add_box("office_chimney_lower", (-16.9, 3.7, 6.16), (1.25, 1.25, 0.75), PLASTER, 0.05)
@@ -206,8 +206,8 @@ def make_building():
             add_box(f"canopy_{side_name}_post_{idx+1}", (x, y, 3.55), (0.48, 0.48, 6.05), STEEL, 0.035)
             add_box(f"canopy_{side_name}_safety_band_{idx+1}", (x, y - 0.26, 0.86), (0.50, 0.035, 0.80), SAFETY_RED, 0.015)
             # Two pale diagonal warning slashes on the post base.
-            add_box(f"canopy_{side_name}_stripe_a_{idx+1}", (x - 0.10, y - 0.285, 0.86), (0.07, 0.025, 0.72), ROAD_PAINT, 0.01).rotation_euler[1] = math.radians(25)
-            add_box(f"canopy_{side_name}_stripe_b_{idx+1}", (x + 0.12, y - 0.285, 0.86), (0.07, 0.025, 0.72), ROAD_PAINT, 0.01).rotation_euler[1] = math.radians(25)
+            add_box(f"canopy_{side_name}_stripe_a_{idx+1}", (x - 0.10, y - 0.285, 0.86), (0.07, 0.025, 0.72), CONCRETE, 0.01).rotation_euler[1] = math.radians(25)
+            add_box(f"canopy_{side_name}_stripe_b_{idx+1}", (x + 0.12, y - 0.285, 0.86), (0.07, 0.025, 0.72), CONCRETE, 0.01).rotation_euler[1] = math.radians(25)
 
     # Longitudinal roof rails on both outer edges and the center dividing line.
     for idx, x in enumerate((x_left, x_mid, x_right)):
@@ -233,11 +233,8 @@ def make_building():
         bpy.context.collection.objects.link(roof)
         EXPORT_OBJECTS.append(roof)
 
-    # Painted bay guides stop short of the front apron and help read the two slots.
-    for idx, x in enumerate((x_left + 0.45, x_mid, x_right - 0.45)):
-        add_box(f"bay_line_{idx+1}", (x, 0.0, 0.046), (0.10, 15.2, 0.012), ROAD_PAINT, 0.004)
-    for idx, x in enumerate(((x_left + x_mid) / 2.0, (x_mid + x_right) / 2.0)):
-        add_box(f"bay_number_pad_{idx+1}", (x, -1.5, 0.0525), (0.85, 0.85, 0.025), CONCRETE, 0.01)
+    # Parking markings and the two decorative center pads are intentionally
+    # omitted; the native ground surface is provided by building metadata.
 
 
 # Material atlas regions used by vanilla building assets. Coordinates are pixel

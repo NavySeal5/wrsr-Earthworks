@@ -10,7 +10,7 @@ The approved target is the initial two-bay canopy, a single road-facing entrance
 - Dispatch office with front windows, door, plinth, shallow roof, and restrained red trim.
 - A vertical decorative tank is visible beside the office. It has no pump or hose and makes no fuel-service promise.
 - The model is authored from named low-poly objects using Blender, with separate material groups. The `.blend` file and generator remain editable project source.
-- The prior OBJ export had 10 material-group meshes, 3,590 vertices total and 6,596 triangles. The current edit removes the separate roof-rib material mesh; re-export and update these counts after ModelViewer conversion. It contains no quads/ngons. The official modelling notes recommend triangles and cite an approximate 19,000-vertex per-object limit: [Modelviewer](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer), [Modelling](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling).
+- The latest Blender OBJ before this correction had 10 material-group meshes, 2,014 vertices and 3,692 faces. This revision removes the two center parking pads, all bay guides, and the `parking_bay_markings` material group, and reverses the stair height sequence so the highest tread is nearest the door. ModelViewer must re-import the regenerated OBJ before the NMF is current. The official modelling notes recommend triangles and cite an approximate 19,000-vertex per-object limit: [Modelviewer](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelviewer), [Modelling](https://wiki.hoodedhorse.com/Workers_Resources_Soviet_Republic/Modelling).
 
 ## Project assets
 

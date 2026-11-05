@@ -502,3 +502,10 @@ A single user statement can accept the current result and authorize progression.
 **Stage 12.1 additional snap-point adjustment — 5 November 2026**
 
 - At the user's request, moved the road snap point another 3 m toward the forecourt, changing the anchored X coordinate from `22.5` to `19.5` while keeping Z `15` and the left-facing direction. The connector points are now `(19.5, 0, 15)` and `(9.5, 0, 15)`. This is an INI-only adjustment; restage and check a newly placed building.
+
+**Stage 12.1 parking geometry and entrance stair correction — 5 November 2026**
+
+- The user identified two square pads in the vehicle court, both included in `mesh_foundation_concrete`, and asked to remove the complete `mesh_parking_bay_markings` group. The Blender source now omits both center pads and bay-line geometry; the parking-marking material group is removed. Small non-parking warning accents use the concrete material instead. The native asphalt rectangle remains separate metadata.
+- The user also reported the entry stairs rising away from the door. Reversed the tread-height order so the lowest tread is furthest from the entrance and the highest tread is nearest it.
+- Regenerated the editable Blender scene, OBJ/MTL and preview. Updated construction staging so the removed material/node is not referenced, and added the tank-cap mesh to the rooftop construction phase so every exported mesh group has a construction phase.
+- Copied the new OBJ/MTL into the ModelViewer-accessible object folder under `media_soviet`. The existing NMF is intentionally still the old conversion; do not launch the game until ModelViewer exports the new OBJ to NMF, that NMF is copied to the native source folder, and the Workshop item is restaged. No in-game test was run.

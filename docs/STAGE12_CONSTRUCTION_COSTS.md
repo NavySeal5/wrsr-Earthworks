@@ -16,7 +16,7 @@ The current prototype copies the installed vanilla construction-office recipe:
 | Brick Laying | `1.0` | `wall_brick 0.7`, `wall_wood 0.3` |
 | Rooftop Building | `1.0` | `roof_woodsteel 0.8` |
 
-Groundworks nodes are `mesh_foundation_concrete` and `mesh_parking_bay_markings`. Brick Laying nodes are `mesh_dispatch_plaster_pale`, `mesh_window_frames`, `mesh_safety_red`, and `mesh_office_window_glass`. Rooftop Building nodes are `mesh_canopy_structural_steel`, `mesh_decorative_tank_painted_steel`, `mesh_corrugated_galvanized_roof`, and `mesh_roof_rib_highlight`. The Groundworks vehicle work station is attached to `mesh_foundation_concrete`.
+Groundworks nodes are `mesh_foundation_concrete`. Brick Laying nodes are `mesh_dispatch_concrete`, `mesh_window_frames`, `mesh_safety_red`, and `mesh_office_window_glass`. Rooftop Building nodes are `mesh_canopy_structural_steel`, `mesh_decorative_tank_painted_steel`, `mesh_tank_cap_steel`, `mesh_corrugated_galvanized_roof`, and `mesh_office_roof_graphite`. The Groundworks vehicle work station is attached to `mesh_foundation_concrete`. The asphalt forecourt is defined by native `$CONNECTIONS_ROAD_DEAD_SQUARE` metadata, not an NMF mesh node.
 
 ## Changing costs
 

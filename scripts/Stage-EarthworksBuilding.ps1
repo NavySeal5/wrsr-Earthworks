@@ -105,7 +105,6 @@ $facilityMaterials = @(
     @{ Name = 'safety_red'; Color = @(160, 48, 38) },
     @{ Name = 'office_window_glass'; Color = @(74, 119, 135) },
     @{ Name = 'canopy_structural_steel'; Color = @(78, 84, 88) },
-    @{ Name = 'parking_bay_markings'; Color = @(225, 215, 187) },
     # The Blender authoring step bakes these atlas patches into local BC1 DDS
     # files so darkening does not depend on a material tint in the game.
     @{ Name = 'decorative_tank_painted_steel'; TextureMtl = 'earthworks_tank_steel.dds' },
@@ -174,8 +173,7 @@ $custom.Add('')
 $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
-    'mesh_foundation_concrete',
-    'mesh_parking_bay_markings'
+    'mesh_foundation_concrete'
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
@@ -198,6 +196,7 @@ $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 1.0')
 foreach ($node in @(
     'mesh_canopy_structural_steel',
     'mesh_decorative_tank_painted_steel',
+    'mesh_tank_cap_steel',
     'mesh_corrugated_galvanized_roof',
     'mesh_office_roof_graphite'
 )) {
