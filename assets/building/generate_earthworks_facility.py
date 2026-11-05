@@ -159,7 +159,8 @@ def make_building():
     # Keep the paved vehicle area flush with terrain, like the vanilla fire
     # station forecourt. The thin surface is visual paving, not a raised pad.
     add_box("parking_surface", (0.2, 0.0, 0.02), (40.0, 21.0, 0.04), PARKING_SURFACE)
-    add_box("front_entry_apron", (7.0, -12.2, 0.02), (26.0, 4.4, 0.04), PARKING_SURFACE)
+    # Leave a deeper paved turning apron in front of both open garage bays.
+    add_box("front_entry_apron", (7.0, -15.0, 0.02), (26.0, 10.0, 0.04), PARKING_SURFACE)
     add_box("office_plinth", (-12.8, -0.8, 0.56), (13.6, 16.2, 0.42), CONCRETE, 0.08)
 
     # Compact dispatch office to the left of the canopy.

@@ -211,11 +211,11 @@ $custom.Add('')
 $custom.Add('$VEHICLE_PARKING 0.7000 0.0000 0.0000 0.7000 0.0000 10.0000')
 $custom.Add('$VEHICLE_PARKING 13.3000 0.0000 0.0000 13.3000 0.0000 10.0000')
 $custom.Add('')
-# One straight road apron spans both open bay fronts. Vehicles turn 90 degrees
-# from the apron into either bay; positive Z is the open frontage in this model.
+# Side access follows the road shown beside the garage. The parking orientation
+# remains front-facing; the expanded paved apron gives vehicles room to turn in.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('-7.0000 0.0000 14.5000')
-$custom.Add('21.0000 0.0000 14.5000')
+$custom.Add('24.5000 0.0000 -10.0000')
+$custom.Add('24.5000 0.0000 10.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
