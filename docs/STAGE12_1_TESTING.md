@@ -67,11 +67,11 @@ The native Road Depot purchase dialog may still display all vehicle categories. 
 
 ### Category-picker diagnostic build
 
-Build `0.14.4-stage12-category-ui-probe` adds a read-only, rate-limited probe to the native vehicle-purchase window. It does not filter or modify the UI. Use it to capture the purchase-window and child-window state while the category popup is open:
+Build `0.14.5-stage12-category-ui-root-probe` adds a read-only, rate-limited probe to the native vehicle-purchase callback. It does not filter or modify the UI. The previous `0.14.4` probe loaded and ran, but the sampled purchase-window and child-window fields stayed unchanged while the popup was open. This build also samples equivalent fields from the callback's other object to check whether the popup state lives in the shared UI context.
 
 1. Close the game and the project-local RML window, then run `launch-prototype.cmd`.
-2. Load the test save and open the Earthworks Facility's vehicle-purchase window.
-3. Open **Filter by type** and leave its category popup open for at least three seconds. Close the popup and purchase window normally.
-4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. The needed lines begin `earthworks  UI probe purchase-window=`. If there are no such lines, include the plugin initialization/preflight lines too.
+2. Load the test save and open the Earthworks Facility's vehicle-purchase window. Leave **Filter by type** closed for two seconds.
+3. Open **Filter by type**, leave the popup open for at least three seconds, then close it and wait two seconds before closing the purchase window.
+4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. The needed lines begin `earthworks  UI probe purchase-window=` and now include `ui=`, `uiSelected=`, and `uiChild=` fields. If there are no such lines, include the plugin initialization/preflight lines too.
 
 The probe only reports observed pointers, window kinds, child-window kinds and native vehicle-list sizing. It does not establish or reserve vehicles, block input, or change purchase behavior. No gameplay test was run by the agent.

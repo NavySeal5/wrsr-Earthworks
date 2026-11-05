@@ -1093,14 +1093,17 @@ unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t 
 }
 void HookedVehiclePurchaseUi(void* ui,void* window)
 {
-    // Read-only probe for the native category picker.  The selected building
-    // and child window are inspected only when this is an Earthworks facility;
-    // the original game callback remains responsible for all UI behavior.
+    // Read-only probe for the native category picker. The first pass showed
+    // that the purchase window's child pointer did not change while the type
+    // dropdown was open, so also sample the callback's shared UI context.
+    // The original game callback remains responsible for all UI behavior.
     static ULONGLONG lastProbe=0;
     void* selectedBuilding=nullptr;
     void* childWindow=nullptr;
-    unsigned windowKind=0,windowMode=0,childKind=0,childMode=0,listCount=0;
-    uintptr_t listBegin=0,listEnd=0,childSelected=0;
+    void* uiSelectedBuilding=nullptr;
+    void* uiChildWindow=nullptr;
+    unsigned windowKind=0,windowMode=0,childKind=0,childMode=0,uiKind=0,uiMode=0,listCount=0;
+    uintptr_t listBegin=0,listEnd=0,childSelected=0,uiChildSelected=0;
     __try {
         auto* bytes=static_cast<unsigned char*>(window);
         if(bytes) {
@@ -1118,15 +1121,30 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
                 childSelected=reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(child+0x240));
             }
         }
-    } __except(EXCEPTION_EXECUTE_HANDLER) { selectedBuilding=nullptr; childWindow=nullptr; }
-    if(IsEarthworksFacility(selectedBuilding) || IsEarthworksFacility(reinterpret_cast<void*>(childSelected))) {
+        auto* uiBytes=static_cast<unsigned char*>(ui);
+        if(uiBytes) {
+            uiKind=*reinterpret_cast<unsigned*>(uiBytes+0x23C);
+            uiMode=*reinterpret_cast<unsigned*>(uiBytes+0x248);
+            uiSelectedBuilding=*reinterpret_cast<void**>(uiBytes+0x240);
+            uiChildWindow=*reinterpret_cast<void**>(uiBytes+0x5C8);
+            if(uiChildWindow) {
+                auto* child=static_cast<unsigned char*>(uiChildWindow);
+                uiChildSelected=reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(child+0x240));
+            }
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        selectedBuilding=nullptr; childWindow=nullptr; uiSelectedBuilding=nullptr; uiChildWindow=nullptr;
+    }
+    if(IsEarthworksFacility(selectedBuilding) || IsEarthworksFacility(reinterpret_cast<void*>(childSelected))
+        || IsEarthworksFacility(uiSelectedBuilding) || IsEarthworksFacility(reinterpret_cast<void*>(uiChildSelected))) {
         const ULONGLONG now=GetTickCount64();
         if(now-lastProbe>=1000) {
             lastProbe=now;
-            host->log("earthworks  UI probe purchase-window=%p selected=%p child=%p kind=%u mode=%u childKind=%u childMode=%u childSelected=%p vehicleRows=%u rowBytes=%llu",
+            host->log("earthworks  UI probe purchase-window=%p selected=%p child=%p kind=%u mode=%u childKind=%u childMode=%u childSelected=%p rows=%u rowBytes=%llu ui=%p uiSelected=%p uiChild=%p uiKind=%u uiMode=%u uiChildSelected=%p",
                 window,selectedBuilding,childWindow,windowKind,windowMode,childKind,childMode,
                 reinterpret_cast<void*>(childSelected),listCount,
-                static_cast<unsigned long long>(listEnd>=listBegin?listEnd-listBegin:0));
+                static_cast<unsigned long long>(listEnd>=listBegin?listEnd-listBegin:0),
+                ui,uiSelectedBuilding,uiChildWindow,uiKind,uiMode,reinterpret_cast<void*>(uiChildSelected));
         }
     }
     originalVehiclePurchaseUi(ui,window);

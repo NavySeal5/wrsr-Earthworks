@@ -56,8 +56,8 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 **Stage 12.2 native category-picker investigation — 5 November 2026**
 
 - Static tracing confirmed that the existing vehicle-slot hook only enforces the allowlist at vehicle selection/purchase; it does not build the native **Filter by type** popup. The installed building configuration also has no per-building vehicle-category list directive.
-- Traced the native vehicle-purchase window callback at EXE+0x80CC60 and its dispatch path. Added a prologue-checked, read-only hook that rate-limits observations to Earthworks facility purchase windows and records the native window/child-window kinds and vehicle-list sizing. It leaves native UI and purchase behavior unchanged.
-- Build `0.14.4-stage12-category-ui-probe` compiled and its x64 DLL exports were verified. No game test was run by the agent. The user should open the facility's **Filter by type** popup for three seconds and return `tools/runtime/rml/rml/logs/rml-runtime.log` using the instructions in [Stage 12.2 testing](STAGE12_1_TESTING.md#category-picker-diagnostic-build). The probe evidence will determine whether to filter the native popup in place or whether the purchase UI needs a dedicated Earthworks-specific selector.
+- Traced the native vehicle-purchase window callback at EXE+0x80CC60 and its dispatch path. Build `0.14.4` added a prologue-checked, read-only hook. The user log confirmed the plugin loaded, the hook ran for 15 seconds with the category popup open, and the game exited normally. The sampled purchase-window and child-window fields remained constant and their reported vehicle-list sizing was zero, so they did not expose the popup state.
+- Build `0.14.5-stage12-category-ui-root-probe` extends the same read-only observation to the callback's other object, to test whether shared UI context contains the popup state. No purchase/UI behavior changes. User-run steps are in [Stage 12.2 testing](STAGE12_1_TESTING.md#category-picker-diagnostic-build); no in-game test was run by the agent.
 
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 
