@@ -457,4 +457,4 @@ A single user statement can accept the current result and authorize progression.
 
 - The user provided a close-up showing that the construction-office tank crop wrapped onto the upward-facing cap as a stretched, wavy atlas pattern. A separate white concrete vent cap and dark neck created the unwanted white knob.
 - Assigned the top cap a separate muted solid-steel material and removed the protruding neck/vent geometry. The side shell retains the weathered CO atlas patch.
-- Regenerated the Blender scene, preview and OBJ. ModelViewer did not remain open when launched, so the NMF has not yet been updated and the item has not been restaged. Needs ModelViewer conversion, restaging, then a fresh in-game placement check.
+- Regenerated the Blender scene, preview and OBJ. After the user opened ModelViewer, imported the OBJ from its copy inside `media_soviet`, and saved `model.nmf` in the WIP object folder, copied that NMF into the native source folder. Added the `tank_cap_steel` material in the native template and staged object MTL. Restaged the updated item; a fresh in-game placement check remains pending.
