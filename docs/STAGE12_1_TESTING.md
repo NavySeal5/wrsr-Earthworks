@@ -77,3 +77,5 @@ Build `0.14.7-stage12-purchase-window-probe` keeps logging that flag and compare
 4. Exit the game and send `tools/runtime/rml/rml/logs/rml-runtime.log`. Include the lines containing `UI probe purchase-window`, `UI probe purchase-window changed`, and `UI probe child changed`.
 
 These probes are read-only diagnostics. They do not reserve vehicles, block purchase behavior, or modify the native UI. The player-facing category restriction remains unresolved until the popup's actual control state or construction path is identified. No in-game test was run by the agent.
+
+Build `0.14.8-stage12-popup-tree-probe` follows up on the 0.14.7 run: `ui+0xFC0` changed from `0x101000000` to `0x101000100` when the category popup appeared, then returned when it closed. That strongly associates the flag with popup visibility. This build logs pointer-like changes in the shared UI context only at those flag transitions, to locate the popup node without dumping frame and timer fields. Repeat the same open/close sequence above and send the `UI probe shared-context` lines. This still does not change the UI.

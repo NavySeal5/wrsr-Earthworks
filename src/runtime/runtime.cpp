@@ -1094,18 +1094,16 @@ unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t 
 }
 void HookedVehiclePurchaseUi(void* ui,void* window)
 {
-    // Read-only probe for native purchase-window controls. A previous broad
-    // scan of the shared UI context mostly captured frame/position data. The
-    // category popup should instead change the purchase window or one of its
-    // child controls, so compare those objects directly.
+    // Read-only probe for the native category popup. The focused window scan
+    // found that ui+0xFC0 changes when the popup opens/closes, while the
+    // purchase-window deltas are mostly timers. Compare shared-context pointer
+    // fields only at those state transitions to locate the popup's UI nodes.
     static ULONGLONG lastProbe=0;
-    static constexpr size_t WindowProbeBytes=0x8000;
-    static constexpr size_t ChildProbeBytes=0x1000;
-    static uintptr_t previousWindow[WindowProbeBytes/sizeof(uintptr_t)]{};
-    static uintptr_t previousChild[ChildProbeBytes/sizeof(uintptr_t)]{};
-    static bool havePreviousWindow=false,havePreviousChild=false;
-    static void* previousWindowAddress=nullptr;
-    static void* previousChildAddress=nullptr;
+    static constexpr size_t SharedUiProbeBytes=0x1000;
+    static uintptr_t previousUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
+    static bool havePreviousUi=false;
+    static void* previousUiAddress=nullptr;
+    static uintptr_t previousSharedFlag=0;
     void* selectedBuilding=nullptr;
     void* childWindow=nullptr;
     unsigned windowKind=0,windowMode=0,childKind=0,childMode=0;
@@ -1136,92 +1134,49 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
                 window,selectedBuilding,childWindow,windowKind,windowMode,childKind,childMode,
                 reinterpret_cast<void*>(childSelected),
                 static_cast<unsigned long long>(sharedFlag));
-            if(window) {
-                uintptr_t currentWindow[WindowProbeBytes/sizeof(uintptr_t)]{};
+            if(ui) {
+                uintptr_t currentUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
                 bool readable=false;
                 __try {
-                    std::memcpy(currentWindow,window,WindowProbeBytes);
+                    std::memcpy(currentUi,ui,SharedUiProbeBytes);
                     readable=true;
                 } __except(EXCEPTION_EXECUTE_HANDLER) { readable=false; }
                 if(readable) {
-                    if(!havePreviousWindow || previousWindowAddress!=window) {
-                        std::memcpy(previousWindow,currentWindow,sizeof(previousWindow));
-                        previousWindowAddress=window;
-                        havePreviousWindow=true;
-                        host->log("earthworks  UI probe window baseline address=%p bytes=%llu",window,
-                            static_cast<unsigned long long>(WindowProbeBytes));
+                    if(!havePreviousUi || previousUiAddress!=ui) {
+                        std::memcpy(previousUi,currentUi,sizeof(previousUi));
+                        previousUiAddress=ui;
+                        previousSharedFlag=sharedFlag;
+                        havePreviousUi=true;
+                        host->log("earthworks  UI probe shared-context baseline ui=%p bytes=%llu flag=%llX",ui,
+                            static_cast<unsigned long long>(SharedUiProbeBytes),static_cast<unsigned long long>(sharedFlag));
                     } else {
-                        char changed[1200]{};
-                        size_t used=0;
-                        unsigned changedCount=0;
-                        for(size_t i=0;i<sizeof(previousWindow)/sizeof(previousWindow[0]) && changedCount<16;++i) {
-                            if(previousWindow[i]==currentWindow[i])continue;
-                            const uintptr_t before=previousWindow[i],after=currentWindow[i];
-                            const auto likelyPointer=[](uintptr_t value) {
-                                return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
-                            };
-                            const auto likelySmallState=[](uintptr_t value) { return value<=0x1000000ull; };
-                            if(!likelyPointer(before) && !likelyPointer(after)
-                                && !likelySmallState(before) && !likelySmallState(after))continue;
-                            const int written=_snprintf_s(changed+used,sizeof(changed)-used,_TRUNCATE,
-                                " +0x%04llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
-                                static_cast<unsigned long long>(before),static_cast<unsigned long long>(after));
-                            if(written>0)used+=static_cast<size_t>(written);
-                            ++changedCount;
+                        if(previousSharedFlag!=sharedFlag) {
+                            char changed[1600]{};
+                            size_t used=0;
+                            unsigned changedCount=0;
+                            for(size_t i=0;i<sizeof(previousUi)/sizeof(previousUi[0]) && changedCount<24;++i) {
+                                if(previousUi[i]==currentUi[i])continue;
+                                const uintptr_t before=previousUi[i],after=currentUi[i];
+                                const auto likelyPointer=[](uintptr_t value) {
+                                    return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
+                                };
+                                if(!likelyPointer(before) && !likelyPointer(after))continue;
+                                const int written=_snprintf_s(changed+used,sizeof(changed)-used,_TRUNCATE,
+                                    " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
+                                    static_cast<unsigned long long>(before),static_cast<unsigned long long>(after));
+                                if(written>0)used+=static_cast<size_t>(written);
+                                ++changedCount;
+                            }
+                            host->log("earthworks  UI probe shared-context flag transition %llX>%llX pointerFields=%u%s",
+                                static_cast<unsigned long long>(previousSharedFlag),static_cast<unsigned long long>(sharedFlag),changedCount,changed);
                         }
-                        if(changedCount) {
-                            host->log("earthworks  UI probe purchase-window changed window=%p fields=%u%s",window,changedCount,changed);
-                            std::memcpy(previousWindow,currentWindow,sizeof(previousWindow));
-                        }
+                        std::memcpy(previousUi,currentUi,sizeof(previousUi));
+                        previousSharedFlag=sharedFlag;
                     }
                 } else {
-                    havePreviousWindow=false;
-                    previousWindowAddress=nullptr;
-                    host->log("earthworks  UI probe purchase-window unreadable window=%p",window);
-                }
-            }
-            if(childWindow) {
-                uintptr_t currentChild[ChildProbeBytes/sizeof(uintptr_t)]{};
-                bool readable=false;
-                __try {
-                    std::memcpy(currentChild,childWindow,ChildProbeBytes);
-                    readable=true;
-                } __except(EXCEPTION_EXECUTE_HANDLER) { readable=false; }
-                if(readable) {
-                    if(!havePreviousChild || previousChildAddress!=childWindow) {
-                        std::memcpy(previousChild,currentChild,sizeof(previousChild));
-                        previousChildAddress=childWindow;
-                        havePreviousChild=true;
-                        host->log("earthworks  UI probe child baseline address=%p bytes=%llu",childWindow,
-                            static_cast<unsigned long long>(ChildProbeBytes));
-                    } else {
-                        char changed[1000]{};
-                        size_t used=0;
-                        unsigned changedCount=0;
-                        for(size_t i=0;i<sizeof(previousChild)/sizeof(previousChild[0]) && changedCount<12;++i) {
-                            if(previousChild[i]==currentChild[i])continue;
-                            const uintptr_t before=previousChild[i],after=currentChild[i];
-                            const auto likelyPointer=[](uintptr_t value) {
-                                return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
-                            };
-                            const auto likelySmallState=[](uintptr_t value) { return value<=0x1000000ull; };
-                            if(!likelyPointer(before) && !likelyPointer(after)
-                                && !likelySmallState(before) && !likelySmallState(after))continue;
-                            const int written=_snprintf_s(changed+used,sizeof(changed)-used,_TRUNCATE,
-                                " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
-                                static_cast<unsigned long long>(before),static_cast<unsigned long long>(after));
-                            if(written>0)used+=static_cast<size_t>(written);
-                            ++changedCount;
-                        }
-                        if(changedCount) {
-                            host->log("earthworks  UI probe child changed child=%p fields=%u%s",childWindow,changedCount,changed);
-                            std::memcpy(previousChild,currentChild,sizeof(previousChild));
-                        }
-                    }
-                } else {
-                    havePreviousChild=false;
-                    previousChildAddress=nullptr;
-                    host->log("earthworks  UI probe child unreadable child=%p",childWindow);
+                    havePreviousUi=false;
+                    previousUiAddress=nullptr;
+                    host->log("earthworks  UI probe shared-context unreadable ui=%p",ui);
                 }
             }
         }
