@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.14.2-stage12-excavators-bulldozers-only",
+  "version": "0.14.3-stage12-project-machine-status",
   "description": "Plan Sites in named Projects, edit them on the map, and assign Earthworks facilities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

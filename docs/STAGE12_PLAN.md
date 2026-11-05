@@ -1,6 +1,6 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** Stage 12.1's model is accepted by the user. The 12.2 prototype uses `$TYPE_ROADDEPO`, removes Earthworks worker staffing/output and keeps two vehicle slots. Fuel storage is omitted for now because it does not appear in the Road Depot UI; the visible tank is decorative. Native panel, purchase/parking and Earthworks execution checks are pending user review. This stage has three parts: model/design, native building UI, and integration with Earthworks facility management and Projects.
+**Status:** Stage 12.1's model is accepted by the user. The 12.2 prototype uses `$TYPE_ROADDEPO`, removes Earthworks worker staffing/output and keeps two vehicle slots. Fuel storage is omitted for now because it does not appear in the Road Depot UI; the visible tank is decorative. The user confirmed the excavator/bulldozer restriction works; the native purchase dialog still displays all category buttons, while unsupported purchases are refused. Stage 12.3 is now in implementation: assigned facilities report eligible parked-machine counts when all readings are valid and otherwise show an unavailable status. User review of the end-to-end integration remains pending.
 
 ## Goal
 

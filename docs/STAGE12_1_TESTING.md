@@ -52,3 +52,15 @@ The current prototype uses `$TYPE_ROADDEPO` and two vehicle bays. Fuel storage i
 7. Save/reload once and confirm the facility is still recognized, its two slots and parked vehicle remain, and the Site resumes only under the normal explicit-start/pause rules.
 
 Report: screenshot of the native facility panel; allowed excavator/bulldozer and rejected dumper/bus purchase examples; how each bay routes; and whether a running Site progresses with an allowed machine but no workers. Fuel functionality is deferred. These checks are for prototype behavior, not final balance acceptance.
+
+## Stage 12.3 — Project facility status
+
+Run these checks after staging build `0.14.3-stage12-project-machine-status` with `launch-prototype.cmd`. Use a fresh test save or new facility placements so the current dedicated building descriptor is loaded.
+
+1. Place two Earthworks facilities and one ordinary construction office. Open Earthworks, select a Project, and assign both Earthworks facilities to it. Confirm each assigned row shows its facility ID and the number of eligible parked excavators/bulldozers. With an empty facility, expect `0 eligible machines`; with one eligible machine, expect `1 eligible machine`.
+2. Remove one assignment and confirm it disappears from the assigned list and becomes available to add again. Try assigning a facility already owned by another Project; it should remain unavailable until removed there.
+3. Park an unsupported vehicle in a bay if possible. It must not increase the eligible-machine count. Add an allowed excavator or bulldozer and confirm the count updates without reopening the panel.
+4. Save and reload. Confirm both assignments and machine counts return correctly. Remove or demolish one assigned facility; its Project row should remain visible and say it is unavailable because it was removed or its readings are incomplete, rather than silently showing zero machines or substituting another building.
+5. Start multiple Sites under the Project and confirm capacity from both assigned facilities is scheduled by the existing priority rules. Worker staffing is not required. Confirm an ordinary construction office is neither recognized nor affected by Earthworks assignment controls.
+
+The native Road Depot purchase dialog may still display all vehicle categories. The restriction is enforced when purchasing/selecting for the facility; this stage changes the Project's live capacity display, not the native category-picker presentation.

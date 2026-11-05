@@ -32,6 +32,7 @@ bool siteEditorOpen=false,creatingSite=false;
 bool savePending = false;
 bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
+ULONGLONG lastProjectFacilityReadings = 0;
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
@@ -294,6 +295,10 @@ void ResetWorld()
 }
 void RefreshProjectStatus()
 {
+    const auto now=GetTickCount64();
+    const bool refreshFacilityReadings=now-lastProjectFacilityReadings>=500;
+    const auto previousFacilities=current.assignedFacilities;
+    const auto previousFacilityCount=current.assignedFacilityCount;
     const auto* selectedContainer=FindNamedProject(durableState.selectedProjectId);
     current.selectedNamedProjectId=durableState.selectedProjectId;
     current.projectContainerName[0]=0;
@@ -304,8 +309,29 @@ void RefreshProjectStatus()
         target.id=source.id;strncpy_s(target.name,source.name.c_str(),_TRUNCATE);target.facilityCount=static_cast<unsigned>(source.facilityIds.size());
     }
     current.assignedFacilityIds.fill(0);
+    current.assignedFacilities.fill(ProjectFacilityBrief{});
     current.assignedFacilityCount=selectedContainer?static_cast<unsigned>(std::min(selectedContainer->facilityIds.size(),MaxProjectFacilities)):0;
-    for(unsigned i=0;i<current.assignedFacilityCount;++i)current.assignedFacilityIds[i]=selectedContainer->facilityIds[i];
+    for(unsigned i=0;i<current.assignedFacilityCount;++i) {
+        const auto id=selectedContainer->facilityIds[i];
+        current.assignedFacilityIds[i]=id;
+        auto& target=current.assignedFacilities[i];target.id=id;
+        bool cached=false;
+        for(unsigned j=0;j<previousFacilityCount;++j)if(previousFacilities[j].id==id) {
+            target.eligibleMachines=previousFacilities[j].eligibleMachines;
+            target.machineCountValid=previousFacilities[j].machineCountValid;
+            cached=true;break;
+        }
+        if(!cached||refreshFacilityReadings) {
+            WorkforceView facility{};
+            target.eligibleMachines=0;target.machineCountValid=false;
+            if(ReadEarthworksFacilityWorkforce(id,&facility) && facility.buildingValid && facility.selectedIsEarthworksFacility
+                && facility.parkedValid && facility.vehiclesValid && facility.unreadableVehicles==0) {
+                target.eligibleMachines=facility.eligibleMachineCandidates;
+                target.machineCountValid=true;
+            }
+        }
+    }
+    if(refreshFacilityReadings||current.assignedFacilityCount!=previousFacilityCount)lastProjectFacilityReadings=now;
     const auto workforce=ReadWorkforce();current.facilityCandidateCount=0;
     for(unsigned i=0;i<workforce.candidateCount&&current.facilityCandidateCount<WorkforceCandidates;++i) {
         const auto& candidate=workforce.candidates[i];if(!candidate.earthworksFacility)continue;

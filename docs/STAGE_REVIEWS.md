@@ -44,7 +44,14 @@ Stage 8's first autonomous project runner is accepted on build 0.9.1-bounds-revi
 
 - User revised the facility allowlist to excavators and bulldozers only. Dumpers, buses and all other vehicle types must be rejected (D92).
 - The vehicle-slot filter now permits only readable native vehicle types categorized as road vehicles and whose internal names identify an excavator or bulldozer. The existing groundworks-machine classifier already uses these two classes, so the purchase/slot filter and executor eligibility now match.
-- Build `0.14.2-stage12-excavators-bulldozers-only` is staged for user-run checks. The game was not launched or tested by the agent.
+- Build `0.14.2-stage12-excavators-bulldozers-only` was staged for user-run checks. The game was not launched or tested by the agent.
+
+**Stage 12.2 vehicle restriction confirmed; Stage 12.3 integration started — 5 November 2026**
+
+- User confirmed the excavator/bulldozer restriction itself works. The native Road Depot purchase dialog continues to show its full vehicle-category list; unsupported vehicle purchases are nevertheless blocked by the facility filter.
+- Began Stage 12.3 by adding a live eligible parked-machine count to each assigned-facility row. The count appears only if the facility identity, parked list, vehicle list and all linked vehicle readings are valid. Otherwise the row says the facility is unavailable because it was removed or its readings are incomplete; it does not display a false zero.
+- Worker counts are omitted from this panel because D90 removed worker staffing from Earthworks operations. Facility ownership and scheduler behavior are pre-existing and unchanged.
+- Build `0.14.3-stage12-project-machine-status` is prepared for user-run review after compilation. No gameplay test was run by the agent.
 
 **Stage 12.1 vanilla-surface texture and grade revision — 4 November 2026**
 

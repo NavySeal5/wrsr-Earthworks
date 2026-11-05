@@ -13,7 +13,13 @@ enum class Action { Pick, Select, NewSite, CloseSiteEditor, CancelSiteDraft, Set
 enum class PickMode { Corners, Sample, None, InspectBuilding, SampleSiteTarget };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
-struct ProjectFacilityBrief { unsigned id=0; float distance=0; uint64_t assignedProjectId=0; char assignedProjectName[MaxSavedNameBytes+1]{}; };
+struct ProjectFacilityBrief {
+    unsigned id=0,eligibleMachines=0;
+    float distance=0;
+    uint64_t assignedProjectId=0;
+    bool machineCountValid=false;
+    char assignedProjectName[MaxSavedNameBytes+1]{};
+};
 struct ProjectBrief {
     uint64_t id = 0;
     char name[MaxSavedNameBytes+1]{};
@@ -47,6 +53,7 @@ struct Snapshot {
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
     std::array<unsigned,MaxProjectFacilities> assignedFacilityIds{};
+    std::array<ProjectFacilityBrief,MaxProjectFacilities> assignedFacilities{};
     std::array<ProjectFacilityBrief,WorkforceCandidates> facilityCandidates{};
     unsigned projectFacilityId = 0;
     float projectFacilityDistance = 0;

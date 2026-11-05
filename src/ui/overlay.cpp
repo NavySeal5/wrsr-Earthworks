@@ -597,8 +597,15 @@ void DrawInterface(const Snapshot& s)
                 ImGui::SeparatorText("Facilities");
                 if(!s.assignedFacilityCount)ImGui::TextDisabled("No facilities assigned.");
                 for(unsigned i=0;i<s.assignedFacilityCount;++i) {
-                    ImGui::PushID(static_cast<int>(s.assignedFacilityIds[i]));ImGui::Text("Earthworks Development Facility — #%u",s.assignedFacilityIds[i]);ImGui::SameLine();
-                    if(ImGui::Button("Remove"))SendProject(Action::RemoveProjectFacility,s.assignedFacilityIds[i]);ImGui::PopID();
+                    const auto& facility=s.assignedFacilities[i];
+                    ImGui::PushID(static_cast<int>(facility.id));
+                    ImGui::Text("Earthworks Facility #%u",facility.id);
+                    ImGui::SameLine();
+                    if(facility.machineCountValid)ImGui::TextDisabled("%u eligible machine%s",facility.eligibleMachines,facility.eligibleMachines==1?"":"s");
+                    else ImGui::TextDisabled("Unavailable (removed or readings incomplete)");
+                    ImGui::SameLine();
+                    if(ImGui::Button("Remove"))SendProject(Action::RemoveProjectFacility,facility.id);
+                    ImGui::PopID();
                 }
                 ImGui::SeparatorText("Available facilities");
                 ImGui::BeginDisabled(!s.selectedNamedProjectId);
