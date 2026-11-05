@@ -6,7 +6,7 @@
 #include "runtime.h"
 #include "save_store.h"
 #include "vehicle_filter.h"
-#include "native_terrain_probe.h"
+#include "native_terrain_edit_hook.h"
 #include "../core/terrain_grid.h"
 #include "../core/productivity.h"
 #include <algorithm>
@@ -50,14 +50,11 @@ using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
 using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
 VehicleSlotFn originalVehicleSlot = nullptr;
-using VehiclePurchaseUiFn = void (*)(void*,void*);
-VehiclePurchaseUiFn originalVehiclePurchaseUi = nullptr;
-constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40, VehiclePurchaseUiRva=0x80CC60;
+constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40;
 const unsigned char lateBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xE0,0xDB,0xFF,0xFF};
 const unsigned char loadBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x00,0x38,0xFF,0xFF};
 const unsigned char constructionAssignBytes[] = {0x48,0x8B,0xC4,0xF3,0x0F,0x11,0x58,0x20,0x4C,0x89,0x40,0x18,0x48,0x89,0x50,0x10,0x53,0x56};
 const unsigned char vehicleSlotBytes[] = {0x44,0x89,0x4C,0x24,0x20,0x53,0x56,0x41,0x54,0x41,0x55,0x41,0x56,0x48,0x83,0xEC,0x50};
-const unsigned char vehiclePurchaseUiBytes[] = {0x40,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x90,0xE5,0xFF,0xFF};
 bool ReadNative(Snapshot* out)
 {
     __try {
@@ -290,7 +287,6 @@ void ResetWorld()
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
-    ProbeWorldBoundary();
     ResetWorkforce();
     RefreshProjectStatus();
     std::lock_guard<std::mutex> lock(dataMutex);
@@ -406,16 +402,6 @@ bool SamplePlan(Plan* plan)
         if (!ReadHeight(p.x,p.z,&plan->ground[static_cast<size_t>(z*GridSide+x)])) return false;
     }
     return true;
-}
-void ProcessProbe(ProbeAction action)
-{
-    const unsigned edits=ReadProbeView().edits;
-    RunProbe(action,current.plan);
-    const auto result=ReadProbeView();
-    if(result.edits!=edits) {
-        current.plan=Plan{};history.Reset();current.mode=PickMode::None;Changed();
-        Message("Diagnostic edit changed real ground. Old preview cleared; inspect the test measurements below.");
-    } else Message("See the Stage 3 test status and measurements below.");
 }
 void Process(const Command& command)
 {
@@ -805,10 +791,6 @@ void Process(const Command& command)
             Message("Site cancelled. Terrain already changed is kept.");break;
         }
         break;
-    case Action::CaptureTest: ProcessProbe(ProbeAction::Capture); break;
-    case Action::RaiseTest: ProcessProbe(ProbeAction::Raise); break;
-    case Action::LowerTest: ProcessProbe(ProbeAction::Lower); break;
-    case Action::RecheckTest: ProcessProbe(ProbeAction::Recheck); break;
     case Action::InspectBuilding:
         current.mode=PickMode::InspectBuilding;Message("Click near your Earthworks facility on the map. Select it in the Projects tab.");break;
     case Action::ChooseBuilding:
@@ -1005,7 +987,7 @@ void Tick()
     for (const auto& command:pending) {
         const Plan before=current.plan;
         Process(command);
-        if (before.complete && command.action<Action::CaptureTest) {
+        if (before.complete && command.action<=Action::CancelProject) {
             Plan check=before;
             if (SamplePlan(&check)) {
                 float difference=0;
@@ -1016,8 +998,6 @@ void Tick()
         }
     }
     current.canUndo = history.CanUndo(); current.canRedo = history.CanRedo();
-    current.probe = ReadProbeView();
-    current.nativeTerrainCall = ReadNativeTerrainCallProbe();
     if(current.ready)TickWorkforce();
     if(current.ready)TickProjectRunner();
     const auto facilityNow=GetTickCount64();
@@ -1091,156 +1071,6 @@ unsigned char HookedVehicleSlot(void* world,void* building,void* type,uintptr_t 
         }
     }
     return originalVehicleSlot(world,building,type,slotHint,slot);
-}
-void HookedVehiclePurchaseUi(void* ui,void* window)
-{
-    // Read-only probe for the native category popup. The focused window scan
-    // found that ui+0xFC0 changes when the popup opens/closes, while the
-    // purchase-window deltas are mostly timers. Compare shared-context pointer
-    // fields only at those state transitions to locate the popup's UI nodes.
-    static ULONGLONG lastProbe=0;
-    static constexpr size_t SharedUiProbeBytes=0x1000;
-    static uintptr_t previousUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
-    static uintptr_t previousWindow[0x2000/sizeof(uintptr_t)]{};
-    static uintptr_t previousChild[0x1000/sizeof(uintptr_t)]{};
-    static bool havePreviousUi=false;
-    static void* previousUiAddress=nullptr;
-    static void* previousWindowAddress=nullptr;
-    static void* previousChildAddress=nullptr;
-    static uintptr_t previousSharedFlag=0;
-    void* selectedBuilding=nullptr;
-    void* childWindow=nullptr;
-    unsigned windowKind=0,windowMode=0,childKind=0,childMode=0;
-    uintptr_t childSelected=0,sharedFlag=0;
-    __try {
-        auto* bytes=static_cast<unsigned char*>(window);
-        if(bytes) {
-            windowKind=*reinterpret_cast<unsigned*>(bytes+0x23C);
-            windowMode=*reinterpret_cast<unsigned*>(bytes+0x248);
-            selectedBuilding=*reinterpret_cast<void**>(bytes+0x240);
-            childWindow=*reinterpret_cast<void**>(bytes+0x5C8);
-            if(childWindow) {
-                auto* child=static_cast<unsigned char*>(childWindow);
-                childKind=*reinterpret_cast<unsigned*>(child+0x23C);
-                childMode=*reinterpret_cast<unsigned*>(child+0x248);
-                childSelected=reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(child+0x240));
-            }
-        }
-        if(ui)sharedFlag=*reinterpret_cast<uintptr_t*>(static_cast<unsigned char*>(ui)+0xFC0);
-    } __except(EXCEPTION_EXECUTE_HANDLER) {
-        selectedBuilding=nullptr; childWindow=nullptr;
-    }
-    if(IsEarthworksFacility(selectedBuilding) || IsEarthworksFacility(reinterpret_cast<void*>(childSelected))) {
-        const ULONGLONG now=GetTickCount64();
-        if(now-lastProbe>=1000) {
-            lastProbe=now;
-            host->log("earthworks  UI probe purchase-window=%p selected=%p child=%p kind=%u mode=%u childKind=%u childMode=%u childSelected=%p sharedFlag=%llX",
-                window,selectedBuilding,childWindow,windowKind,windowMode,childKind,childMode,
-                reinterpret_cast<void*>(childSelected),
-                static_cast<unsigned long long>(sharedFlag));
-            if(ui) {
-                uintptr_t currentUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
-                bool readable=false;
-                __try {
-                    std::memcpy(currentUi,ui,SharedUiProbeBytes);
-                    readable=true;
-                } __except(EXCEPTION_EXECUTE_HANDLER) { readable=false; }
-                if(readable) {
-                    if(!havePreviousUi || previousUiAddress!=ui) {
-                        std::memcpy(previousUi,currentUi,sizeof(previousUi));
-                        previousUiAddress=ui;
-                        previousSharedFlag=sharedFlag;
-                        havePreviousUi=true;
-                        previousWindowAddress=window;
-                        previousChildAddress=childWindow;
-                        __try {
-                            if(window)std::memcpy(previousWindow,window,sizeof(previousWindow));
-                            if(childWindow)std::memcpy(previousChild,childWindow,sizeof(previousChild));
-                        } __except(EXCEPTION_EXECUTE_HANDLER) {
-                            previousWindowAddress=nullptr;
-                            previousChildAddress=nullptr;
-                        }
-                        host->log("earthworks  UI probe shared-context baseline ui=%p bytes=%llu flag=%llX",ui,
-                            static_cast<unsigned long long>(SharedUiProbeBytes),static_cast<unsigned long long>(sharedFlag));
-                    } else {
-                        if(previousSharedFlag!=sharedFlag) {
-                            const auto logRootDelta=[](const char* name,const uintptr_t* before,uintptr_t* after,size_t count) {
-                                char fields[1200]{};
-                                size_t used=0;
-                                unsigned logged=0;
-                                for(size_t i=0;i<count && logged<16;++i) {
-                                    if(before[i]==after[i])continue;
-                                    const auto likelyPointer=[](uintptr_t value) {
-                                        return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
-                                    };
-                                    // UI state is usually a pointer, bit mask, or small enum.
-                                    // Filtering these avoids flooding the log with float animation values.
-                                    if(!likelyPointer(before[i]) && !likelyPointer(after[i])
-                                        && before[i]>0xFFFFu && after[i]>0xFFFFu)continue;
-                                    const int written=_snprintf_s(fields+used,sizeof(fields)-used,_TRUNCATE,
-                                        " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
-                                        static_cast<unsigned long long>(before[i]),static_cast<unsigned long long>(after[i]));
-                                    if(written>0)used+=static_cast<size_t>(written);
-                                    ++logged;
-                                }
-                                host->log("earthworks  UI probe %s transition fields=%u%s",name,logged,fields);
-                            };
-                            uintptr_t currentWindow[0x2000/sizeof(uintptr_t)]{};
-                            uintptr_t currentChild[0x1000/sizeof(uintptr_t)]{};
-                            bool windowReadable=false,childReadable=false;
-                            __try {
-                                if(window) { std::memcpy(currentWindow,window,sizeof(currentWindow)); windowReadable=true; }
-                                if(childWindow) { std::memcpy(currentChild,childWindow,sizeof(currentChild)); childReadable=true; }
-                            } __except(EXCEPTION_EXECUTE_HANDLER) { windowReadable=false; childReadable=false; }
-                            if(windowReadable) {
-                                if(previousWindowAddress==window)logRootDelta("purchase-window",previousWindow,currentWindow,sizeof(currentWindow)/sizeof(currentWindow[0]));
-                                std::memcpy(previousWindow,currentWindow,sizeof(previousWindow));
-                                previousWindowAddress=window;
-                            }
-                            if(childReadable) {
-                                if(previousChildAddress==childWindow)logRootDelta("purchase-child",previousChild,currentChild,sizeof(currentChild)/sizeof(currentChild[0]));
-                                std::memcpy(previousChild,currentChild,sizeof(previousChild));
-                                previousChildAddress=childWindow;
-                            }
-                            char changed[1600]{};
-                            size_t used=0;
-                            unsigned changedCount=0;
-                            for(size_t i=0;i<sizeof(previousUi)/sizeof(previousUi[0]) && changedCount<24;++i) {
-                                if(previousUi[i]==currentUi[i])continue;
-                                const uintptr_t before=previousUi[i],after=currentUi[i];
-                                const auto likelyPointer=[](uintptr_t value) {
-                                    return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
-                                };
-                                if(!likelyPointer(before) && !likelyPointer(after))continue;
-                                const int written=_snprintf_s(changed+used,sizeof(changed)-used,_TRUNCATE,
-                                    " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
-                                    static_cast<unsigned long long>(before),static_cast<unsigned long long>(after));
-                                if(written>0)used+=static_cast<size_t>(written);
-                                ++changedCount;
-                            }
-                            host->log("earthworks  UI probe shared-context flag transition %llX>%llX pointerFields=%u%s",
-                                static_cast<unsigned long long>(previousSharedFlag),static_cast<unsigned long long>(sharedFlag),changedCount,changed);
-                        }
-                        std::memcpy(previousUi,currentUi,sizeof(previousUi));
-                        if(window && window==previousWindowAddress) {
-                            __try { std::memcpy(previousWindow,window,sizeof(previousWindow)); }
-                            __except(EXCEPTION_EXECUTE_HANDLER) { previousWindowAddress=nullptr; }
-                        }
-                        if(childWindow && childWindow==previousChildAddress) {
-                            __try { std::memcpy(previousChild,childWindow,sizeof(previousChild)); }
-                            __except(EXCEPTION_EXECUTE_HANDLER) { previousChildAddress=nullptr; }
-                        }
-                        previousSharedFlag=sharedFlag;
-                    }
-                } else {
-                    havePreviousUi=false;
-                    previousUiAddress=nullptr;
-                    host->log("earthworks  UI probe shared-context unreadable ui=%p",ui);
-                }
-            }
-        }
-    }
-    originalVehiclePurchaseUi(ui,window);
 }
 using BoolFn = bool (*)(void*);
 using KeyFn = bool (*)(void*,int);
@@ -1410,13 +1240,11 @@ bool InstallRuntime()
     closeHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureClose@C3D_TERRAIN@@QEAAXXZ"));
     if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
         || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
-        || host->exeSize < VehiclePurchaseUiRva+sizeof(vehiclePurchaseUiBytes)
         || !host->findIatSlot || !host->patchIat || !host->installInlineHook
         || std::memcmp(host->exeBase+LateRva,lateBytes,sizeof(lateBytes)) != 0
         || std::memcmp(host->exeBase+LoadRva,loadBytes,sizeof(loadBytes)) != 0
         || std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0
-        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0
-        || std::memcmp(host->exeBase+VehiclePurchaseUiRva,vehiclePurchaseUiBytes,sizeof(vehiclePurchaseUiBytes)) != 0) {
+        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0) {
         host->log("earthworks  native preflight failed; planning disabled"); return false;
     }
     for (const auto& item:imports) if (!host->findIatSlot(host->exeModule,"C3DDLL64.dll",item.symbol)) {
@@ -1432,10 +1260,8 @@ bool InstallRuntime()
     if (!host->installInlineHook(host->exeBase+LoadRva,reinterpret_cast<void*>(HookedLoad),reinterpret_cast<void**>(&originalLoad),loadBytes,sizeof(loadBytes),"Earthworks world boundary")) return false;
     if (!host->installInlineHook(host->exeBase+ConstructionAssignRva,reinterpret_cast<void*>(HookedConstructionAssign),reinterpret_cast<void**>(&originalConstructionAssign),constructionAssignBytes,sizeof(constructionAssignBytes),"Earthworks office assignment filter")) return false;
     if (!host->installInlineHook(host->exeBase+VehicleSlotRva,reinterpret_cast<void*>(HookedVehicleSlot),reinterpret_cast<void**>(&originalVehicleSlot),vehicleSlotBytes,sizeof(vehicleSlotBytes),"Earthworks vehicle slot filter")) return false;
-    if (!host->installInlineHook(host->exeBase+VehiclePurchaseUiRva,reinterpret_cast<void*>(HookedVehiclePurchaseUi),reinterpret_cast<void**>(&originalVehiclePurchaseUi),vehiclePurchaseUiBytes,sizeof(vehiclePurchaseUiBytes),"Earthworks read-only vehicle purchase UI probe")) return false;
-    host->log("earthworks  bindings installed: 13 C3D input imports, DirectInput digit filter, frame, world-load, office assignment, vehicle slot filter, and read-only vehicle purchase UI probe");
-    BindTerrainProbe();
-    BindNativeTerrainCallProbe();
+    host->log("earthworks  bindings installed: 13 C3D input imports, DirectInput digit filter, frame, world-load, office assignment, and vehicle slot filter");
+    BindNativeTerrainEditHook();
     host->log("earthworks  terrain executor bindings %s",raiseLower&&heightQuery&&openHeightmap&&closeHeightmap?"available":"unavailable; projects remain queued");
     return true;
 }

@@ -237,13 +237,13 @@ Acceptance evidence: the user can see and predict which projects run, worker/mac
 
 The user requested a dedicated stage before balancing to improve the Earthworks building, its interface and the mod's general UI. Stage 10 is split so the interface can be accepted before the building asset is introduced.
 
-The user chose a **Plan** tab and a **Projects** tab. Keep planning and project execution controls in the player-facing interface while removing technical inspector and terrain-probe controls from the player build. The debug controls remain available only in a developer build. Do not change accepted gameplay rules.
+The user chose a **Plan** tab and a **Projects** tab. Keep planning and project execution controls in the player-facing interface. The workforce inspector remains developer-build-only; temporary terrain-edit and UI-observation probes have been removed. Do not change accepted gameplay rules.
 
 Proposed layout: **Plan** contains area selection, height, cut/fill preview, estimate and queue confirmation. **Projects** contains the prioritized queue, selected-project status/progress and controls, plus facility selection/assignment. Keep the panel open for terrain clicks as the current selection workflow requires; keep actions usable without requiring the player to close the panel unnecessarily.
 
 In-game checklist:
 
-1. Open the player build and confirm the inspector, raw terrain readings and terrain probes are absent.
+1. Open the player build and confirm the developer-only inspector and removed diagnostic probes are absent.
 2. Use Plan to select two corners, set/sample a target, review cut/fill and confirm a project.
 3. Use Projects to select/reorder a project, find and assign a facility, and operate queue controls.
 4. Review queued, waiting, running, paused, review-required, completed and cancelled states where available.

@@ -2,6 +2,8 @@
 
 This is a user-run check. The agent has not launched the game or edited a save. The prototype is staged as **Earthworks Facility (prototype)**, Workshop ID `9100000012`, with the custom model, preview icon, two parking entries and provisional frontage routing.
 
+**Retired diagnostic builds:** The 0.14.6–0.14.9 purchase-window/UI probes documented below have been removed. Keep `$TYPE_ROADDEPO` and the working slot-level filter: it rejects disallowed purchases, while the native picker continues to show its broad vehicle categories. No further UI-state probe is planned.
+
 The user has accepted the current building model. If checking the current staged config, focus on the new airport-area extension and the parking anchors moved 5 m toward the rear; a fresh placement is required to see these changes.
 
 ## Start

@@ -1,15 +1,14 @@
 #pragma once
 #include "../core/planning.h"
 #include "tesmio_api.h"
-#include "terrain_probe.h"
-#include "native_terrain_probe.h"
+#include "native_terrain_edit_hook.h"
 #include "../core/state_store.h"
 #include "workforce_probe.h"
 #include <atomic>
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, NewSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SampleSiteTarget, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, CaptureTest, RaiseTest, LowerTest, RecheckTest, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects };
+enum class Action { Pick, Select, NewSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SampleSiteTarget, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects };
 enum class PickMode { Corners, Sample, None, InspectBuilding, SampleSiteTarget };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
@@ -65,8 +64,6 @@ struct Snapshot {
     Plan queuedPlan{};
     std::array<ProjectBrief,MaxVisibleProjects> projects{};
     Volumes volumes{};
-    ProbeView probe{};
-    NativeTerrainCallView nativeTerrainCall{};
     WorkforceView workforce{};
     PickMode mode = PickMode::None;
     char message[160] = "Load a republic to begin.";

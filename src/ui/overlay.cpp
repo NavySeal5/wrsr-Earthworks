@@ -60,9 +60,6 @@ bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
 std::atomic<bool> areaPickCapture{false};
-#ifdef EARTHWORKS_DEVELOPER_UI
-bool showProbe=true;
-#endif
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
@@ -340,20 +337,6 @@ void DrawPreview(const Snapshot& s)
         Line(s,a,b,IM_COL32(245,250,255,255),2.5f);
     }
 }
-#ifdef EARTHWORKS_DEVELOPER_UI
-void DrawProbe(const Snapshot& s)
-{
-    if(!showProbe || !s.ready || !s.cameraValid || !s.probe.available || !s.probe.captured) return;
-    const auto& p=s.probe;
-    const Point corners[]={{p.a.x,p.target,p.a.z},{p.b.x,p.target,p.a.z},{p.b.x,p.target,p.b.z},{p.a.x,p.target,p.b.z}};
-    const Point outer[]={{p.outerA.x,p.target,p.outerA.z},{p.outerB.x,p.target,p.outerA.z},
-        {p.outerB.x,p.target,p.outerB.z},{p.outerA.x,p.target,p.outerB.z}};
-    for(int i=0;i<4;++i) {
-        Line(s,corners[i],corners[(i+1)%4],IM_COL32(255,255,255,255),3);
-        Line(s,outer[i],outer[(i+1)%4],IM_COL32(255,70,70,255),2);
-    }
-}
-#endif
 bool CursorOnVisibleSite(const Snapshot& s)
 {
     if(!s.cursorValid)return false;
@@ -671,51 +654,6 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TextWrapped("Raw job state and route stops are diagnostics, not proof of availability or reservation.");
                 }
                 if(ImGui::Button("Log inspector snapshot"))Send(Action::LogInspector);
-            }
-            if(s.probe.available && ImGui::CollapsingHeader("Controlled terrain test")) {
-                static bool emptyChecked=false;
-                static uint64_t checkedWorld=~uint64_t{0};
-                if(checkedWorld!=s.generation) {emptyChecked=false;checkedWorld=s.generation;}
-                const auto& p=s.probe;
-                ImGui::TextColored({1,0.6f,0.3f,1},"THE TEST BUTTONS CHANGE REAL GROUND");
-                ImGui::TextWrapped("Disposable S03 save only. Select an empty, dry 20-50 m rectangle. Include paths, trees and underground infrastructure in your margin check.");
-                ImGui::Checkbox("Patch and margin checked empty",&emptyChecked);
-                ImGui::Checkbox("Show captured test outline",&showProbe);
-                ImGui::BeginDisabled(!emptyChecked || !s.plan.complete);
-                if(ImGui::Button("Capture selected test patch")) Send(Action::CaptureTest);
-                ImGui::EndDisabled();
-                ImGui::TextWrapped("%s",p.status);
-                if(p.captured) {
-                    ImGui::Text("Original: %.3f .. %.3f m",p.low,p.high);
-                    ImGui::Text("Target %.3f m | native unit %.5f m",p.target,p.precision);
-                    ImGui::Text("Target error: %.5f m",p.maxError);
-                    ImGui::Text("Guard delta: %.5f m",p.outsideDelta);
-                    ImGui::Text("Reload delta %.5f m | edits %u",p.reloadDelta,p.edits);
-                    ImGui::Text("Balances: RUB %.2f / USD %.2f",p.rubleChange,p.dollarChange);
-                    ImGui::BeginDisabled(!emptyChecked || p.faulted);
-                    if(ImGui::Button("Apply raise test (+1 m)")) Send(Action::RaiseTest);
-                    if(ImGui::Button("Apply lower test (-1 m)")) Send(Action::LowerTest);
-                    ImGui::EndDisabled();
-                    if(ImGui::Button("Recheck / compare after reload")) Send(Action::RecheckTest);
-                }
-            }
-            if(ImGui::CollapsingHeader("Native terrain-call probe")) {
-                const auto& t=s.nativeTerrainCall;
-                if(!t.bound) ImGui::TextColored({0.55f,0.25f,0.08f,1},"Native angle-limited terrain-call probe unavailable for this game build.");
-                else {
-                    ImGui::Text("Observed EditRaiseLowerAngleLimit calls: %llu",static_cast<unsigned long long>(t.calls));
-                    if(t.calls) {
-                        if(t.callerInGame) ImGui::Text("Last caller: SOVIET64.exe + 0x%llX",static_cast<unsigned long long>(t.caller));
-                        else ImGui::Text("Last caller address: 0x%llX",static_cast<unsigned long long>(t.caller));
-                        ImGui::Text("Last position X %.2f Z %.2f",t.x,t.z);
-                        ImGui::Text("Brush parameters: %.4g, %.4g, %.4g, %.4g | flag %s | angle %.4g",t.brush[0],t.brush[1],t.brush[2],t.brush[3],t.flag?"true":"false",t.angleLimit);
-                    } else ImGui::TextDisabled("No angle-limited terrain calls observed yet.");
-                }
-            }
-            if(ImGui::CollapsingHeader("Terrain readings")) {
-                ImGui::Text("Cursor: X %.1f  Z %.1f  Height %.2f m",s.cursor.x,s.cursor.z,s.cursor.y);
-                ImGui::Text("Day %d, year %d, day progress %.3f",s.day,s.year,s.time);
-                ImGui::Text("Grid: %d x %d samples",GridSide,GridSide);
             }
             ImGui::EndTabItem();
         }
@@ -1254,9 +1192,6 @@ void Render(IDXGISwapChain* swap)
     previewLinesUnderlay=gameUnderlayInstalled;
     DrawPreview(snapshot);
     previewLinesUnderlay=false;
-#ifdef EARTHWORKS_DEVELOPER_UI
-    DrawProbe(snapshot);
-#endif
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
     DrawGameCursorArt();

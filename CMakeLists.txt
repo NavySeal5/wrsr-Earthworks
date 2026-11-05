@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
-project(EarthworksPlanning VERSION 0.14.9 LANGUAGES CXX)
+project(EarthworksPlanning VERSION 0.14.10 LANGUAGES CXX)
 option(EARTHWORKS_TRACE_FAULT "Enable temporary native fault tracing during investigation" OFF)
-option(EARTHWORKS_DEVELOPER_UI "Include technical inspector and terrain-probe UI" OFF)
+option(EARTHWORKS_DEVELOPER_UI "Include the technical workforce inspector" OFF)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Use the Microsoft x64 C++ toolchain on Windows.")
@@ -28,7 +28,7 @@ add_library(earthworks_imgui STATIC
 target_include_directories(earthworks_imgui SYSTEM PUBLIC "${IMGUI_DIR}" "${IMGUI_DIR}/backends")
 target_compile_definitions(earthworks_imgui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 set_property(TARGET earthworks_imgui PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-add_library(EarthworksPlanning SHARED src/plugin/plugin.cpp src/core/planning.cpp src/core/productivity.cpp src/core/state_store.cpp src/runtime/runtime.cpp src/runtime/save_store.cpp src/runtime/terrain_probe.cpp src/runtime/native_terrain_probe.cpp src/runtime/workforce_probe.cpp src/runtime/vehicle_filter.cpp src/ui/overlay.cpp src/ui/game_underlay.cpp)
+add_library(EarthworksPlanning SHARED src/plugin/plugin.cpp src/core/planning.cpp src/core/productivity.cpp src/core/state_store.cpp src/runtime/runtime.cpp src/runtime/save_store.cpp src/runtime/native_terrain_edit_hook.cpp src/runtime/workforce_probe.cpp src/runtime/vehicle_filter.cpp src/ui/overlay.cpp src/ui/game_underlay.cpp)
 target_link_libraries(EarthworksPlanning PRIVATE earthworks_imgui d3d11 dxgi d3dcompiler dwmapi bcrypt windowscodecs ole32)
 target_include_directories(EarthworksPlanning SYSTEM PRIVATE "${TESMIO_SDK_DIR}/src")
 target_compile_features(EarthworksPlanning PRIVATE cxx_std_17)

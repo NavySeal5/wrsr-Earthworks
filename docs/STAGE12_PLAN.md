@@ -61,7 +61,7 @@ Inspect an empty facility, then buy/park representative allowed vehicles. Verify
 3. Show facility name/identity, eligible parked machine counts, and missing/unreadable status in the assigned-facility section, but only when readings are reliable. Do not show workers as a requirement or productivity input. If a vehicle reading is unavailable, label it unavailable rather than displaying a misleading zero. Do not expose technical inspector fields or add per-machine detail without confirmation.
 4. Preserve project ownership rules: multiple facilities per Project, no facility shared between Projects, explicit add/remove, reassignment only after removal, and saved assignments bound to stable building identity. A missing facility must remain visible as unavailable or clearly explain why capacity is absent; never silently assign a different building.
 5. Verify scheduler capacity aggregation with two facilities assigned to one Project, facility exclusivity across Projects, worker/machine counts and concurrent Sites. Verify removing/demolishing a facility follows existing missing-facility handling and preserves project progress.
-6. Add player UI only for demonstrated integration state. Keep developer inspector and terrain probes out of the player build.
+6. Add player UI only for demonstrated integration state. Keep the workforce inspector out of the player build; temporary terrain-edit and native UI/terrain observation probes have been removed.
 
 ### User-run check and gate
 
