@@ -173,6 +173,13 @@ $custom.Add('$CONNECTIONS_AIRPORT_DEAD_SQUARE')
 $custom.Add('-19.0000 -8.5000')
 $custom.Add('-6.5000 20.0000')
 $custom.Add('')
+# The marked lower-right section extends the office apron toward the tank side.
+# Keep it a separate rectangle so the adjoining pedestrian/gravel patch remains
+# intact rather than overlapping it with airport concrete.
+$custom.Add('$CONNECTIONS_AIRPORT_DEAD_SQUARE')
+$custom.Add('-25.5000 8.5000')
+$custom.Add('-19.0000 20.0000')
+$custom.Add('')
 # In the game's area-surface mapping, pedestrian dead squares render the
 # gravel-like ground surface. Cover the tank flank while keeping its rectangle
 # adjacent to (not overlapping) the office's airport-concrete apron.
