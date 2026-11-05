@@ -488,3 +488,8 @@ A single user statement can accept the current result and authorize progression.
 
 - The user reported that reversing the endpoints corrected direction but shifted the road stub too far left. This establishes that the first `$CONNECTION_ROAD` coordinate anchors the access location, while the second controls its direction.
 - Restored the first endpoint to the previously confirmed lower-left position `(24.5, 0, 10)` and set the second point to `(14.5, 0, 10)`. This keeps the anchor fixed and retains the confirmed direction. Restaged the INI; no model re-export is needed.
+
+**Stage 12.1 forecourt clearance adjustment — 5 November 2026**
+
+- The user confirmed the connector orientation and location generally, but reported that the road endpoint overlapped the garage pillar instead of meeting the paved forecourt.
+- Moved both connector points 5 m farther into the forecourt along positive Z, preserving the confirmed left-facing orientation. The revised points are `(24.5, 0, 15)` and `(14.5, 0, 15)`. This is an INI-only adjustment; restage and verify with a newly placed building.
