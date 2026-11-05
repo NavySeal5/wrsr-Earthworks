@@ -79,3 +79,12 @@ Build `0.14.7-stage12-purchase-window-probe` keeps logging that flag and compare
 These probes are read-only diagnostics. They do not reserve vehicles, block purchase behavior, or modify the native UI. The player-facing category restriction remains unresolved until the popup's actual control state or construction path is identified. No in-game test was run by the agent.
 
 Build `0.14.8-stage12-popup-tree-probe` follows up on the 0.14.7 run: `ui+0xFC0` changed from `0x101000000` to `0x101000100` when the category popup appeared, then returned when it closed. That strongly associates the flag with popup visibility. This build logs pointer-like changes in the shared UI context only at those flag transitions, to locate the popup node without dumping frame and timer fields. Repeat the same open/close sequence above and send the `UI probe shared-context` lines. This still does not change the UI.
+
+Build `0.14.9-stage12-popup-window-delta-probe` was added after the latest user run confirmed the same flag transitions but no changed shared-context pointers. It compares pointer-like and small state fields in the purchase-window and its child at each popup transition, in addition to the shared context. No UI behavior is changed. To capture it:
+
+1. Close the game and project-local RML, then run `launch-prototype.cmd`.
+2. Open the Earthworks facility's vehicle-purchase window and leave **Filter by type** closed for about three seconds.
+3. Open **Filter by type** for five seconds, close it for five seconds, then open it once more for five seconds. Keep the purchase window open throughout.
+4. Exit the game and send the `tools/runtime/rml/rml/logs/rml-runtime.log` lines containing `UI probe purchase-window`, `UI probe purchase-window transition`, `UI probe purchase-child transition`, and `UI probe shared-context flag transition`.
+
+This is still a read-only investigation. The allowlist enforcement continues to work; the remaining issue is hiding unsupported categories from the native picker without changing unrelated vehicle-purchase windows.

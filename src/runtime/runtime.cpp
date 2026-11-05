@@ -1101,8 +1101,12 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
     static ULONGLONG lastProbe=0;
     static constexpr size_t SharedUiProbeBytes=0x1000;
     static uintptr_t previousUi[SharedUiProbeBytes/sizeof(uintptr_t)]{};
+    static uintptr_t previousWindow[0x2000/sizeof(uintptr_t)]{};
+    static uintptr_t previousChild[0x1000/sizeof(uintptr_t)]{};
     static bool havePreviousUi=false;
     static void* previousUiAddress=nullptr;
+    static void* previousWindowAddress=nullptr;
+    static void* previousChildAddress=nullptr;
     static uintptr_t previousSharedFlag=0;
     void* selectedBuilding=nullptr;
     void* childWindow=nullptr;
@@ -1147,10 +1151,57 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
                         previousUiAddress=ui;
                         previousSharedFlag=sharedFlag;
                         havePreviousUi=true;
+                        previousWindowAddress=window;
+                        previousChildAddress=childWindow;
+                        __try {
+                            if(window)std::memcpy(previousWindow,window,sizeof(previousWindow));
+                            if(childWindow)std::memcpy(previousChild,childWindow,sizeof(previousChild));
+                        } __except(EXCEPTION_EXECUTE_HANDLER) {
+                            previousWindowAddress=nullptr;
+                            previousChildAddress=nullptr;
+                        }
                         host->log("earthworks  UI probe shared-context baseline ui=%p bytes=%llu flag=%llX",ui,
                             static_cast<unsigned long long>(SharedUiProbeBytes),static_cast<unsigned long long>(sharedFlag));
                     } else {
                         if(previousSharedFlag!=sharedFlag) {
+                            const auto logRootDelta=[](const char* name,const uintptr_t* before,uintptr_t* after,size_t count) {
+                                char fields[1200]{};
+                                size_t used=0;
+                                unsigned logged=0;
+                                for(size_t i=0;i<count && logged<16;++i) {
+                                    if(before[i]==after[i])continue;
+                                    const auto likelyPointer=[](uintptr_t value) {
+                                        return value>=0x10000000ull && value<=0x00007FFFFFFFFFFFull && (value&7u)==0;
+                                    };
+                                    // UI state is usually a pointer, bit mask, or small enum.
+                                    // Filtering these avoids flooding the log with float animation values.
+                                    if(!likelyPointer(before[i]) && !likelyPointer(after[i])
+                                        && before[i]>0xFFFFu && after[i]>0xFFFFu)continue;
+                                    const int written=_snprintf_s(fields+used,sizeof(fields)-used,_TRUNCATE,
+                                        " +0x%03llX:%llX>%llX",static_cast<unsigned long long>(i*sizeof(uintptr_t)),
+                                        static_cast<unsigned long long>(before[i]),static_cast<unsigned long long>(after[i]));
+                                    if(written>0)used+=static_cast<size_t>(written);
+                                    ++logged;
+                                }
+                                host->log("earthworks  UI probe %s transition fields=%u%s",name,logged,fields);
+                            };
+                            uintptr_t currentWindow[0x2000/sizeof(uintptr_t)]{};
+                            uintptr_t currentChild[0x1000/sizeof(uintptr_t)]{};
+                            bool windowReadable=false,childReadable=false;
+                            __try {
+                                if(window) { std::memcpy(currentWindow,window,sizeof(currentWindow)); windowReadable=true; }
+                                if(childWindow) { std::memcpy(currentChild,childWindow,sizeof(currentChild)); childReadable=true; }
+                            } __except(EXCEPTION_EXECUTE_HANDLER) { windowReadable=false; childReadable=false; }
+                            if(windowReadable) {
+                                if(previousWindowAddress==window)logRootDelta("purchase-window",previousWindow,currentWindow,sizeof(currentWindow)/sizeof(currentWindow[0]));
+                                std::memcpy(previousWindow,currentWindow,sizeof(previousWindow));
+                                previousWindowAddress=window;
+                            }
+                            if(childReadable) {
+                                if(previousChildAddress==childWindow)logRootDelta("purchase-child",previousChild,currentChild,sizeof(currentChild)/sizeof(currentChild[0]));
+                                std::memcpy(previousChild,currentChild,sizeof(previousChild));
+                                previousChildAddress=childWindow;
+                            }
                             char changed[1600]{};
                             size_t used=0;
                             unsigned changedCount=0;
@@ -1171,6 +1222,14 @@ void HookedVehiclePurchaseUi(void* ui,void* window)
                                 static_cast<unsigned long long>(previousSharedFlag),static_cast<unsigned long long>(sharedFlag),changedCount,changed);
                         }
                         std::memcpy(previousUi,currentUi,sizeof(previousUi));
+                        if(window && window==previousWindowAddress) {
+                            __try { std::memcpy(previousWindow,window,sizeof(previousWindow)); }
+                            __except(EXCEPTION_EXECUTE_HANDLER) { previousWindowAddress=nullptr; }
+                        }
+                        if(childWindow && childWindow==previousChildAddress) {
+                            __try { std::memcpy(previousChild,childWindow,sizeof(previousChild)); }
+                            __except(EXCEPTION_EXECUTE_HANDLER) { previousChildAddress=nullptr; }
+                        }
                         previousSharedFlag=sharedFlag;
                     }
                 } else {
