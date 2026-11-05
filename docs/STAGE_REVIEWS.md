@@ -498,3 +498,7 @@ A single user statement can accept the current result and authorize progression.
 
 - The user confirmed the connector orientation and described a small gap between the forecourt and road access snap point.
 - Shifted the anchored X coordinate 2 m toward the forecourt, from `24.5` to `22.5`, keeping Z `15` and the established left-facing vector. The new connector points are `(22.5, 0, 15)` and `(12.5, 0, 15)`. This is an INI-only adjustment; restage and check a newly placed building.
+
+**Stage 12.1 additional snap-point adjustment — 5 November 2026**
+
+- At the user's request, moved the road snap point another 3 m toward the forecourt, changing the anchored X coordinate from `22.5` to `19.5` while keeping Z `15` and the left-facing direction. The connector points are now `(19.5, 0, 15)` and `(9.5, 0, 15)`. This is an INI-only adjustment; restage and check a newly placed building.
