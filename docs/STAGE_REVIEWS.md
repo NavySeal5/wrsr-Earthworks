@@ -509,3 +509,10 @@ A single user statement can accept the current result and authorize progression.
 - The user also reported the entry stairs rising away from the door. Reversed the tread-height order so the lowest tread is furthest from the entrance and the highest tread is nearest it.
 - Regenerated the editable Blender scene, OBJ/MTL and preview. Updated construction staging so the removed material/node is not referenced, and added the tank-cap mesh to the rooftop construction phase so every exported mesh group has a construction phase.
 - Copied the new OBJ/MTL into the ModelViewer-accessible object folder under `media_soviet`. The existing NMF is intentionally still the old conversion; do not launch the game until ModelViewer exports the new OBJ to NMF, that NMF is copied to the native source folder, and the Workshop item is restaged. No in-game test was run.
+
+**Stage 12.1 native ground-area sizing — 5 November 2026**
+
+- The user confirmed the asphalt surface mechanism worked, then asked for asphalt across both garage bays and the front maneuvering apron, a concrete/airport area in front of the dispatch building, and gravel around the tank-side edge.
+- Expanded `$CONNECTIONS_ROAD_DEAD_SQUARE` to local X/Z `(-6.5, -10)`–`(20.5, 20)`, covering the full canopy court and apron and including the confirmed side road-access point at `(19.5, 15)`. Added an adjacent `$CONNECTIONS_AIRPORT_DEAD_SQUARE` area at `(-20.5, 8.5)`–`(-6, 18.5)` for the office entrance apron, with a small shared edge to avoid a seam.
+- The installed files and user's Building Editor comparison expose only four native rectangular area types: road/asphalt, airport/tarmac, pedestrian, and water. No gravel-area directive was found in `media_soviet`; mud-road connection tags are distinct connection points, not proven ground-area coverage. Asked the user how to handle the tank-side area while investigating a native gravel option.
+- Restaged the expanded asphalt and office-apron areas. No game test was run; check a newly placed facility after the tank-side treatment is decided.

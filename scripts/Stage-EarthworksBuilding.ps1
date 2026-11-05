@@ -159,13 +159,19 @@ $custom.Add("`$NAME_STR `"$name`"")
 $custom.Add('')
 $custom.AddRange([string[]]$retained)
 $custom.Add('')
-# The Building Editor's all-floor-types comparison isolates the native
-# asphalt surface from the separate road connector. This dead-road rectangle
-# applies the finished asphalt ground under the vehicle forecourt; it is
-# intentionally not a $CONNECTION_ROAD and does not create a road link.
+# Native surface-area metadata is separate from road/network access points.
+# The asphalt rectangle covers the full two-bay court and the maneuvering
+# apron; it extends over the confirmed side-connection anchor at (19.5, 15).
 $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
-$custom.Add('5.5147 4.0049')
-$custom.Add('17.5180 17.9735')
+$custom.Add('-6.5000 -10.0000')
+$custom.Add('20.5000 20.0000')
+$custom.Add('')
+# The adjacent office entrance apron uses the Building Editor's airport/tarmac
+# surface. Its inner edge slightly overlaps the asphalt rectangle to avoid a
+# seam, while remaining separate from the road access connector.
+$custom.Add('$CONNECTIONS_AIRPORT_DEAD_SQUARE')
+$custom.Add('-20.5000 8.5000')
+$custom.Add('-6.0000 18.5000')
 $custom.Add('')
 # Keep the native construction-office phase sequence, using the custom model's
 # node names. The large values are diagnostic only and make the build-menu
