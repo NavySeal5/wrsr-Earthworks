@@ -216,8 +216,8 @@ $custom.Add('')
 # parking orientation remains front-facing; the expanded apron gives vehicles
 # room to turn in.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('34.5000 0.0000 10.0000')
 $custom.Add('24.5000 0.0000 10.0000')
+$custom.Add('14.5000 0.0000 10.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))

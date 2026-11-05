@@ -483,3 +483,8 @@ A single user statement can accept the current result and authorize progression.
 
 - The user confirmed the latest connector location was correct but its facing direction was reversed.
 - Reversed the two `$CONNECTION_ROAD` endpoints without changing their coordinates, preserving the access segment location while flipping its direction. Restage and check on a newly placed facility; no in-game test was run by the agent.
+
+**Stage 12.1 connector anchor correction — 5 November 2026**
+
+- The user reported that reversing the endpoints corrected direction but shifted the road stub too far left. This establishes that the first `$CONNECTION_ROAD` coordinate anchors the access location, while the second controls its direction.
+- Restored the first endpoint to the previously confirmed lower-left position `(24.5, 0, 10)` and set the second point to `(14.5, 0, 10)`. This keeps the anchor fixed and retains the confirmed direction. Restaged the INI; no model re-export is needed.
