@@ -207,7 +207,11 @@ foreach ($side in @(
     @{ X1 = -30.0000; X2 = -27.0000 },
     @{ X1 = 30.0000; X2 = 27.0000 }
 )) {
-    foreach ($z in @('-33.0000', '-27.5556', '-22.1111', '-16.6667', '-11.2222', '-5.7778', '-0.3333', '5.1111', '10.5556', '16.0000')) {
+    # Blender's longitudinal axis is inverted in the building config. The
+    # covered centers (-33..16 in Blender Y) map to game Z (+33..-16); the
+    # open-air centers (-47/-54) map to game Z +47/+54. Keep this conversion
+    # explicit so no position lands on the rear service building.
+    foreach ($z in @('-16.0000', '-9.0000', '-2.0000', '5.0000', '12.0000', '19.0000', '26.0000', '33.0000', '47.0000', '54.0000')) {
         # The parking segment now runs across X. Its direction points toward
         # the yard center: +X on the left and -X on the right.
         $x1 = ([double]$side.X1).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
@@ -290,6 +294,6 @@ if ($parkingCount -ne 20 -or $stationCount -ne 2) {
 Write-Host "Staged Stage 12 Large Earthworks facility at $target"
 Write-Host 'The native road-depot type is used; the vehicle allowlist and Earthworks project scheduler remain plugin-controlled.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
-Write-Host 'The custom model uses twenty independently accessible stalls in the garage wings and two loading stations.'
+Write-Host 'The custom model uses sixteen covered garage stalls, four open-air stalls at the U opening, and two loading stations.'
 Write-Host 'No workers are required for Earthworks output. Fuel storage is omitted.'
 

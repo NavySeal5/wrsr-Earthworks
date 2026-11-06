@@ -4,7 +4,7 @@ Updated 5 November 2026. A stage is accepted only when the user confirms the dem
 
 On 6 November the user revised the facility construction costs (D95). Small material coefficients are now 75% of the vanilla construction-office comparison values, and Medium coefficients are 120% of the reduced Small values. Construction work coefficients are unchanged. The generated config quantities are recorded in [Stage 12 construction cost notes](STAGE12_CONSTRUCTION_COSTS.md). This is staged for a fresh build-menu preview; the user must confirm the displayed totals in game.
 
-The user approved a third, Large facility variant using visual proposal C. Its original D96–D97 decisions included 20 independently accessible single-depth parking stalls, two loading/unloading stations, one road connector centered at the U opening, no tandem/blocking parking, and material coefficients 30% above Medium. D99 supersedes the initial 16-covered/4-open-air split: all 20 stalls are to be placed inside the two garage wings, ten per side. Existing vehicle-only Road Depot behavior and the excavator/bulldozer filter carry over. The model is accepted and converted; the revised parking layout is staged and awaits user-run in-game review.
+The user approved a third, Large facility variant using visual proposal C. Its original D96–D97 decisions included 20 independently accessible single-depth parking stalls, two loading/unloading stations, one road connector centered at the U opening, no tandem/blocking parking, and material coefficients 30% above Medium. The intended split is 16 covered stalls (eight per wing) and four open-air stalls at the U opening (D99). An axis-sign error in the config caused some stalls to land on the main building; D100 corrects the Blender-to-game longitudinal conversion. The revised config is staged and awaits fresh-placement review. Existing vehicle-only Road Depot behavior and the excavator/bulldozer filter carry over.
 
 **Current position**
 
@@ -622,3 +622,10 @@ A single user statement can accept the current result and authorize progression.
 - The user directed that all twenty stalls belong in the garage wings. This supersedes the earlier 16-covered/4-open-air layout and D98's open-air placement.
 - Replaced the four roof positions at Z `47/54` with additional covered positions evenly distributed along the existing garage rows. The resulting config has ten inward-facing stalls per wing. The model mesh, asphalt bounds, road access and loading stations remain unchanged.
 - Restage and check a newly placed Large facility. Confirm the two-per-side roof positions are gone, all stalls are inside the garage wings, and vehicles do not overlap. No in-game check has been performed.
+
+**Stage 12.1 Large parking-axis correction — 6 November 2026**
+
+- The user reported that the previous all-garage revision made the problem worse: three vehicles per side appeared on the main service building.
+- Inspection of the Blender source showed the covered garage centers at Blender Y `-33,-26,-19,-12,-5,2,9,16`, while the config's game Z axis runs in the opposite longitudinal direction. The earlier config copied the sign directly, placing negative-Z stalls over the rear service block.
+- Restored the agreed 16-covered/4-open-air split. The eight covered positions per wing now use game Z `-16,-9,-2,5,12,19,26,33`; the four open-air positions at the U opening use Z `47,54` on both sides. Vehicle headings and model geometry are unchanged.
+- Restage and ask the user to place a fresh Large facility. Confirm eight covered positions per wing, four open-air positions at the opening, and no positions on the main service building. No in-game test was run.
