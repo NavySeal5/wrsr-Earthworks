@@ -160,8 +160,8 @@ $custom.Add('')
 # Native asphalt court surface. It covers the yard and both structural wings;
 # road/network access remains a separate connector at the U opening.
 $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
-$custom.Add('-46.0000 -61.0000')
-$custom.Add('46.0000 33.0000')
+$custom.Add('-37.5000 -61.0000')
+$custom.Add('37.5000 33.0000')
 $custom.Add('')
 # Resource coefficients follow the accepted 30% step above Medium.
 $custom.Add('-------')
@@ -203,7 +203,7 @@ $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.936')
 $custom.Add('')
 # Road-depot UI; 20 independent parking slots and two loading/unloading stations.
 $custom.Add('')
-foreach ($x in @('-36.0000', '36.0000')) {
+foreach ($x in @('-28.5000', '28.5000')) {
     foreach ($z in @('-54.0000', '-47.0000', '-33.0000', '-26.0000', '-19.0000', '-12.0000', '-5.0000', '2.0000', '9.0000', '16.0000')) {
         $slotZ1 = ([double]::Parse($z, [Globalization.CultureInfo]::InvariantCulture) - 1.5).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
         $slotZ2 = ([double]::Parse($z, [Globalization.CultureInfo]::InvariantCulture) + 1.5).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)

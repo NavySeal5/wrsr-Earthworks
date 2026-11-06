@@ -275,15 +275,15 @@ def make_large_building():
     # The accepted concept is a clearly legible U: a continuous service block
     # closes the back, with the office centered between two loading doors.
     # Native asphalt and parking markings remain building metadata, not mesh.
-    add_box("large_service_plinth", (0.0, 28.2, 0.28), (91.0, 17.0, 0.5), CONCRETE, 0.08)
-    add_box("large_service_hall", (0.0, 29.0, 3.55), (90.0, 15.0, 6.1), PLASTER, 0.07)
-    add_box("large_service_roof", (0.0, 29.0, 6.72), (91.4, 16.0, 0.34), OFFICE_ROOF, 0.06)
-    add_box("large_service_roof_front_edge", (0.0, 20.85, 6.72), (91.2, 0.24, 0.38), FRAME, 0.025)
-    add_box("large_service_safety_band", (0.0, 21.38, 0.80), (89.9, 0.12, 0.28), SAFETY_RED, 0.02)
+    add_box("large_service_plinth", (0.0, 28.2, 0.28), (75.0, 17.0, 0.5), CONCRETE, 0.08)
+    add_box("large_service_hall", (0.0, 29.0, 3.55), (74.0, 15.0, 6.1), PLASTER, 0.07)
+    add_box("large_service_roof", (0.0, 29.0, 6.72), (75.4, 16.0, 0.34), OFFICE_ROOF, 0.06)
+    add_box("large_service_roof_front_edge", (0.0, 20.85, 6.72), (75.2, 0.24, 0.38), FRAME, 0.025)
+    add_box("large_service_safety_band", (0.0, 21.38, 0.80), (73.9, 0.12, 0.28), SAFETY_RED, 0.02)
 
     # Front elevation: two broad machinery doors flank a projecting, glazed
     # dispatch office. Its centered entry and steps face the open yard.
-    for idx, x in enumerate((-18.0, 18.0), start=1):
+    for idx, x in enumerate((-15.0, 15.0), start=1):
         add_box(f"large_loading_door_{idx}_surround", (x, 21.43, 3.0), (8.2, 0.28, 5.25), FRAME, 0.04)
         add_box(f"large_loading_door_{idx}_panel", (x, 21.24, 3.0), (7.55, 0.08, 4.88), STEEL, 0.03)
         for stripe in range(1, 5):
@@ -302,12 +302,12 @@ def make_large_building():
         add_box(f"large_entry_step_{idx+1}", (0.0, 16.28 - idx * 0.5, height / 2), (width, depth, height), CONCRETE, 0.035)
 
     # Four modest roof vents follow the rear building rhythm in the reference.
-    for idx, x in enumerate((-33.0, -20.0, 20.0, 33.0), start=1):
+    for idx, x in enumerate((-27.0, -17.0, 17.0, 27.0), start=1):
         add_box(f"large_service_vent_{idx}_stem", (x, 29.0, 7.22), (0.48, 0.48, 0.62), STEEL, 0.03)
         add_box(f"large_service_vent_{idx}_cap", (x, 29.0, 7.57), (0.9, 0.75, 0.14), OFFICE_ROOF, 0.025)
     # Repeating rear-facing industrial windows keep the back elevation from
     # reading as an unbroken wall in the rear and oblique concept views.
-    for idx, x in enumerate((-36.0, -18.0, 18.0, 36.0), start=1):
+    for idx, x in enumerate((-28.0, -14.0, 14.0, 28.0), start=1):
         add_window(f"large_rear_window_{idx}", x, 3.6, 5.0, 1.35, y=36.62)
 
     # Side sheds run forward from the service block and face the central court.
@@ -318,7 +318,7 @@ def make_large_building():
     wing_center_y = (y_back + y_front) / 2.0
     stall_centers = (-33.0, -26.0, -19.0, -12.0, -5.0, 2.0, 9.0, 16.0)
     for side, sign in (("left", -1), ("right", 1)):
-        x_inner, x_outer = sign * 29.0, sign * 46.0
+        x_inner, x_outer = sign * 20.0, sign * 37.0
         x_min, x_max = sorted((x_inner, x_outer))
         x_mid = (x_inner + x_outer) / 2.0
         # Solid outside wall with a muted red plinth strip, like the concept.
@@ -343,7 +343,7 @@ def make_large_building():
             add_box(f"large_{side}_end_door_rib_{stripe}", (x_mid, y_front - 0.32, 0.95 + stripe * 0.63), (10.25, 0.035, 0.045), FRAME, 0.006)
         # Shallow gable roof, dark like the accepted mockup. Structural portal
         # ties are repeated over the covered run, not over the open-air stalls.
-        ridge_x = sign * 37.5
+        ridge_x = sign * 28.5
         eave_z, ridge_z = 5.75, 6.55
         for idx, y in enumerate(frame_positions, start=1):
             add_beam(f"large_{side}_roof_tie_{idx}", (x_inner, y, eave_z), (x_outer, y, eave_z), 0.22, 0.24, STEEL, 0.02)
@@ -362,7 +362,7 @@ def make_large_building():
 
     # Two shipping containers sit along the exterior side of the rear wing,
     # parallel to that wall and clear of the court and garage entries.
-    for idx, (x, y, mat) in enumerate(((-49.0, 26.0, CONTAINER_RED), (-49.0, 33.0, CONTAINER_BLUE)), start=1):
+    for idx, (x, y, mat) in enumerate(((-40.0, 26.0, CONTAINER_RED), (-40.0, 33.0, CONTAINER_BLUE)), start=1):
         add_box(f"large_container_{idx}_body", (x, y, 1.3), (2.45, 6.0, 2.6), mat, 0.04)
         for rib in range(1, 8):
             yy = y - 2.8 + rib * 0.8
@@ -492,7 +492,7 @@ def set_camera_and_render():
         bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -14.0, -0.005))
         court = bpy.context.object
         court.name = "preview_only_native_asphalt_court"
-        court.dimensions = (92.0, 94.0, 0.05)
+        court.dimensions = (75.0, 94.0, 0.05)
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         court.data.materials.append(asphalt_preview)
         bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -66.0, 0.0))

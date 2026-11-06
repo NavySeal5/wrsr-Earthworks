@@ -7,7 +7,7 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 - Twenty independently accessible vehicle stalls: sixteen covered in two side wings and four open-air at the U opening.
 - Two loading/unloading stations on the yard-facing main building.
 - One road connector centered at the open end of the U.
-- Proportions scaled toward the five-view concept: the structural U is approximately 91 m wide by 75 m deep; the native asphalt court is approximately 92 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
+- Proportions scaled toward the five-view concept: the structural U is approximately 75 m wide by 75 m deep; the rear hall is approximately 74 m long compared with 59.5 m side wings. The native asphalt court is approximately 75 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
 - `$TYPE_ROADDEPO`, no workers, no fuel storage, and the existing plugin-controlled excavator/bulldozer filter.
 - Asphalt native surface metadata for the yard; ground and parking markings are not part of the mesh.
 - Material coefficients 30% above Medium: asphalt 1.755, brick 0.819, wood 0.351, roof material 0.936.
