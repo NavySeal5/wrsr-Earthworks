@@ -312,21 +312,24 @@ def make_large_building():
 
     # Side sheds run forward from the service block and face the central court.
     # Each gets eight covered stalls; two more stalls at the mouth remain open
-    # air. The repeated portal spacing follows the native station layout.
-    y_front, y_back = -11.0, 21.5
-    stall_centers = (-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)
+    # air. Longer wings and a deeper court now match the concept proportions.
+    y_front, y_back = -38.0, 21.5
+    wing_length = y_back - y_front
+    wing_center_y = (y_back + y_front) / 2.0
+    stall_centers = (-33.0, -26.0, -19.0, -12.0, -5.0, 2.0, 9.0, 16.0)
     for side, sign in (("left", -1), ("right", 1)):
         x_inner, x_outer = sign * 29.0, sign * 46.0
         x_min, x_max = sorted((x_inner, x_outer))
         x_mid = (x_inner + x_outer) / 2.0
         # Solid outside wall with a muted red plinth strip, like the concept.
-        add_box(f"large_{side}_outer_wall", (x_outer, 5.25, 2.65), (0.36, 32.5, 5.3), PLASTER, 0.035)
-        add_box(f"large_{side}_outer_safety_band", (x_outer - sign * 0.2, 5.25, 0.63), (0.1, 32.4, 0.25), SAFETY_RED, 0.012)
+        add_box(f"large_{side}_outer_wall", (x_outer, wing_center_y, 2.65), (0.36, wing_length, 5.3), PLASTER, 0.035)
+        add_box(f"large_{side}_outer_safety_band", (x_outer - sign * 0.2, wing_center_y, 0.63), (0.1, wing_length - 0.1, 0.25), SAFETY_RED, 0.012)
         # Thin wall pilasters add visible bay rhythm without blocking access.
-        for idx, y in enumerate((-10.8, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.0), start=1):
+        frame_positions = (-38.0, -30.5, -23.0, -15.5, -8.0, -0.5, 7.0, 14.5, 22.0)
+        for idx, y in enumerate(frame_positions, start=1):
             add_box(f"large_{side}_outer_pilaster_{idx}", (x_outer - sign * 0.23, y, 2.7), (0.16, 0.2, 5.4), FRAME, 0.02)
         # Open courtyard side: steel columns frame the individual vehicle bays.
-        for idx, y in enumerate((-10.7, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.2), start=1):
+        for idx, y in enumerate(frame_positions, start=1):
             add_box(f"large_{side}_court_post_{idx}", (x_inner, y, 2.85), (0.36, 0.36, 5.7), STEEL, 0.025)
             add_box(f"large_{side}_court_foot_{idx}", (x_inner, y, 0.24), (0.68, 0.68, 0.48), CONCRETE, 0.035)
             add_box(f"large_{side}_post_safety_{idx}", (x_inner - sign * 0.2, y, 0.82), (0.05, 0.06, 0.72), SAFETY_RED, 0.01)
@@ -342,7 +345,7 @@ def make_large_building():
         # ties are repeated over the covered run, not over the open-air stalls.
         ridge_x = sign * 37.5
         eave_z, ridge_z = 5.75, 6.55
-        for idx, y in enumerate((-10.8, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.2), start=1):
+        for idx, y in enumerate(frame_positions, start=1):
             add_beam(f"large_{side}_roof_tie_{idx}", (x_inner, y, eave_z), (x_outer, y, eave_z), 0.22, 0.24, STEEL, 0.02)
             add_beam(f"large_{side}_roof_rafter_inner_{idx}", (x_inner, y, eave_z), (ridge_x, y, ridge_z), 0.18, 0.2, STEEL, 0.02)
             add_beam(f"large_{side}_roof_rafter_outer_{idx}", (ridge_x, y, ridge_z), (x_outer, y, eave_z), 0.18, 0.2, STEEL, 0.02)
@@ -354,8 +357,8 @@ def make_large_building():
                 (xa, y_front - 0.25, za), (xb, y_front - 0.25, zb),
                 (xb, y_back + 0.25, zb), (xa, y_back + 0.25, za),
             ], OFFICE_ROOF)
-        add_box(f"large_{side}_ridge_cap", (ridge_x, 5.25, ridge_z + 0.06), (0.18, 32.8, 0.14), FRAME, 0.02)
-        add_box(f"large_{side}_inner_gutter", (x_inner, 5.25, eave_z + 0.04), (0.2, 32.8, 0.18), FRAME, 0.02)
+        add_box(f"large_{side}_ridge_cap", (ridge_x, wing_center_y, ridge_z + 0.06), (0.18, wing_length + 0.6, 0.14), FRAME, 0.02)
+        add_box(f"large_{side}_inner_gutter", (x_inner, wing_center_y, eave_z + 0.04), (0.2, wing_length + 0.6, 0.18), FRAME, 0.02)
 
     # Two shipping containers sit along the exterior side of the rear wing,
     # parallel to that wall and clear of the court and garage entries.
@@ -443,9 +446,9 @@ def apply_atlas_uvs(obj, material_name):
 
 def set_camera_and_render():
     if LARGE:
-        target = Vector((0.0, 0.0, 2.8))
-        camera_location = (-34.0, -122.0, 82.0)
-        ortho_scale = 132.0
+        target = Vector((0.0, -14.0, 2.8))
+        camera_location = (-40.0, -154.0, 96.0)
+        ortho_scale = 155.0
     elif MEDIUM:
         target = Vector((12.0, 0.0, 2.3))
         camera_location = (-25.0, -68.0, 54.0)
@@ -486,21 +489,21 @@ def set_camera_and_render():
         # like the playable layout; they are intentionally excluded from OBJ.
         asphalt_preview = material("preview_native_asphalt", (0.105, 0.115, 0.13), 0.94)
         line_preview = material("preview_native_parking_lines", (0.78, 0.76, 0.68), 0.9)
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -1.5, -0.005))
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -14.0, -0.005))
         court = bpy.context.object
         court.name = "preview_only_native_asphalt_court"
-        court.dimensions = (92.0, 69.0, 0.05)
+        court.dimensions = (92.0, 94.0, 0.05)
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         court.data.materials.append(asphalt_preview)
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -40.5, 0.0))
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -66.0, 0.0))
         approach = bpy.context.object
         approach.name = "preview_only_native_road_apron"
-        approach.dimensions = (12.0, 12.0, 0.05)
+        approach.dimensions = (12.0, 20.0, 0.05)
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         approach.data.materials.append(asphalt_preview)
         # Twenty individually readable, single-depth parking positions.
         for side, x in (("left", -36.0), ("right", 36.0)):
-            for index, y in enumerate((-19.0, -15.0, -7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0), start=1):
+            for index, y in enumerate((-54.0, -47.0, -33.0, -26.0, -19.0, -12.0, -5.0, 2.0, 9.0, 16.0), start=1):
                 for edge_x in (x - 5.0, x + 5.0):
                     bpy.ops.mesh.primitive_cube_add(size=1.0, location=(edge_x, y, 0.028))
                     stripe = bpy.context.object

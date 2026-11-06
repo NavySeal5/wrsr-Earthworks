@@ -160,7 +160,7 @@ $custom.Add('')
 # Native asphalt court surface. It covers the yard and both structural wings;
 # road/network access remains a separate connector at the U opening.
 $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
-$custom.Add('-46.0000 -36.0000')
+$custom.Add('-46.0000 -61.0000')
 $custom.Add('46.0000 33.0000')
 $custom.Add('')
 # Resource coefficients follow the accepted 30% step above Medium.
@@ -204,7 +204,7 @@ $custom.Add('')
 # Road-depot UI; 20 independent parking slots and two loading/unloading stations.
 $custom.Add('')
 foreach ($x in @('-36.0000', '36.0000')) {
-    foreach ($z in @('-19.0000', '-15.0000', '-7.0000', '-3.0000', '1.0000', '5.0000', '9.0000', '13.0000', '17.0000', '21.0000')) {
+    foreach ($z in @('-54.0000', '-47.0000', '-33.0000', '-26.0000', '-19.0000', '-12.0000', '-5.0000', '2.0000', '9.0000', '16.0000')) {
         $slotZ1 = ([double]::Parse($z, [Globalization.CultureInfo]::InvariantCulture) - 1.5).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
         $slotZ2 = ([double]::Parse($z, [Globalization.CultureInfo]::InvariantCulture) + 1.5).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
         $custom.Add('$VEHICLE_PARKING ' + $x + ' 0.0000 ' + $slotZ1 + ' ' + $x + ' 0.0000 ' + $slotZ2)
@@ -215,8 +215,8 @@ $custom.Add('$VEHICLE_STATION 11.0000 0.0000 17.0000 19.0000 0.0000 17.0000')
 $custom.Add('')
 # Single connector at the U opening, aligned to the central approach aisle.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('0.0000 0.0000 -33.0000')
-$custom.Add('0.0000 0.0000 -43.0000')
+$custom.Add('0.0000 0.0000 -61.0000')
+$custom.Add('0.0000 0.0000 -71.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
