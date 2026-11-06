@@ -163,7 +163,10 @@ $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
 $custom.Add('-37.5000 -33.0000')
 $custom.Add('37.5000 61.0000')
 $custom.Add('')
-# Resource coefficients follow the accepted 30% step above Medium.
+# Target displayed material totals at 130% of Medium. Because the Large mesh
+# has substantially more construction-node surface area, normalize each phase
+# coefficient by the Medium/Large node-area ratio instead of scaling the raw
+# coefficients by 1.30. Final totals still require a fresh in-game preview.
 $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
@@ -172,7 +175,7 @@ foreach ($node in @(
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
 $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
-$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.755')
+$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 0.336')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 1.0')
 foreach ($node in @(
@@ -183,8 +186,8 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO wall_brick 0.819')
-$custom.Add('$COST_RESOURCE_AUTO wall_wood 0.351')
+$custom.Add('$COST_RESOURCE_AUTO wall_brick 0.147')
+$custom.Add('$COST_RESOURCE_AUTO wall_wood 0.063')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 1.0')
 foreach ($node in @(
@@ -199,7 +202,7 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.936')
+$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.289')
 $custom.Add('')
 # Road-depot UI; 20 independent parking slots and two loading/unloading stations.
 $custom.Add('')
