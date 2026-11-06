@@ -53,6 +53,34 @@ bool IsEarthworksAsset(const char* assetName)
         std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0 ||
         std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0;
 }
+const char* EarthworksDisplayName(const char* assetName)
+{
+    if(!assetName)return "Earthworks Facility";
+    const char* objectName=std::strrchr(assetName,'/');
+    objectName=objectName?objectName+1:assetName;
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
+    return "Earthworks Facility (Small)";
+}
+bool ReadUtf16(Address address,unsigned maxChars,char* out,size_t outSize)
+{
+    if(!out||!outSize)return false;
+    out[0]=0;
+    wchar_t value[64]{};
+    const unsigned count=std::min<unsigned>(maxChars,_countof(value));
+    unsigned length=0;
+    for(;length<count;++length) {
+        if(!Read(address+length*sizeof(wchar_t),&value[length]))return false;
+        if(value[length]==L'\0')break;
+    }
+    if(!length)return true;
+    if(length==count&&length<_countof(value))value[length]=L'\0';
+    const int converted=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,value,static_cast<int>(length),
+        out,static_cast<int>(outSize-1),nullptr,nullptr);
+    if(converted<=0){out[0]=0;return false;}
+    out[converted]=0;
+    return true;
+}
 bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
 {
     Address type=0;
@@ -65,20 +93,18 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
         if(static_cast<unsigned char>(c)<32 || static_cast<unsigned char>(c)>126)return false;
         out->assetName[i]=c;
     }
-    // RepublicMP's building-switch layout identifies the native custom-name
-    // text at building+0x114. It occupies 0x80 bytes (64 UTF-16 code units).
-    wchar_t nativeName[64]{};
-    unsigned nameLength=0;
-    for(;nameLength<_countof(nativeName);++nameLength) {
-        if(!Read(address+0x114+nameLength*sizeof(wchar_t),&nativeName[nameLength]))return false;
-        if(nativeName[nameLength]==L'\0')break;
-    }
-    if(nameLength) {
-        nativeName[_countof(nativeName)-1]=L'\0';
-        WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,nativeName,static_cast<int>(nameLength),
-            out->displayName,static_cast<int>(sizeof(out->displayName)-1),nullptr,nullptr);
-    }
     out->earthworksFacility=IsEarthworksAsset(out->assetName);
+    if(out->earthworksFacility) {
+        // The native header uses an explicit instance name when present;
+        // otherwise it prefixes the configured $NAME_STR with its city name.
+        if(!ReadUtf16(address+0x114,64,out->displayName,sizeof(out->displayName)))return false;
+        if(!out->displayName[0]) {
+            Address city=0;char cityName[129]{};
+            if(Read(address+0x108,&city)&&city&&ReadUtf16(city+0x10,32,cityName,sizeof(cityName))&&cityName[0])
+                sprintf_s(out->displayName,"%s %s",cityName,EarthworksDisplayName(out->assetName));
+            else strncpy_s(out->displayName,EarthworksDisplayName(out->assetName),_TRUNCATE);
+        }
+    }
     return true;
 }
 bool Resolve(const Identity& identity,Address* address)
