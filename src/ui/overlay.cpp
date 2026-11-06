@@ -15,6 +15,7 @@
 #include "imgui_impl_dx11.h"
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -95,6 +96,15 @@ const char* ProjectStatusName(ProjectStatus status)
     case ProjectStatus::Cancelled:return "Cancelled";
     default:return "Draft";
     }
+}
+const char* FacilityTypeName(const char* assetName)
+{
+    if(!assetName)return "Earthworks Facility";
+    const char* objectName=std::strrchr(assetName,'/');
+    objectName=objectName?objectName+1:assetName;
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
+    return "Earthworks Facility (Small)";
 }
 bool ProjectCanMove(ProjectStatus status)
 {
@@ -595,8 +605,8 @@ void DrawInterface(const Snapshot& s)
                         ++displayed;ImGui::PushID(static_cast<int>(facility.id));ImGui::TableNextRow();
                         if(assignedElsewhere)ImGui::BeginDisabled(true);
                         ImGui::TableNextColumn();
-                        if(facility.displayName[0])ImGui::Text("%s (#%u)",facility.displayName,facility.id);
-                        else ImGui::Text("Building #%u",facility.id);
+                        const char* facilityName=facility.displayName[0]?facility.displayName:FacilityTypeName(facility.assetName);
+                        ImGui::Text("%s (#%u)",facilityName,facility.id);
                         ImGui::TableNextColumn();
                         if(assignedElsewhere)ImGui::TextUnformatted(facility.assignedProjectName);
                         else if(facility.assignedProjectId)ImGui::TextUnformatted(s.projectContainerName);
