@@ -13,6 +13,7 @@ struct BuildingReading {
     float distance=0;
     bool earthworksFacility=false;
     char assetName[64]{};
+    char displayName[257]{};
 };
 struct VehicleReading {
     unsigned id=0,category=0,routeStopCount=0;

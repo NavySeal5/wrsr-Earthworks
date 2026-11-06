@@ -18,6 +18,7 @@ struct ProjectFacilityBrief {
     uint64_t assignedProjectId=0;
     bool machineCountValid=false;
     char assetName[64]{};
+    char displayName[257]{};
     char assignedProjectName[MaxSavedNameBytes+1]{};
 };
 struct ProjectBrief {

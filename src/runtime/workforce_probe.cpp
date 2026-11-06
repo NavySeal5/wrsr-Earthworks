@@ -65,6 +65,19 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
         if(static_cast<unsigned char>(c)<32 || static_cast<unsigned char>(c)>126)return false;
         out->assetName[i]=c;
     }
+    // RepublicMP's building-switch layout identifies the native custom-name
+    // text at building+0x114. It occupies 0x80 bytes (64 UTF-16 code units).
+    wchar_t nativeName[64]{};
+    unsigned nameLength=0;
+    for(;nameLength<_countof(nativeName);++nameLength) {
+        if(!Read(address+0x114+nameLength*sizeof(wchar_t),&nativeName[nameLength]))return false;
+        if(nativeName[nameLength]==L'\0')break;
+    }
+    if(nameLength) {
+        nativeName[_countof(nativeName)-1]=L'\0';
+        WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,nativeName,static_cast<int>(nameLength),
+            out->displayName,static_cast<int>(sizeof(out->displayName)-1),nullptr,nullptr);
+    }
     out->earthworksFacility=IsEarthworksAsset(out->assetName);
     return true;
 }

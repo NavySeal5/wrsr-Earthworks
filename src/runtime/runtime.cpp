@@ -342,6 +342,7 @@ void RefreshProjectStatus()
             for(unsigned i=0;i<count;++i) {
                 auto& target=current.facilityCandidates[i];target=ProjectFacilityBrief{};
                 target.id=buildings[i].id;strncpy_s(target.assetName,buildings[i].assetName,_TRUNCATE);
+                strncpy_s(target.displayName,buildings[i].displayName,_TRUNCATE);
             }
         }
         lastWorldFacilityScan=now;

@@ -595,7 +595,9 @@ void DrawInterface(const Snapshot& s)
                         ++displayed;ImGui::PushID(static_cast<int>(facility.id));ImGui::TableNextRow();
                         if(assignedElsewhere)ImGui::BeginDisabled(true);
                         const char* size=strstr(facility.assetName,"Large")?"Large":strstr(facility.assetName,"Medium")?"Medium":"Small";
-                        ImGui::TableNextColumn();ImGui::Text("%s Earthworks Facility #%u",size,facility.id);
+                        ImGui::TableNextColumn();
+                        if(facility.displayName[0])ImGui::Text("%s (%s #%u)",facility.displayName,size,facility.id);
+                        else ImGui::Text("%s Earthworks Facility #%u",size,facility.id);
                         ImGui::TableNextColumn();
                         if(assignedElsewhere)ImGui::TextUnformatted(facility.assignedProjectName);
                         else if(facility.assignedProjectId)ImGui::TextUnformatted(s.projectContainerName);

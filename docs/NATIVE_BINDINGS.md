@@ -54,6 +54,7 @@ Provenance: local RepublicMP commit `630775724abd5e3346eb59f9c66e2873128d74a4`, 
 | Buildings | World = EXE+0x9D4F10; pointer vector +0x11B08 | World-local list, capped at 262144 slots for this diagnostic |
 | Building identity | +0x00 unsigned ID, validated alongside vector slot and address | Never persist pointers; invalidate on mismatch/load |
 | Building origin/type | +0x350 vector3; type pointer +0x318, category +0x360, subtype +0x364 | Origin, category/subtype and bounded internal asset name at the descriptor start |
+| Building custom name | +0x114, inline UTF-16 text occupying 0x80 bytes | Read as up to 64 UTF-16 code units and convert to UTF-8 for the Projects facility table. The pinned RepublicMP `lockstep/building_switches.cpp` treats building bytes in `[0x114, 0x194)` as text rather than heap links; names are optional, so an empty field falls back to the generated facility type and ID. |
 | Building asset identity | Type descriptor starts with bounded internal asset name | Exact strings `9100000012/EarthworksDevelopmentFacility`, `9100000013/EarthworksDevelopmentFacilityMedium`, and `9100000014/EarthworksDevelopmentFacilityLarge` identify the generated Small, Medium and Large items, independent of their generic native category/subtype |
 | Occupants | Building pointer vector +0xBC0 | Non-null entries and slots; workers at workplace is a hypothesis to compare, residents at homes use this same list |
 | Parked vehicles | Building pointer vector +0xC70 | Native membership, not verified idle/usable status |
