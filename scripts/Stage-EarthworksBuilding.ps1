@@ -233,7 +233,7 @@ $custom.Add('')
 # 12.6 m wide. Two parking lanes per bay are centered 6 m apart.
 # Move both parking anchors 5 m toward the rear of the bays so longer vehicles
 # sit farther beneath the canopy. Preserve the +Z heading toward the opening.
-$custom.Add('$VEHICLE_STATION 9.5000 0.0000 -5.0000 15.5000 0.0000 -5.0000')
+$custom.Add('$VEHICLE_STATION 9.5000 0.0000 18.0000 15.5000 0.0000 18.0000')
 foreach ($x in @('-2.3000', '3.7000', '10.3000', '16.3000')) {
     $custom.Add('$VEHICLE_PARKING ' + $x + ' 0.0000 -5.0000 ' + $x + ' 0.0000 5.0000')
 }
