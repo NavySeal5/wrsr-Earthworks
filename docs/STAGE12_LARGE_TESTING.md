@@ -7,6 +7,7 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 - Twenty independently accessible vehicle stalls: sixteen covered in the side garage wings (eight per wing) and four open-air at the U opening; all face inward.
 - Two loading/unloading stations side by side near the center of the court, close to the yard-facing main-building frontage.
 - Both garage wings remain open at their terminal ends; the end walls, safety strips, and decorative ribbed garage-door assemblies were removed so those openings are not blocked.
+- Parking bay markings come from the native `$VEHICLE_PARKING` segment, not separate mesh paint. Large uses 10 m segments centered on the same 20 vehicle positions as before, matching the segment length used by Small and Medium.
 - Two-storey raised central section on the rear service building, about 9.9 m high; the side wings remain single-storey.
 - One road connector centered at the U opening / road-approach end.
 - Proportions scaled toward the five-view concept: the structural U is approximately 75 m wide by 75 m deep; the rear hall is approximately 74 m long compared with 59.5 m side wings. The native asphalt court is approximately 75 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
@@ -31,6 +32,7 @@ Use a fresh disposable save and select **Earthworks Facility (Large)** from the 
 3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings with both terminal garage ends open, no stalls in front of other stalls, and containers outside vehicle paths.
 4. Test the single road approach and confirm its snap point remains at the U opening while its direction is reversed from the previous build; confirm vehicles can enter and turn through the central aisle.
 5. Count twenty native parking positions: eight covered inside each garage wing and four open-air at the U opening. Confirm none are on the main-building roof, and every position faces inward toward the yard. Try representative long excavators and bulldozers in all positions; inspect clipping, spacing, and pathing.
+   Confirm the game renders the ground bay lines for all twenty positions. Their `$VEHICLE_PARKING` segments now span 10 m while retaining their previous centers and inward-facing direction.
 6. Confirm both loading/unloading positions sit side by side near the court center, close to the main-building frontage, and do not overlap parking paths, stairs, buildings, or the road approach.
 7. Confirm the native panel shows twenty vehicle positions, admits excavators and bulldozers, rejects other vehicle classes, and exposes no worker or fuel requirement.
 8. Save, reload, and confirm the placed building retains its vehicle state. Demolish it and check that surface-area metadata is removed with the building.

@@ -212,10 +212,18 @@ foreach ($side in @(
     # open-air centers (-47/-54) map to game Z +47/+54. Keep this conversion
     # explicit so no position lands on the rear service building.
     foreach ($z in @('-16.0000', '-9.0000', '-2.0000', '5.0000', '12.0000', '19.0000', '26.0000', '33.0000', '47.0000', '54.0000')) {
-        # The parking segment now runs across X. Its direction points toward
-        # the yard center: +X on the left and -X on the right.
-        $x1 = ([double]$side.X1).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
-        $x2 = ([double]$side.X2).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
+        # Native parking entries also define the ground bay marking span.
+        # Small/Medium use 10 m spans; Large keeps the same vehicle center and
+        # inward-facing direction while extending each short 3 m span evenly.
+        $centerX = (([double]$side.X1 + [double]$side.X2) / 2.0)
+        if ([double]$side.X1 -lt 0) {
+            $x1 = ($centerX - 5.0).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
+            $x2 = ($centerX + 5.0).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
+        }
+        else {
+            $x1 = ($centerX + 5.0).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
+            $x2 = ($centerX - 5.0).ToString('0.0000', [Globalization.CultureInfo]::InvariantCulture)
+        }
         $custom.Add('$VEHICLE_PARKING ' + $x1 + ' 0.0000 ' + $z + ' ' + $x2 + ' 0.0000 ' + $z)
     }
 }
