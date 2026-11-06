@@ -180,6 +180,21 @@ void FindWorkforceBuildings(Point point)
     }
     strcpy_s(view.status,view.candidateCount?"Choose the intended building from the nearby origins below.":"No readable building origins within 150 m. Click closer to the building centre.");
 }
+bool ReadWorldEarthworksFacilities(std::array<BuildingReading,WorldEarthworksFacilities>* out,unsigned* count,bool* truncated)
+{
+    if(!out||!count||!truncated)return false;
+    out->fill(BuildingReading{});*count=0;*truncated=false;
+    List buildings;
+    if(!PointerList(World()+0x11B08,262144,&buildings))return false;
+    for(unsigned i=0;i<buildings.count;++i) {
+        Address address=0;BuildingReading reading{};
+        if(!Element(buildings,i,&address))return false;
+        if(!DescribeBuilding(address,i,&reading)||!reading.earthworksFacility)continue;
+        if(*count>=out->size()){*truncated=true;continue;}
+        (*out)[(*count)++]=reading;
+    }
+    return true;
+}
 void SelectWorkforceBuilding(unsigned candidate)
 {
     if(candidate>=view.candidateCount)return;

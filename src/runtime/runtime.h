@@ -17,6 +17,7 @@ struct ProjectFacilityBrief {
     float distance=0;
     uint64_t assignedProjectId=0;
     bool machineCountValid=false;
+    char assetName[64]{};
     char assignedProjectName[MaxSavedNameBytes+1]{};
 };
 struct ProjectBrief {
@@ -51,9 +52,10 @@ struct Snapshot {
     Plan editorPlan{};
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
+    bool facilityListTruncated=false;
     std::array<unsigned,MaxProjectFacilities> assignedFacilityIds{};
     std::array<ProjectFacilityBrief,MaxProjectFacilities> assignedFacilities{};
-    std::array<ProjectFacilityBrief,WorkforceCandidates> facilityCandidates{};
+    std::array<ProjectFacilityBrief,WorldEarthworksFacilities> facilityCandidates{};
     unsigned projectFacilityId = 0;
     float projectFacilityDistance = 0;
     int day = 0, year = 0;

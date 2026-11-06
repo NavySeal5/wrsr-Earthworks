@@ -5,6 +5,7 @@
 
 namespace ew {
 constexpr unsigned WorkforceCandidates=5, WorkforceRows=48;
+constexpr unsigned WorldEarthworksFacilities=128;
 struct BuildingReading {
     unsigned slot=0,id=0;
     int category=-1,subtype=-1;
@@ -34,6 +35,7 @@ struct WorkforceView {
 };
 void ResetWorkforce();
 void FindWorkforceBuildings(Point point);
+bool ReadWorldEarthworksFacilities(std::array<BuildingReading,WorldEarthworksFacilities>* out,unsigned* count,bool* truncated);
 void SelectWorkforceBuilding(unsigned candidate);
 bool IsEarthworksBuilding(void* building);
 bool IsEarthworksFacility(void* building);

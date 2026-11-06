@@ -34,6 +34,7 @@ bool savePending = false;
 bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
 ULONGLONG lastProjectFacilityReadings = 0;
+ULONGLONG lastWorldFacilityScan = 0;
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
@@ -284,6 +285,7 @@ void ResetWorld()
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
     durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    lastWorldFacilityScan=0;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
@@ -332,12 +334,22 @@ void RefreshProjectStatus()
         }
     }
     if(refreshFacilityReadings||current.assignedFacilityCount!=previousFacilityCount)lastProjectFacilityReadings=now;
-    const auto workforce=ReadWorkforce();current.facilityCandidateCount=0;
-    for(unsigned i=0;i<workforce.candidateCount&&current.facilityCandidateCount<WorkforceCandidates;++i) {
-        const auto& candidate=workforce.candidates[i];if(!candidate.earthworksFacility)continue;
-        auto& target=current.facilityCandidates[current.facilityCandidateCount++];target=ProjectFacilityBrief{};
-        target.id=candidate.id;target.distance=candidate.distance;
-        if(const auto* owner=FacilityOwner(candidate.id)) {
+    if(!current.ready||now-lastWorldFacilityScan>=1000) {
+        current.facilityCandidateCount=0;current.facilityListTruncated=false;
+        std::array<BuildingReading,WorldEarthworksFacilities> buildings{};unsigned count=0;bool truncated=false;
+        if(current.ready&&ReadWorldEarthworksFacilities(&buildings,&count,&truncated)) {
+            current.facilityCandidateCount=count;current.facilityListTruncated=truncated;
+            for(unsigned i=0;i<count;++i) {
+                auto& target=current.facilityCandidates[i];target=ProjectFacilityBrief{};
+                target.id=buildings[i].id;strncpy_s(target.assetName,buildings[i].assetName,_TRUNCATE);
+            }
+        }
+        lastWorldFacilityScan=now;
+    }
+    for(unsigned i=0;i<current.facilityCandidateCount;++i) {
+        auto& target=current.facilityCandidates[i];
+        target.assignedProjectId=0;target.assignedProjectName[0]=0;
+        if(const auto* owner=FacilityOwner(target.id)) {
             target.assignedProjectId=owner->id;strncpy_s(target.assignedProjectName,owner->name.c_str(),_TRUNCATE);
         }
     }

@@ -59,6 +59,7 @@ bool escapeOwned = false;
 bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
+bool showAllFacilities = false;
 std::atomic<bool> areaPickCapture{false};
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
@@ -578,36 +579,49 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
                 ImGui::EndDisabled();
                 ImGui::SeparatorText("Facilities");
-                if(!s.assignedFacilityCount)ImGui::TextDisabled("No facilities assigned.");
-                for(unsigned i=0;i<s.assignedFacilityCount;++i) {
-                    const auto& facility=s.assignedFacilities[i];
-                    ImGui::PushID(static_cast<int>(facility.id));
-                    ImGui::Text("Earthworks Facility #%u",facility.id);
-                    ImGui::SameLine();
-                    if(facility.machineCountValid)ImGui::TextDisabled("%u eligible machine%s",facility.eligibleMachines,facility.eligibleMachines==1?"":"s");
-                    else ImGui::TextDisabled("Unavailable (removed or readings incomplete)");
-                    ImGui::SameLine();
-                    if(ImGui::Button("Remove"))SendProject(Action::RemoveProjectFacility,facility.id);
-                    ImGui::PopID();
+                if(ImGui::SmallButton(showAllFacilities?"Hide other Projects":"Show all facilities"))showAllFacilities=!showAllFacilities;
+                ImGui::SameLine();ImGui::TextDisabled("%u found",s.facilityCandidateCount);
+                if(ImGui::BeginTable("facilityTable",4,ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,{0,190})) {
+                    ImGui::TableSetupColumn("Facility",ImGuiTableColumnFlags_WidthStretch,2.2f);
+                    ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,1.6f);
+                    ImGui::TableSetupColumn("Machines",ImGuiTableColumnFlags_WidthFixed,84.0f);
+                    ImGui::TableSetupColumn("",ImGuiTableColumnFlags_WidthFixed,72.0f);
+                    ImGui::TableHeadersRow();
+                    unsigned displayed=0;
+                    for(unsigned i=0;i<s.facilityCandidateCount;++i) {
+                        const auto& facility=s.facilityCandidates[i];
+                        const bool assignedElsewhere=facility.assignedProjectId&&facility.assignedProjectId!=s.selectedNamedProjectId;
+                        if(assignedElsewhere&&!showAllFacilities)continue;
+                        ++displayed;ImGui::PushID(static_cast<int>(facility.id));ImGui::TableNextRow();
+                        if(assignedElsewhere)ImGui::BeginDisabled(true);
+                        const char* size=strstr(facility.assetName,"Large")?"Large":strstr(facility.assetName,"Medium")?"Medium":"Small";
+                        ImGui::TableNextColumn();ImGui::Text("%s Earthworks Facility #%u",size,facility.id);
+                        ImGui::TableNextColumn();
+                        if(assignedElsewhere)ImGui::TextUnformatted(facility.assignedProjectName);
+                        else if(facility.assignedProjectId)ImGui::TextUnformatted(s.projectContainerName);
+                        else ImGui::TextDisabled("Unassigned");
+                        ImGui::TableNextColumn();
+                        const auto assigned=std::find_if(s.assignedFacilities.begin(),s.assignedFacilities.begin()+s.assignedFacilityCount,[&](const ProjectFacilityBrief& row){return row.id==facility.id;});
+                        if(assigned!=s.assignedFacilities.begin()+s.assignedFacilityCount&&assigned->machineCountValid)
+                            ImGui::Text("%u",assigned->eligibleMachines);
+                        else ImGui::TextDisabled("—");
+                        ImGui::TableNextColumn();
+                        if(assignedElsewhere)ImGui::TextDisabled("Assigned");
+                        else if(facility.assignedProjectId==s.selectedNamedProjectId) {
+                            if(ImGui::SmallButton("Remove"))SendProject(Action::RemoveProjectFacility,facility.id);
+                        } else {
+                            ImGui::BeginDisabled(!s.selectedNamedProjectId);
+                            if(ImGui::SmallButton("Assign"))SendProject(Action::AddProjectFacility,facility.id);
+                            ImGui::EndDisabled();
+                        }
+                        if(assignedElsewhere)ImGui::EndDisabled();
+                        ImGui::PopID();
+                    }
+                    ImGui::EndTable();
+                    if(!displayed)ImGui::TextDisabled("No unassigned or current-Project facilities found.");
                 }
-                ImGui::SeparatorText("Available facilities");
-                ImGui::BeginDisabled(!s.selectedNamedProjectId);
-                if(ImGui::Button("Choose facility on map"))Send(Action::InspectBuilding);
-                ImGui::EndDisabled();
-                if(s.mode==PickMode::InspectBuilding)ImGui::TextDisabled("Click near a facility on the map; keep this panel open.");
-                if(s.mode==PickMode::InspectBuilding&&!s.facilityCandidateCount)
-                    ImGui::TextDisabled("No recognized Earthworks facility found near that click. Try clicking the facility itself.");
-                for(unsigned i=0;i<s.facilityCandidateCount;++i) {
-                    const auto& candidate=s.facilityCandidates[i];ImGui::PushID(static_cast<int>(candidate.id));
-                    ImGui::Text("Earthworks Development Facility — #%u  |  %.0f m away",candidate.id,candidate.distance);ImGui::SameLine();
-                    if(candidate.assignedProjectId&&candidate.assignedProjectId!=s.selectedNamedProjectId) {
-                        ImGui::BeginDisabled(true);ImGui::Button("Unavailable");ImGui::EndDisabled();
-                        ImGui::TextDisabled("Already assigned to %s",candidate.assignedProjectName);
-                    } else if(std::find(s.assignedFacilityIds.begin(),s.assignedFacilityIds.begin()+s.assignedFacilityCount,candidate.id)==s.assignedFacilityIds.begin()+s.assignedFacilityCount) {
-                        if(ImGui::Button("＋ Add"))SendProject(Action::AddProjectFacility,candidate.id);
-                    } else ImGui::TextDisabled("Already assigned here");
-                    ImGui::PopID();
-                }
+                if(s.facilityListTruncated)ImGui::TextDisabled("Showing the first %u facilities.",WorldEarthworksFacilities);
+                else if(!s.facilityCandidateCount)ImGui::TextDisabled("No existing Earthworks facilities found in this republic.");
             }
             if(ImGui::BeginPopupModal("Site name",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
