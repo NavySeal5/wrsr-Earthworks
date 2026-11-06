@@ -97,15 +97,6 @@ const char* ProjectStatusName(ProjectStatus status)
     default:return "Draft";
     }
 }
-const char* FacilityTypeName(const char* assetName)
-{
-    if(!assetName)return "Earthworks Facility";
-    const char* objectName=std::strrchr(assetName,'/');
-    objectName=objectName?objectName+1:assetName;
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
-    return "Earthworks Facility (Small)";
-}
 bool ProjectCanMove(ProjectStatus status)
 {
     return status==ProjectStatus::Queued||status==ProjectStatus::Running||status==ProjectStatus::Waiting||status==ProjectStatus::Paused;
@@ -605,8 +596,8 @@ void DrawInterface(const Snapshot& s)
                         ++displayed;ImGui::PushID(static_cast<int>(facility.id));ImGui::TableNextRow();
                         if(assignedElsewhere)ImGui::BeginDisabled(true);
                         ImGui::TableNextColumn();
-                        const char* facilityName=facility.displayName[0]?facility.displayName:FacilityTypeName(facility.assetName);
-                        ImGui::Text("%s (#%u)",facilityName,facility.id);
+                        if(facility.displayName[0])ImGui::TextUnformatted(facility.displayName);
+                        else ImGui::TextDisabled("Name unavailable");
                         ImGui::TableNextColumn();
                         if(assignedElsewhere)ImGui::TextUnformatted(facility.assignedProjectName);
                         else if(facility.assignedProjectId)ImGui::TextUnformatted(s.projectContainerName);

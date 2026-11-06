@@ -53,15 +53,6 @@ bool IsEarthworksAsset(const char* assetName)
         std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0 ||
         std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0;
 }
-const char* EarthworksDisplayName(const char* assetName)
-{
-    if(!assetName)return "Earthworks Facility";
-    const char* objectName=std::strrchr(assetName,'/');
-    objectName=objectName?objectName+1:assetName;
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
-    return "Earthworks Facility (Small)";
-}
 bool ReadUtf16(Address address,unsigned maxChars,char* out,size_t outSize)
 {
     if(!out||!outSize)return false;
@@ -95,15 +86,9 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
     }
     out->earthworksFacility=IsEarthworksAsset(out->assetName);
     if(out->earthworksFacility) {
-        // The native header uses an explicit instance name when present;
-        // otherwise it prefixes the configured $NAME_STR with its city name.
+        // Read only the name stored on this building instance. The default
+        // header shown by the game is not stored here; do not synthesize it.
         if(!ReadUtf16(address+0x114,64,out->displayName,sizeof(out->displayName)))return false;
-        if(!out->displayName[0]) {
-            Address city=0;char cityName[129]{};
-            if(Read(address+0x108,&city)&&city&&ReadUtf16(city+0x10,32,cityName,sizeof(cityName))&&cityName[0])
-                sprintf_s(out->displayName,"%s %s",cityName,EarthworksDisplayName(out->assetName));
-            else strncpy_s(out->displayName,EarthworksDisplayName(out->assetName),_TRUNCATE);
-        }
     }
     return true;
 }
