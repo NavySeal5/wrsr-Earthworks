@@ -343,14 +343,9 @@ def make_large_building():
             add_box(f"large_{side}_court_post_{idx}", (x_inner, y, 2.85), (0.36, 0.36, 5.7), STEEL, 0.025)
             add_box(f"large_{side}_court_foot_{idx}", (x_inner, y, 0.24), (0.68, 0.68, 0.48), CONCRETE, 0.035)
             add_box(f"large_{side}_post_safety_{idx}", (x_inner - sign * 0.2, y, 0.82), (0.05, 0.06, 0.72), SAFETY_RED, 0.01)
-        # End wall frames the opening and distinguishes the covered bays from
-        # the two open-air positions in front of it.
-        add_box(f"large_{side}_mouth_end_wall", (x_mid, y_front, 2.75), (17.3, 0.3, 5.5), PLASTER, 0.04)
-        add_box(f"large_{side}_mouth_safety_band", (x_mid, y_front - 0.18, 0.63), (17.1, 0.08, 0.24), SAFETY_RED, 0.01)
-        add_box(f"large_{side}_end_door_surround", (x_mid, y_front - 0.19, 2.85), (11.2, 0.12, 4.55), FRAME, 0.035)
-        add_box(f"large_{side}_end_door_panel", (x_mid, y_front - 0.27, 2.85), (10.55, 0.07, 4.1), STEEL, 0.025)
-        for stripe in range(1, 6):
-            add_box(f"large_{side}_end_door_rib_{stripe}", (x_mid, y_front - 0.32, 0.95 + stripe * 0.63), (10.25, 0.035, 0.045), FRAME, 0.006)
+        # Leave the terminal end of each garage wing fully open. The earlier
+        # end wall and ribbed door blocked the stalls despite the open-sided
+        # canopy design.
         # Shallow gable roof, dark like the accepted mockup. Structural portal
         # ties are repeated over the covered run, not over the open-air stalls.
         ridge_x = sign * 28.5

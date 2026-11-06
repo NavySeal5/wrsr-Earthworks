@@ -6,6 +6,7 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 
 - Twenty independently accessible vehicle stalls: sixteen covered in the side garage wings (eight per wing) and four open-air at the U opening; all face inward.
 - Two loading/unloading stations side by side near the center of the court, close to the yard-facing main-building frontage.
+- Both garage wings remain open at their terminal ends; the end walls, safety strips, and decorative ribbed garage-door assemblies were removed so those openings are not blocked.
 - Two-storey raised central section on the rear service building, about 9.9 m high; the side wings remain single-storey.
 - One road connector centered at the U opening / road-approach end.
 - Proportions scaled toward the five-view concept: the structural U is approximately 75 m wide by 75 m deep; the rear hall is approximately 74 m long compared with 59.5 m side wings. The native asphalt court is approximately 75 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
@@ -27,7 +28,7 @@ Use a fresh disposable save and select **Earthworks Facility (Large)** from the 
 
 1. Check construction costs and phase progress. Confirm the listed resource quantities are the documented coefficients and the blueprint advances through construction.
 2. Inspect the enlarged footprint and yard surface. Confirm the asphalt court fills the yard and meets the single road connector at the U opening / road-approach end.
-3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings, no stalls in front of other stalls, and containers outside vehicle paths.
+3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings with both terminal garage ends open, no stalls in front of other stalls, and containers outside vehicle paths.
 4. Test the single road approach and confirm its snap point remains at the U opening while its direction is reversed from the previous build; confirm vehicles can enter and turn through the central aisle.
 5. Count twenty native parking positions: eight covered inside each garage wing and four open-air at the U opening. Confirm none are on the main-building roof, and every position faces inward toward the yard. Try representative long excavators and bulldozers in all positions; inspect clipping, spacing, and pathing.
 6. Confirm both loading/unloading positions sit side by side near the court center, close to the main-building frontage, and do not overlap parking paths, stairs, buildings, or the road approach.
