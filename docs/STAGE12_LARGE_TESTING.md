@@ -4,10 +4,10 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 
 ## Decisions implemented
 
-- Twenty independently accessible vehicle stalls: sixteen covered in two side wings and four open-air at the U opening.
+- Twenty independently accessible vehicle stalls: sixteen covered in two side wings and four open-air at the U opening / road-approach end.
 - Two loading/unloading stations on the yard-facing main building.
 - Two-storey raised central section on the rear service building, about 9.9 m high; the side wings remain single-storey.
-- One road connector centered at the open end of the U.
+- One road connector centered at the U opening / road-approach end.
 - Proportions scaled toward the five-view concept: the structural U is approximately 75 m wide by 75 m deep; the rear hall is approximately 74 m long compared with 59.5 m side wings. The native asphalt court is approximately 75 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
 - `$TYPE_ROADDEPO`, no workers, no fuel storage, and the existing plugin-controlled excavator/bulldozer filter.
 - Asphalt native surface metadata for the yard; ground and parking markings are not part of the mesh.
@@ -26,10 +26,10 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 Use a fresh disposable save and select **Earthworks Facility (Large)** from the construction-office category.
 
 1. Check construction costs and phase progress. Confirm the listed resource quantities are the documented coefficients and the blueprint advances through construction.
-2. Inspect the enlarged footprint and yard surface. Confirm the asphalt area fills the deeper court and meets the single road connector at the open end.
+2. Inspect the enlarged footprint and yard surface. Confirm the asphalt court fills the yard and meets the single road connector at the U opening / road-approach end.
 3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings, no stalls in front of other stalls, and containers outside vehicle paths.
-4. Test the single road approach and confirm vehicles can enter and turn through the central aisle.
-5. Count twenty native parking positions: sixteen under the wing roofs and four uncovered near the opening. Try representative long excavators and bulldozers in all positions; inspect clipping, spacing, and pathing.
+4. Test the single road approach and confirm its side and outward-facing direction, then confirm vehicles can enter and turn through the central aisle.
+5. Count twenty native parking positions: sixteen under the wing roofs and four uncovered at the opening / road-approach end. Confirm every position is rotated 90 degrees to face inward toward the yard. Try representative long excavators and bulldozers in all positions; inspect clipping, spacing, and pathing.
 6. Confirm both loading/unloading positions are outside the parking paths and do not overlap the building or road approach.
 7. Confirm the native panel shows twenty vehicle positions, admits excavators and bulldozers, rejects other vehicle classes, and exposes no worker or fuel requirement.
 8. Save, reload, and confirm the placed building retains its vehicle state. Demolish it and check that surface-area metadata is removed with the building.

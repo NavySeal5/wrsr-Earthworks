@@ -602,3 +602,16 @@ A single user statement can accept the current result and authorize progression.
 - At the user's request, raised the center of the rear service building to a second storey above the dispatch section. Kept the two side wings at one storey and retained the existing loading doors, dispatch entrance, yard, parking layout and road access.
 - Split the rear roof into two low side roofs and a higher center roof. Added upper-level front and rear windows so the extra floor reads clearly from the yard and back views.
 - The revised model is still pending user review and ModelViewer conversion; no game placement test was run.
+
+**Stage 12.1 Large road connector side adjustment — 6 November 2026**
+
+- After the user approved the model, they reported that the Large facility's road access was on the opposite side from what they wanted.
+- Moved the centered `$CONNECTION_ROAD` from local Z `-61` to `+61`, and its outward endpoint from `-71` to `+71`. This moves the connector to the opposite end while retaining its centered X position and outward direction. The NMF/model geometry is unchanged.
+- Restage and check a newly placed Large facility in game. Confirm the connector is on the intended side and vehicles can still enter the yard. No in-game verification has been performed.
+
+**Stage 12.1 Large parking orientation and approach-side revision — 6 November 2026**
+
+- The user reported that all Large parking positions were rotated incorrectly and that the four open-air stalls were on the wrong side. They selected the U opening / road-approach end for the open-air positions.
+- Rotated each `$VEHICLE_PARKING` segment 90 degrees from the local Z axis to the X axis, pointing left-side positions toward +X and right-side positions toward -X (inward toward the yard).
+- Moved the four uncovered positions from Z `-54/-47` to Z `47/54`, keeping the sixteen covered positions in their existing central range. Moved the 94 m asphalt court to Z `-33..61` so it covers the revised yard and approach; the road connector remains at Z `61` and points outward to `71`.
+- Restage and verify all twenty slots, open-air placement, connector side, inward orientation, vehicle access and asphalt coverage on a newly placed Large facility. No in-game check has been performed.
