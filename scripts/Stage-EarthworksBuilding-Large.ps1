@@ -219,14 +219,16 @@ foreach ($side in @(
         $custom.Add('$VEHICLE_PARKING ' + $x1 + ' 0.0000 ' + $z + ' ' + $x2 + ' 0.0000 ' + $z)
     }
 }
-$custom.Add('$VEHICLE_STATION -19.0000 0.0000 17.0000 -11.0000 0.0000 17.0000')
-$custom.Add('$VEHICLE_STATION 11.0000 0.0000 17.0000 19.0000 0.0000 17.0000')
+# Center the two loading/unloading positions side by side in the court, near
+# the main building frontage. Blender Y is inverted into game Z for this asset.
+$custom.Add('$VEHICLE_STATION -10.0000 0.0000 -12.0000 -2.0000 0.0000 -12.0000')
+$custom.Add('$VEHICLE_STATION 2.0000 0.0000 -12.0000 10.0000 0.0000 -12.0000')
 $custom.Add('')
 # Single connector at the U opening / road-approach end. Keep it centered and
 # point it outward from this end of the footprint.
 $custom.Add('$CONNECTION_ROAD')
 $custom.Add('0.0000 0.0000 61.0000')
-$custom.Add('0.0000 0.0000 71.0000')
+$custom.Add('0.0000 0.0000 51.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
