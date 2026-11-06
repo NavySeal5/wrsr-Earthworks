@@ -8,7 +8,7 @@ Replace the temporary construction-office-derived test item with a distinctive, 
 
 The Small concept is an open two-bay equipment canopy beside a compact dispatch office, with a visible decorative tank. Its four vehicle slots are two parallel positions in each bay. The Medium concept (visual option A) extends the same canopy to four openings; it has eight slots, one loading/unloading station in front of the office and a road connection on the far-right end pointing outward to the right. The accepted Large concept is the revised C layout: long main service building across the rear, substantial left and right structures around a wide shared court. It has 20 non-blocking, single-depth stalls (16 covered and 4 open-air), two loading/unloading stations and one road connector at the U opening. Put one loading station on each side of the main building's yard-facing service frontage, clear of parking and turning paths. Keep containers outside all vehicle paths. Current material coefficients are 75% of the vanilla office baseline for Small, 120% of Small for Medium and 130% of Medium for Large; see the cost notes. Retain the same vehicle-only `$TYPE_ROADDEPO` behavior, excavator/bulldozer allowlist, no worker requirement and no fuel storage. Eligible parked machines give capacity; no eligible parked machine means no work. Machine-rate scale remains provisional under the existing rate decision. The earlier 0.5-worker-per-Strength rule (D87) is superseded by the vehicle-only direction.
 
-The active Large visual reference is [the five-view concept sheet](mockups/STAGE12_FACILITY_LARGE_ANGLE_CONCEPT.png), with front/open-yard, rear, left-side, right-side and top-down views. Use this concept for further discussion; neither generated Large Blender model is accepted.
+The active Large visual reference is [the five-view concept sheet](mockups/STAGE12_FACILITY_LARGE_ANGLE_CONCEPT.png), with front/open-yard, rear, left-side, right-side and top-down views. A new WIP Blender model and preview have been generated against this sheet; the user has not yet accepted the model or its in-game appearance.
 
 ## 12.1 — Building design, model and placeable item
 
@@ -83,7 +83,7 @@ Final machine productivity/balance, facility range, build/maintenance costs, fue
 ## Open decisions to resolve at the relevant checkpoint
 
 - Finish native ModelViewer conversion and staging for the 12.1 single-frontage model, then ask the user to review the placeable item in game before 12.2.
-- Convert the Large OBJ through ModelViewer, stage its native item, then review all 20 parking positions, pathing, two stations, construction phases, asphalt coverage and demolition cleanup using [STAGE12_LARGE_TESTING.md](STAGE12_LARGE_TESTING.md).
+- Review the current Large preview against the concept, then convert its OBJ through ModelViewer and stage the native item. Review all 20 parking positions, pathing, two stations, construction phases, asphalt coverage and demolition cleanup using [STAGE12_LARGE_TESTING.md](STAGE12_LARGE_TESTING.md).
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show eligible-machine counts per assigned facility when readings are reliable; show a clear unavailable state instead of misleading zeroes. Worker counts are no longer an operating prerequisite (D90).
 - Keep the machine-rate scale provisional through Stage 12 and review final productivity during Stage 13.

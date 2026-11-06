@@ -263,7 +263,7 @@ def make_building():
 
 
 def make_large_building():
-    """Articulated U-shaped vehicle yard: 16 covered and 4 open-air stalls."""
+    """Large U-shaped depot closely following the accepted five-view concept."""
     def roof_panel(name, vertices, mat):
         mesh = bpy.data.meshes.new(name + "_mesh")
         mesh.from_pydata(vertices, [], [tuple(range(len(vertices)))])
@@ -272,92 +272,99 @@ def make_large_building():
         bpy.context.collection.objects.link(obj)
         EXPORT_OBJECTS.append(obj)
 
-    # Rear operations building closes the U. A stepped dispatch office and a
-    # pair of loading bays make it read as a working depot, not a blank box.
-    add_box("large_service_plinth", (0.0, 27.0, 0.30), (57.0, 15.0, 0.56), CONCRETE, 0.08)
-    add_box("large_service_hall", (0.0, 27.5, 3.85), (56.0, 13.8, 6.7), PLASTER, 0.07)
-    add_box("large_dispatch_office", (23.0, 18.4, 3.5), (9.5, 4.0, 6.0), PLASTER, 0.05)
-    add_box("large_service_roof", (-1.0, 27.4, 7.45), (55.0, 14.6, 0.34), OFFICE_ROOF, 0.05)
-    add_box("large_office_roof", (23.0, 18.4, 6.7), (9.7, 4.2, 0.30), OFFICE_ROOF, 0.04)
-    add_box("large_service_roof_front_edge", (-1.0, 19.98, 7.42), (55.0, 0.28, 0.42), FRAME, 0.03)
-    for idx, x in enumerate((-15.0, 15.0), start=1):
-        add_box(f"large_loading_door_{idx}_surround", (x, 20.42, 3.0), (7.8, 0.28, 5.5), FRAME, 0.04)
-        add_box(f"large_loading_door_{idx}_panel", (x, 20.23, 3.0), (7.15, 0.08, 4.95), STEEL, 0.03)
+    # The accepted concept is a clearly legible U: a continuous service block
+    # closes the back, with the office centered between two loading doors.
+    # Native asphalt and parking markings remain building metadata, not mesh.
+    add_box("large_service_plinth", (0.0, 28.2, 0.28), (91.0, 17.0, 0.5), CONCRETE, 0.08)
+    add_box("large_service_hall", (0.0, 29.0, 3.55), (90.0, 15.0, 6.1), PLASTER, 0.07)
+    add_box("large_service_roof", (0.0, 29.0, 6.72), (91.4, 16.0, 0.34), OFFICE_ROOF, 0.06)
+    add_box("large_service_roof_front_edge", (0.0, 20.85, 6.72), (91.2, 0.24, 0.38), FRAME, 0.025)
+    add_box("large_service_safety_band", (0.0, 21.38, 0.80), (89.9, 0.12, 0.28), SAFETY_RED, 0.02)
+
+    # Front elevation: two broad machinery doors flank a projecting, glazed
+    # dispatch office. Its centered entry and steps face the open yard.
+    for idx, x in enumerate((-18.0, 18.0), start=1):
+        add_box(f"large_loading_door_{idx}_surround", (x, 21.43, 3.0), (8.2, 0.28, 5.25), FRAME, 0.04)
+        add_box(f"large_loading_door_{idx}_panel", (x, 21.24, 3.0), (7.55, 0.08, 4.88), STEEL, 0.03)
         for stripe in range(1, 5):
-            add_box(f"large_loading_door_{idx}_rib_{stripe}", (x, 20.15, 0.85 + stripe * 0.88), (6.95, 0.06, 0.06), FRAME, 0.01)
-    for x in (-27.0, -7.0, 10.5):
-        add_box(f"large_service_pier_{str(x).replace('-', 'm')}", (x, 20.23, 3.8), (0.55, 0.3, 6.3), CONCRETE, 0.03)
+            add_box(f"large_loading_door_{idx}_rib_{stripe}", (x, 21.15, 0.9 + stripe * 0.84), (7.25, 0.05, 0.055), FRAME, 0.008)
 
-    # Dispatch frontage, with sheltered entrance and broad steps to the yard.
-    add_box("large_entry_door", (23.0, 16.28, 2.25), (1.5, 0.14, 3.5), FRAME, 0.04)
-    add_box("large_entry_door_inner", (23.0, 16.17, 2.25), (1.18, 0.08, 3.12), STEEL, 0.03)
-    for idx, x in enumerate((18.2, 23.0, 27.7), start=1):
-        add_window(f"large_dispatch_window_{idx}", x, 3.15, 2.4, 1.8, y=16.7)
-    add_box("large_dispatch_awning", (23.0, 15.85, 4.25), (4.8, 1.0, 0.18), OFFICE_ROOF, 0.03)
-    add_box("large_service_safety_band", (0.0, 20.10, 0.82), (55.0, 0.12, 0.28), SAFETY_RED, 0.02)
-    for idx, (width, depth, height) in enumerate(((2.0, 0.55, 0.48), (2.4, 0.6, 0.34), (2.8, 0.65, 0.2))):
-        add_box(f"large_entry_step_{idx+1}", (23.0, 15.4 - idx * 0.58, height / 2), (width, depth, height), CONCRETE, 0.04)
+    add_box("large_dispatch_plinth", (0.0, 19.15, 0.25), (20.5, 4.8, 0.42), CONCRETE, 0.06)
+    add_box("large_dispatch_office", (0.0, 19.2, 3.5), (19.6, 4.3, 6.1), PLASTER, 0.05)
+    add_box("large_office_roof", (0.0, 19.2, 6.68), (20.3, 4.8, 0.3), OFFICE_ROOF, 0.04)
+    add_box("large_office_safety_band", (0.0, 16.99, 0.86), (19.5, 0.1, 0.27), SAFETY_RED, 0.015)
+    add_box("large_entry_door", (0.0, 16.96, 2.2), (1.65, 0.13, 3.4), FRAME, 0.035)
+    add_box("large_entry_door_inner", (0.0, 16.86, 2.2), (1.28, 0.06, 3.05), STEEL, 0.02)
+    for idx, x in enumerate((-7.0, -3.5, 3.5, 7.0), start=1):
+        add_window(f"large_dispatch_window_{idx}", x, 3.45, 2.2, 1.65, y=16.88)
+    add_box("large_dispatch_awning", (0.0, 16.52, 4.15), (5.0, 0.85, 0.18), OFFICE_ROOF, 0.03)
+    for idx, (width, depth, height) in enumerate(((2.0, 0.5, 0.48), (2.4, 0.55, 0.33), (2.8, 0.6, 0.18))):
+        add_box(f"large_entry_step_{idx+1}", (0.0, 16.28 - idx * 0.5, height / 2), (width, depth, height), CONCRETE, 0.035)
 
-    # Two prominent garage wings form the U around a broad, unobstructed court.
-    # Each wing has eight covered bays. The four remaining single-depth stalls
-    # are open-air at the U mouth, as specified in the accepted layout.
-    y_front, y_back = -11.0, 21.0
-    y_centers = (-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)
+    # Four modest roof vents follow the rear building rhythm in the reference.
+    for idx, x in enumerate((-33.0, -20.0, 20.0, 33.0), start=1):
+        add_box(f"large_service_vent_{idx}_stem", (x, 29.0, 7.22), (0.48, 0.48, 0.62), STEEL, 0.03)
+        add_box(f"large_service_vent_{idx}_cap", (x, 29.0, 7.57), (0.9, 0.75, 0.14), OFFICE_ROOF, 0.025)
+    # Repeating rear-facing industrial windows keep the back elevation from
+    # reading as an unbroken wall in the rear and oblique concept views.
+    for idx, x in enumerate((-36.0, -18.0, 18.0, 36.0), start=1):
+        add_window(f"large_rear_window_{idx}", x, 3.6, 5.0, 1.35, y=36.62)
+
+    # Side sheds run forward from the service block and face the central court.
+    # Each gets eight covered stalls; two more stalls at the mouth remain open
+    # air. The repeated portal spacing follows the native station layout.
+    y_front, y_back = -11.0, 21.5
+    stall_centers = (-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)
     for side, sign in (("left", -1), ("right", 1)):
-        x_inner, x_outer = sign * 28.5, sign * 45.5
-        x_mid = (x_inner + x_outer) / 2.0
+        x_inner, x_outer = sign * 29.0, sign * 46.0
         x_min, x_max = sorted((x_inner, x_outer))
-        # Low, articulated rear walls with clerestory lights leave the garages
-        # visually open while giving each wing a separate service-building form.
-        add_box(f"large_{side}_rear_wall_base", (x_outer, 5.0, 1.05), (0.36, 32.0, 2.1), PLASTER, 0.03)
-        for bay, y in enumerate(y_centers, start=1):
-            add_box(f"large_{side}_rear_panel_{bay}", (x_outer, y, 3.15), (0.30, 3.25, 1.55), PLASTER, 0.02)
-            add_box(f"large_{side}_clerestory_{bay}", (x_outer - sign * 0.19, y, 4.65), (0.08, 2.45, 0.65), GLASS, 0.01)
-            add_box(f"large_{side}_rear_pilaster_{bay}", (x_outer - sign * 0.22, y + 1.85, 2.9), (0.16, 0.18, 5.6), FRAME, 0.02)
-        add_box(f"large_{side}_rear_safety_band", (x_outer - sign * 0.21, 5.0, 0.62), (0.12, 31.8, 0.23), SAFETY_RED, 0.01)
-
-        # Repeated steel portal frames articulate the stalls from the courtyard.
-        ridge_x = sign * 37.0
-        for bay, y in enumerate(y_centers, start=1):
-            post_x = x_inner
-            add_box(f"large_{side}_portal_post_{bay}", (post_x, y + 1.85, 2.9), (0.34, 0.34, 5.6), STEEL, 0.025)
-            add_box(f"large_{side}_portal_foot_{bay}", (post_x, y + 1.85, 0.24), (0.78, 0.78, 0.48), CONCRETE, 0.04)
-            add_box(f"large_{side}_portal_girder_{bay}", (x_mid, y + 1.85, 5.72), (17.0, 0.32, 0.34), STEEL, 0.025)
-            add_beam(f"large_{side}_roof_truss_outer_{bay}", (x_outer, y + 1.85, 5.85), (ridge_x, y + 1.85, 7.02), 0.16, 0.18, STEEL)
-            add_beam(f"large_{side}_roof_truss_inner_{bay}", (ridge_x, y + 1.85, 7.02), (x_inner, y + 1.85, 5.85), 0.16, 0.18, STEEL)
-        add_box(f"large_{side}_rear_return", (x_mid, y_back, 3.0), (17.0, 0.36, 5.8), PLASTER, 0.04)
-
-        # Pitched metal roofs split at the ridge so the wings look like garages
-        # and respond to the light instead of reading as single flat slabs.
-        eave_z, ridge_z = 5.95, 7.15
-        for roof_side in ("outer", "inner"):
-            if sign < 0:
-                xa, xb = ((x_min - 0.35, ridge_x) if roof_side == "outer" else (ridge_x, x_max + 0.35))
-            else:
-                xa, xb = ((ridge_x, x_max + 0.35) if roof_side == "outer" else (x_min - 0.35, ridge_x))
-            za = eave_z if abs(xa) > abs(xb) else ridge_z
-            zb = eave_z if abs(xb) > abs(xa) else ridge_z
+        x_mid = (x_inner + x_outer) / 2.0
+        # Solid outside wall with a muted red plinth strip, like the concept.
+        add_box(f"large_{side}_outer_wall", (x_outer, 5.25, 2.65), (0.36, 32.5, 5.3), PLASTER, 0.035)
+        add_box(f"large_{side}_outer_safety_band", (x_outer - sign * 0.2, 5.25, 0.63), (0.1, 32.4, 0.25), SAFETY_RED, 0.012)
+        # Thin wall pilasters add visible bay rhythm without blocking access.
+        for idx, y in enumerate((-10.8, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.0), start=1):
+            add_box(f"large_{side}_outer_pilaster_{idx}", (x_outer - sign * 0.23, y, 2.7), (0.16, 0.2, 5.4), FRAME, 0.02)
+        # Open courtyard side: steel columns frame the individual vehicle bays.
+        for idx, y in enumerate((-10.7, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.2), start=1):
+            add_box(f"large_{side}_court_post_{idx}", (x_inner, y, 2.85), (0.36, 0.36, 5.7), STEEL, 0.025)
+            add_box(f"large_{side}_court_foot_{idx}", (x_inner, y, 0.24), (0.68, 0.68, 0.48), CONCRETE, 0.035)
+            add_box(f"large_{side}_post_safety_{idx}", (x_inner - sign * 0.2, y, 0.82), (0.05, 0.06, 0.72), SAFETY_RED, 0.01)
+        # End wall frames the opening and distinguishes the covered bays from
+        # the two open-air positions in front of it.
+        add_box(f"large_{side}_mouth_end_wall", (x_mid, y_front, 2.75), (17.3, 0.3, 5.5), PLASTER, 0.04)
+        add_box(f"large_{side}_mouth_safety_band", (x_mid, y_front - 0.18, 0.63), (17.1, 0.08, 0.24), SAFETY_RED, 0.01)
+        add_box(f"large_{side}_end_door_surround", (x_mid, y_front - 0.19, 2.85), (11.2, 0.12, 4.55), FRAME, 0.035)
+        add_box(f"large_{side}_end_door_panel", (x_mid, y_front - 0.27, 2.85), (10.55, 0.07, 4.1), STEEL, 0.025)
+        for stripe in range(1, 6):
+            add_box(f"large_{side}_end_door_rib_{stripe}", (x_mid, y_front - 0.32, 0.95 + stripe * 0.63), (10.25, 0.035, 0.045), FRAME, 0.006)
+        # Shallow gable roof, dark like the accepted mockup. Structural portal
+        # ties are repeated over the covered run, not over the open-air stalls.
+        ridge_x = sign * 37.5
+        eave_z, ridge_z = 5.75, 6.55
+        for idx, y in enumerate((-10.8, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0, 18.0, 21.2), start=1):
+            add_beam(f"large_{side}_roof_tie_{idx}", (x_inner, y, eave_z), (x_outer, y, eave_z), 0.22, 0.24, STEEL, 0.02)
+            add_beam(f"large_{side}_roof_rafter_inner_{idx}", (x_inner, y, eave_z), (ridge_x, y, ridge_z), 0.18, 0.2, STEEL, 0.02)
+            add_beam(f"large_{side}_roof_rafter_outer_{idx}", (ridge_x, y, ridge_z), (x_outer, y, eave_z), 0.18, 0.2, STEEL, 0.02)
+        for roof_side, xa, xb, za, zb in (
+            ("inner", x_min - 0.25, ridge_x, eave_z, ridge_z),
+            ("outer", ridge_x, x_max + 0.25, ridge_z, eave_z),
+        ):
             roof_panel(f"large_{side}_{roof_side}_pitched_roof", [
-                (xa, y_front - 0.35, za), (xb, y_front - 0.35, zb),
-                (xb, y_back + 0.35, zb), (xa, y_back + 0.35, za),
-            ], ROOF)
-        add_box(f"large_{side}_ridge_cap", (ridge_x, 5.0, ridge_z + 0.08), (0.22, 32.8, 0.18), FRAME, 0.03)
-        add_box(f"large_{side}_front_gutter", (x_mid, y_front - 0.22, eave_z + 0.03), (17.6, 0.18, 0.2), FRAME, 0.02)
+                (xa, y_front - 0.25, za), (xb, y_front - 0.25, zb),
+                (xb, y_back + 0.25, zb), (xa, y_back + 0.25, za),
+            ], OFFICE_ROOF)
+        add_box(f"large_{side}_ridge_cap", (ridge_x, 5.25, ridge_z + 0.06), (0.18, 32.8, 0.14), FRAME, 0.02)
+        add_box(f"large_{side}_inner_gutter", (x_inner, 5.25, eave_z + 0.04), (0.2, 32.8, 0.18), FRAME, 0.02)
 
-    # Small utility annex and decorative tank distinguish the service yard.
-    add_box("large_pump_house", (-22.0, 29.0, 2.3), (7.5, 7.0, 4.2), PLASTER, 0.05)
-    add_box("large_pump_house_roof", (-22.0, 29.0, 4.48), (7.8, 7.3, 0.28), OFFICE_ROOF, 0.03)
-    add_box("large_pump_house_door", (-22.0, 25.39, 1.55), (1.2, 0.12, 2.6), STEEL, 0.03)
-    add_cylinder("large_decorative_fuel_tank", (-27.0, 31.0, 3.2), 1.65, 6.2, TANK, vertices=20)
-    add_cylinder("large_decorative_tank_cap", (-27.0, 31.0, 6.35), 1.62, 0.18, FRAME, vertices=20, bevel=0.03)
-
-    # Shipping containers stay outside the parking slots, court and loading approaches.
-    for i, (x, y, mat) in enumerate(((-50.0, 9.0, CONTAINER_RED), (-50.0, 1.0, CONTAINER_BLUE), (50.0, 9.0, CONTAINER_RED)), start=1):
-        add_box(f"large_container_{i}_body", (x, y, 1.3), (6.0, 2.45, 2.6), mat, 0.04)
+    # Two shipping containers sit along the exterior side of the rear wing,
+    # parallel to that wall and clear of the court and garage entries.
+    for idx, (x, y, mat) in enumerate(((-49.0, 26.0, CONTAINER_RED), (-49.0, 33.0, CONTAINER_BLUE)), start=1):
+        add_box(f"large_container_{idx}_body", (x, y, 1.3), (2.45, 6.0, 2.6), mat, 0.04)
         for rib in range(1, 8):
-            xx = x - 2.8 + rib * 0.8
-            add_box(f"large_container_{i}_rib_{rib}", (xx, y - 1.25, 1.3), (0.07, 0.07, 2.5), FRAME, 0.01)
-        add_box(f"large_container_{i}_roof", (x, y, 2.63), (6.1, 2.5, 0.08), STEEL, 0.02)
+            yy = y - 2.8 + rib * 0.8
+            add_box(f"large_container_{idx}_rib_{rib}", (x - 1.25, yy, 1.3), (0.07, 0.07, 2.5), FRAME, 0.01)
+        add_box(f"large_container_{idx}_roof", (x, y, 2.63), (2.5, 6.1, 0.08), STEEL, 0.02)
 
 
 # Material atlas regions used by vanilla building assets. Coordinates are pixel
