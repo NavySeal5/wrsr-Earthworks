@@ -161,10 +161,10 @@ $custom.AddRange([string[]]$retained)
 $custom.Add('')
 # Native surface-area metadata is separate from road/network access points.
 # The asphalt rectangle covers the full four-bay court and the maneuvering
-# apron; it extends over the confirmed side-connection anchor at (50.5, 15).
+# apron; its right edge follows the garage end and side-connection anchor at (45.5, 15).
 $custom.Add('$CONNECTIONS_ROAD_DEAD_SQUARE')
 $custom.Add('-6.5000 -10.0000')
-$custom.Add('51.5000 20.0000')
+$custom.Add('45.5000 20.0000')
 $custom.Add('')
 # The office-side apron uses the Building Editor's airport/tarmac surface.
 # Extend it to the asphalt court's far Z edge and the gravel strip's near Z edge,
@@ -242,8 +242,8 @@ $custom.Add('')
 # outward toward +X, as selected for the Medium layout. The parking orientation
 # remains front-facing; the expanded apron gives vehicles room to turn in.
 $custom.Add('$CONNECTION_ROAD')
-$custom.Add('50.5000 0.0000 15.0000')
-$custom.Add('60.5000 0.0000 15.0000')
+$custom.Add('45.5000 0.0000 15.0000')
+$custom.Add('55.5000 0.0000 15.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
