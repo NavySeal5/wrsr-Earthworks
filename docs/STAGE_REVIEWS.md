@@ -2,6 +2,8 @@
 
 Updated 5 November 2026. A stage is accepted only when the user confirms the demonstrated result. Technical verification and user acceptance are separate fields.
 
+On 6 November the user revised the facility construction costs (D95). Small material coefficients are now 75% of the vanilla construction-office comparison values, and Medium coefficients are 120% of the reduced Small values. Construction work coefficients are unchanged. The generated config quantities are recorded in [Stage 12 construction cost notes](STAGE12_CONSTRUCTION_COSTS.md). This is staged for a fresh build-menu preview; the user must confirm the displayed totals in game.
+
 **Current position**
 
 The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist, Stage 4d vehicle allowlist, Stage 6 persistence and Stage 7 facility assignment are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains the previous test type. The dedicated facility blocks ordinary jobs on the verified direct assignment route. On 5 November the user changed the facility to vehicle-only work and selected the native `$TYPE_ROADDEPO` panel. Worker gating is removed under D90; see the Stage 12.2 entry below. Machine rate and native vehicle reservation remain provisional. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).

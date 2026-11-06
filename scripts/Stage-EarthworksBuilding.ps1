@@ -188,8 +188,8 @@ $custom.Add('-25.5000 -8.5000')
 $custom.Add('-19.0000 8.5000')
 $custom.Add('')
 # Keep the native construction-office phase sequence, using the custom model's
-# node names. The large values are diagnostic only and make the build-menu
-# summary easy to inspect; they are not final construction balance.
+# node names. Resource coefficients use 75% of the approved vanilla-office
+# comparison recipe as the current Small facility cost baseline.
 $custom.Add('-------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_GROUNDWORKS 0.0')
 foreach ($node in @(
@@ -198,7 +198,7 @@ foreach ($node in @(
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
 $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete')
-$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.5')
+$custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.125')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 1.0')
 foreach ($node in @(
@@ -209,8 +209,8 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO wall_brick 0.7')
-$custom.Add('$COST_RESOURCE_AUTO wall_wood 0.3')
+$custom.Add('$COST_RESOURCE_AUTO wall_brick 0.525')
+$custom.Add('$COST_RESOURCE_AUTO wall_wood 0.225')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 1.0')
 foreach ($node in @(
@@ -222,7 +222,7 @@ foreach ($node in @(
 )) {
     $custom.Add('$COST_WORK_BUILDING_NODE ' + $node)
 }
-$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
+$custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.600')
 $custom.Add('')
 # Use the road-depot native panel for a vehicle-only facility. Keep four
 # parking slots in the canopy bays, but replace the four loading/unloading
