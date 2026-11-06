@@ -54,7 +54,8 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
     }
     out->earthworksFacility=
         std::strcmp(out->assetName,"9100000012/EarthworksDevelopmentFacility")==0 ||
-        std::strcmp(out->assetName,"9100000013/EarthworksDevelopmentFacilityMedium")==0;
+        std::strcmp(out->assetName,"9100000013/EarthworksDevelopmentFacilityMedium")==0 ||
+        std::strcmp(out->assetName,"9100000014/EarthworksDevelopmentFacilityLarge")==0;
     return true;
 }
 bool Resolve(const Identity& identity,Address* address)

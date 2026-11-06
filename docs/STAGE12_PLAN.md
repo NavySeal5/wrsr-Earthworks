@@ -1,6 +1,6 @@
 # Stage 12 — Purpose-built Earthworks facility
 
-**Status:** The Small model is accepted. Its Road Depot prototype has four vehicle slots (D93). The Medium variant (D94) has eight slots and one loading/unloading station; its model and config are staged, with user-run in-game review pending. The user approved a Large variant (D96): 20 independent single-depth slots (16 covered, 4 open-air), two loading/unloading stations and one road connector at the U opening. Large construction-material coefficients are 30% above Medium (D97). The accepted vehicle-only behavior remains: native `$TYPE_ROADDEPO`, excavators and bulldozers only, no worker requirement, and no configured fuel storage. Large model authoring is now in progress.
+**Status:** The Small model is accepted. Its Road Depot prototype has four vehicle slots (D93). The Medium variant (D94) has eight slots and one loading/unloading station; its model and config are staged, with user-run in-game review pending. The Large variant (D96) now has a first editable Blender model, generated OBJ/MTL and preview, plus a Workshop staging script. ModelViewer NMF conversion and in-game review remain outstanding. It targets 20 independent stalls (16 covered, 4 open-air), two loading/unloading stations and one road connector at the U opening. Large construction-material coefficients are 30% above Medium (D97). The accepted vehicle-only behavior remains: native `$TYPE_ROADDEPO`, excavators and bulldozers only, no worker requirement, and no configured fuel storage.
 
 ## Goal
 
@@ -81,6 +81,7 @@ Final machine productivity/balance, facility range, build/maintenance costs, fue
 ## Open decisions to resolve at the relevant checkpoint
 
 - Finish native ModelViewer conversion and staging for the 12.1 single-frontage model, then ask the user to review the placeable item in game before 12.2.
+- Convert the Large OBJ through ModelViewer, stage its native item, then review all 20 parking positions, pathing, two stations, construction phases, asphalt coverage and demolition cleanup using [STAGE12_LARGE_TESTING.md](STAGE12_LARGE_TESTING.md).
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show eligible-machine counts per assigned facility when readings are reliable; show a clear unavailable state instead of misleading zeroes. Worker counts are no longer an operating prerequisite (D90).
 - Keep the machine-rate scale provisional through Stage 12 and review final productivity during Stage 13.

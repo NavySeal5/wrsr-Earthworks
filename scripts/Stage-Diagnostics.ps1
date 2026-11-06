@@ -61,6 +61,13 @@ if (Test-Path -LiteralPath $mediumModel) {
 } else {
     Write-Host 'Medium Earthworks item is not staged because its ModelViewer NMF conversion is not ready yet.'
 }
+$largeModel = Join-Path $root 'assets\building\large\native\earthworks_facility_large.nmf'
+if (Test-Path -LiteralPath $largeModel) {
+    & (Join-Path $PSScriptRoot 'Stage-EarthworksBuilding-Large.ps1')
+    if (-not $?) { throw 'Large Earthworks building content staging failed.' }
+} else {
+    Write-Host 'Large Earthworks item is not staged because its ModelViewer NMF conversion is not ready yet.'
+}
 $config = Get-Content -LiteralPath (Join-Path $root 'assets\rml\diagnostic-config.json') -Raw | ConvertFrom-Json
 $config.gamePath = Join-Path $game 'SOVIET64.exe'
 $config.plugins.PSObject.Properties.Remove('earthworks.planning')

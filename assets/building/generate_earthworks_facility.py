@@ -17,15 +17,22 @@ from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 MEDIUM = "--medium" in sys.argv
-VARIANT = "medium" if MEDIUM else "small"
+LARGE = "--large" in sys.argv
+if MEDIUM and LARGE:
+    raise SystemExit("Choose one building size: --medium or --large")
+VARIANT = "large" if LARGE else ("medium" if MEDIUM else "small")
 OUT = ROOT / "assets" / "building" / "generated"
-if MEDIUM:
-    OUT = OUT / "medium"
+if MEDIUM or LARGE:
+    OUT = OUT / VARIANT
 OUT.mkdir(parents=True, exist_ok=True)
-suffix = "_medium" if MEDIUM else ""
+suffix = "_" + VARIANT if VARIANT != "small" else ""
 BLEND = OUT / f"earthworks_facility{suffix}.blend"
 OBJ = OUT / f"earthworks_facility{suffix}.obj"
-preview_name = "STAGE12_FACILITY_MODEL_PREVIEW.png" if not MEDIUM else "STAGE12_FACILITY_MEDIUM_PREVIEW.png"
+preview_name = {
+    "small": "STAGE12_FACILITY_MODEL_PREVIEW.png",
+    "medium": "STAGE12_FACILITY_MEDIUM_PREVIEW.png",
+    "large": "STAGE12_FACILITY_LARGE_PREVIEW.png",
+}[VARIANT]
 PREVIEW = ROOT / "docs" / "mockups" / preview_name
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bake_atlas_patches import bake_patch
@@ -64,6 +71,8 @@ GLASS = material("office_window_glass", (0.29, 0.47, 0.53), 0.32, 0.05)
 FRAME = material("window_frames", (0.19, 0.22, 0.24), 0.72, 0.04)
 TANK = material("decorative_tank_painted_steel", (1.00, 1.00, 1.00), 0.90, 0.01)
 TANK_TOP = material("tank_cap_steel", (0.28, 0.31, 0.28), 0.90, 0.01)
+CONTAINER_RED = material("container_oxide_red", (0.40, 0.19, 0.14), 0.86, 0.03)
+CONTAINER_BLUE = material("container_blue", (0.20, 0.29, 0.34), 0.84, 0.04)
 
 
 EXPORT_OBJECTS = []
@@ -253,6 +262,62 @@ def make_building():
     # omitted; the native ground surface is provided by building metadata.
 
 
+def make_large_building():
+    """Long U-shaped vehicle yard: 16 covered and 4 open-air stalls."""
+    # Rear service block spans between the two long garage wings. Its yard-side
+    # facade faces toward negative Y; native surface areas are configured later.
+    add_box("large_service_plinth", (0.0, 25.0, 0.38), (58.0, 15.0, 0.72), CONCRETE, 0.08)
+    add_box("large_service_hall", (0.0, 25.0, 4.4), (57.0, 14.0, 7.4), PLASTER, 0.08)
+    add_box("large_service_roof", (0.0, 25.0, 8.25), (58.0, 15.0, 0.38), OFFICE_ROOF, 0.06)
+    add_box("large_service_roof_front_edge", (0.0, 17.4, 8.25), (58.0, 0.25, 0.5), FRAME, 0.03)
+
+    # Yard-facing service facade: central entrance and two large loading doors.
+    add_box("large_loading_door_left", (-15.0, 17.85, 3.0), (7.4, 0.18, 5.6), FRAME, 0.04)
+    add_box("large_loading_door_left_inner", (-15.0, 17.72, 3.0), (6.8, 0.06, 5.0), STEEL, 0.03)
+    add_box("large_loading_door_right", (15.0, 17.85, 3.0), (7.4, 0.18, 5.6), FRAME, 0.04)
+    add_box("large_loading_door_right_inner", (15.0, 17.72, 3.0), (6.8, 0.06, 5.0), STEEL, 0.03)
+    add_box("large_entry_door", (0.0, 17.68, 2.45), (1.5, 0.12, 3.2), STEEL, 0.04)
+    for i, x in enumerate((-23.0, -7.5, 7.5, 23.0)):
+        add_window(f"large_service_window_{i+1}", x, 5.0, 2.3, 1.8, y=17.70)
+    add_box("large_service_safety_band", (0.0, 17.48, 0.95), (56.5, 0.14, 0.32), SAFETY_RED, 0.02)
+    # Three broad, shallow steps lead from the yard to the central doorway.
+    for idx, (depth, height) in enumerate(((0.44, 0.58), (0.72, 0.40), (1.0, 0.22))):
+        add_box(f"large_entry_step_{idx+1}", (0.0, 16.75 - idx * 0.68, height / 2), (2.8, 0.7, height), CONCRETE, 0.04)
+
+    # Two side wings form the U. Each has six covered single-depth bays facing
+    # the central court; the two stalls nearest the opening on each side are
+    # open-air. Structural columns are placed between stalls, never in a slot.
+    for side, x_outer, x_inner in (("left", -46.0, -28.0), ("right", 46.0, 28.0)):
+        x_mid = (x_outer + x_inner) / 2.0
+        add_box(f"large_{side}_wing_backwall", (x_outer, 6.0, 3.2), (0.45, 37.0, 6.2), PLASTER, 0.05)
+        add_box(f"large_{side}_wing_endwall", (x_mid, 24.0, 3.2), (18.0, 0.45, 6.2), PLASTER, 0.04)
+        # A continuous low industrial roof covers eight rear stalls.
+        add_box(f"large_{side}_garage_roof", (x_mid, 6.5, 6.55), (18.2, 33.0, 0.36), ROOF, 0.05)
+        add_box(f"large_{side}_garage_roof_edge", (x_inner, 6.5, 6.55), (0.30, 33.0, 0.52), FRAME, 0.03)
+        for i, y in enumerate((-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)):
+            # Outer wall returns frame each individual vehicle bay; openings
+            # face inward and remain clear from the court aisle.
+            add_box(f"large_{side}_bay_divider_{i+1}", (x_outer + (1.0 if side == "left" else -1.0), y, 3.1), (0.25, 0.18, 5.9), STEEL, 0.02)
+        for i, y in enumerate((-19.0, -15.0, -7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)):
+            # Two stalls at the U mouth stay uncovered; posts are beyond the
+            # outside edge of those spaces and never obstruct their approach.
+            if y >= -7.0:
+                post_x = x_inner if side == "left" else x_inner
+                add_box(f"large_{side}_front_post_{i+1}", (post_x, y, 3.2), (0.38, 0.38, 6.0), STEEL, 0.025)
+                add_box(f"large_{side}_front_post_foot_{i+1}", (post_x, y, 0.24), (0.85, 0.85, 0.48), CONCRETE, 0.05)
+
+    # Four open-air spaces continue the rows at the mouth of the U, two per
+    # wing. Keep them adjacent to the covered bays with an unobstructed aisle.
+    # Decorative shipping containers sit outside the left/rear wing, clear of
+    # vehicle routes and loading approaches.
+    for i, (x, y, mat) in enumerate(((-50.0, 12.0, CONTAINER_RED), (-50.0, 5.0, CONTAINER_BLUE), (50.0, 12.0, CONTAINER_RED)), start=1):
+        add_box(f"large_container_{i}_body", (x, y, 1.3), (6.0, 2.45, 2.6), mat, 0.04)
+        for rib in range(1, 8):
+            xx = x - 2.8 + rib * 0.8
+            add_box(f"large_container_{i}_rib_{rib}", (xx, y - 1.25, 1.3), (0.07, 0.07, 2.5), FRAME, 0.01)
+        add_box(f"large_container_{i}_roof", (x, y, 2.63), (6.1, 2.5, 0.08), STEEL, 0.02)
+
+
 # Material atlas regions used by vanilla building assets. Coordinates are pixel
 # rectangles measured from the upper-left of each DDS; each entry records its
 # source atlas dimensions because the vanilla sheets use different sizes.
@@ -328,7 +393,11 @@ def apply_atlas_uvs(obj, material_name):
 
 
 def set_camera_and_render():
-    if MEDIUM:
+    if LARGE:
+        target = Vector((0.0, 0.0, 2.8))
+        camera_location = (-82.0, -105.0, 78.0)
+        ortho_scale = 160.0
+    elif MEDIUM:
         target = Vector((12.0, 0.0, 2.3))
         camera_location = (-25.0, -68.0, 54.0)
         ortho_scale = 91.0
@@ -366,8 +435,8 @@ def set_camera_and_render():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 48
-    scene.render.resolution_x = 1800 if MEDIUM else 1400
-    scene.render.resolution_y = 1050
+    scene.render.resolution_x = 2200 if LARGE else (1800 if MEDIUM else 1400)
+    scene.render.resolution_y = 1350 if LARGE else 1050
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.filepath = str(PREVIEW)
@@ -453,7 +522,10 @@ def export_obj():
 def main():
     bake_facility_textures()
     clear_scene()
-    make_building()
+    if LARGE:
+        make_large_building()
+    else:
+        make_building()
     set_camera_and_render()
     export_obj()
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND))
