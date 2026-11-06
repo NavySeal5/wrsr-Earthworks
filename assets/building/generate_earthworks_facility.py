@@ -277,8 +277,15 @@ def make_large_building():
     # Native asphalt and parking markings remain building metadata, not mesh.
     add_box("large_service_plinth", (0.0, 28.2, 0.28), (75.0, 17.0, 0.5), CONCRETE, 0.08)
     add_box("large_service_hall", (0.0, 29.0, 3.55), (74.0, 15.0, 6.1), PLASTER, 0.07)
-    add_box("large_service_roof", (0.0, 29.0, 6.72), (75.4, 16.0, 0.34), OFFICE_ROOF, 0.06)
-    add_box("large_service_roof_front_edge", (0.0, 20.85, 6.72), (75.2, 0.24, 0.38), FRAME, 0.025)
+    # Keep the wings of the rear hall single-storey, while a narrower raised
+    # center section gives the main building a clear two-storey silhouette.
+    for idx, x in enumerate((-24.95, 24.95), start=1):
+        add_box(f"large_service_roof_wing_{idx}", (x, 29.0, 6.72), (25.5, 16.0, 0.34), OFFICE_ROOF, 0.06)
+        add_box(f"large_service_roof_front_edge_{idx}", (x, 20.85, 6.72), (25.3, 0.24, 0.38), FRAME, 0.025)
+    add_box("large_service_upper_floor", (0.0, 29.0, 7.9), (24.0, 15.0, 3.4), PLASTER, 0.05)
+    add_box("large_service_upper_front_band", (0.0, 21.38, 6.45), (23.9, 0.12, 0.25), SAFETY_RED, 0.015)
+    add_box("large_service_upper_roof", (0.0, 29.0, 9.68), (24.8, 16.0, 0.36), OFFICE_ROOF, 0.04)
+    add_box("large_service_upper_roof_front_edge", (0.0, 20.85, 9.68), (24.6, 0.24, 0.4), FRAME, 0.025)
     add_box("large_service_safety_band", (0.0, 21.38, 0.80), (73.9, 0.12, 0.28), SAFETY_RED, 0.02)
 
     # Front elevation: two broad machinery doors flank a projecting, glazed
@@ -309,6 +316,9 @@ def make_large_building():
     # reading as an unbroken wall in the rear and oblique concept views.
     for idx, x in enumerate((-28.0, -14.0, 14.0, 28.0), start=1):
         add_window(f"large_rear_window_{idx}", x, 3.6, 5.0, 1.35, y=36.62)
+    for idx, x in enumerate((-6.0, 6.0), start=1):
+        add_window(f"large_upper_front_window_{idx}", x, 8.15, 2.6, 1.2, y=21.20)
+        add_window(f"large_upper_rear_window_{idx}", x, 8.15, 2.6, 1.2, y=36.62)
 
     # Side sheds run forward from the service block and face the central court.
     # Each gets eight covered stalls; two more stalls at the mouth remain open

@@ -6,6 +6,7 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 
 - Twenty independently accessible vehicle stalls: sixteen covered in two side wings and four open-air at the U opening.
 - Two loading/unloading stations on the yard-facing main building.
+- Two-storey raised central section on the rear service building, about 9.9 m high; the side wings remain single-storey.
 - One road connector centered at the open end of the U.
 - Proportions scaled toward the five-view concept: the structural U is approximately 75 m wide by 75 m deep; the rear hall is approximately 74 m long compared with 59.5 m side wings. The native asphalt court is approximately 75 m by 94 m including the forecourt/road approach. These are modeling dimensions, not a final gameplay footprint balance.
 - `$TYPE_ROADDEPO`, no workers, no fuel storage, and the existing plugin-controlled excavator/bulldozer filter.
@@ -26,7 +27,7 @@ Use a fresh disposable save and select **Earthworks Facility (Large)** from the 
 
 1. Check construction costs and phase progress. Confirm the listed resource quantities are the documented coefficients and the blueprint advances through construction.
 2. Inspect the enlarged footprint and yard surface. Confirm the asphalt area fills the deeper court and meets the single road connector at the open end.
-3. Confirm the U layout reads clearly: main service block at the closed end, side wings, no stalls in front of other stalls, and containers outside vehicle paths.
+3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings, no stalls in front of other stalls, and containers outside vehicle paths.
 4. Test the single road approach and confirm vehicles can enter and turn through the central aisle.
 5. Count twenty native parking positions: sixteen under the wing roofs and four uncovered near the opening. Try representative long excavators and bulldozers in all positions; inspect clipping, spacing, and pathing.
 6. Confirm both loading/unloading positions are outside the parking paths and do not overlap the building or road approach.

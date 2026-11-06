@@ -596,3 +596,9 @@ A single user statement can accept the current result and authorize progression.
 - The user said the main building still looked too wide relative to the side wings. Shortened the rear service hall from 90 m to 74 m and moved both side wings inward while preserving their 17 m bay depth and 59.5 m run. This reduces the hall-to-wing length ratio from about 1.51 to 1.24, close to the reference proportions.
 - Repositioned the two loading doors, roof vents, rear windows, wing roof ridges, and containers to fit the narrower arrangement. Narrowed the asphalt court from 92 m to 75 m and moved each row of ten vehicle slots to the center of its bay; the road connector and longitudinal extent remain unchanged.
 - Regenerated the Blender scene, OBJ/MTL, preview, and five review angles. This remains a source-model review only; no ModelViewer conversion, staging, or in-game check was performed.
+
+**Stage 12.1 Large central second storey — 6 November 2026**
+
+- At the user's request, raised the center of the rear service building to a second storey above the dispatch section. Kept the two side wings at one storey and retained the existing loading doors, dispatch entrance, yard, parking layout and road access.
+- Split the rear roof into two low side roofs and a higher center roof. Added upper-level front and rear windows so the extra floor reads clearly from the yard and back views.
+- The revised model is still pending user review and ModelViewer conversion; no game placement test was run.
