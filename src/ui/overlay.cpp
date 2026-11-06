@@ -595,6 +595,8 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::Button("Choose facility on map"))Send(Action::InspectBuilding);
                 ImGui::EndDisabled();
                 if(s.mode==PickMode::InspectBuilding)ImGui::TextDisabled("Click near a facility on the map; keep this panel open.");
+                if(s.mode==PickMode::InspectBuilding&&!s.facilityCandidateCount)
+                    ImGui::TextDisabled("No recognized Earthworks facility found near that click. Try clicking the facility itself.");
                 for(unsigned i=0;i<s.facilityCandidateCount;++i) {
                     const auto& candidate=s.facilityCandidates[i];ImGui::PushID(static_cast<int>(candidate.id));
                     ImGui::Text("Earthworks Development Facility — #%u  |  %.0f m away",candidate.id,candidate.distance);ImGui::SameLine();

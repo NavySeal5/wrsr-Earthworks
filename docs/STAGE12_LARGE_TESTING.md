@@ -27,6 +27,8 @@ The Large Earthworks Facility is integrated as Workshop item `9100000014` (`Eart
 
 Run `launch-prototype.cmd` after closing the game and project-local RML. Its staging output should say Small, Medium, and Large are enabled. Start Earthworks Development, use a fresh disposable save, and select **Earthworks Facility (Large)** from the construction-office category.
 
+Before reviewing the building, create/select a Project, choose **Choose facility on map**, and click the Large facility. It should appear under Available facilities; press **＋ Add** and confirm it moves to Assigned facilities. The assignment recognizer now matches the generated internal object name even if the Workshop id prefix differs.
+
 1. Check construction costs and phase progress. Compare Large's total displayed material quantities with Medium and confirm Large is about 30% higher overall. Confirm the blueprint advances through construction.
 2. Inspect the enlarged footprint and yard surface. Confirm the asphalt court fills the yard and meets the single road connector at the U opening / road-approach end.
 3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings with both terminal garage ends open, no stalls in front of other stalls, and containers outside vehicle paths.

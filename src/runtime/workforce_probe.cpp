@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 
 namespace ew {
 namespace {
@@ -40,6 +41,18 @@ bool Position(Address address,Point* out)
 { return Read(address,out) && std::isfinite(out->x) && std::isfinite(out->y) && std::isfinite(out->z)
     && std::abs(out->x)<100000 && std::abs(out->z)<100000; }
 float Distance(Point a,Point b) { return std::hypot(a.x-b.x,a.z-b.z); }
+bool IsEarthworksAsset(const char* assetName)
+{
+    if(!assetName || !assetName[0])return false;
+    // The game may expose the Workshop id as a prefix, or only the internal
+    // object name. These generated names are unique; matching the final path
+    // component prevents a repacked item id from hiding a valid facility.
+    const char* objectName=std::strrchr(assetName,'/');
+    objectName=objectName?objectName+1:assetName;
+    return std::strcmp(objectName,"EarthworksDevelopmentFacility")==0 ||
+        std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0 ||
+        std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0;
+}
 bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
 {
     Address type=0;
@@ -52,10 +65,7 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
         if(static_cast<unsigned char>(c)<32 || static_cast<unsigned char>(c)>126)return false;
         out->assetName[i]=c;
     }
-    out->earthworksFacility=
-        std::strcmp(out->assetName,"9100000012/EarthworksDevelopmentFacility")==0 ||
-        std::strcmp(out->assetName,"9100000013/EarthworksDevelopmentFacilityMedium")==0 ||
-        std::strcmp(out->assetName,"9100000014/EarthworksDevelopmentFacilityLarge")==0;
+    out->earthworksFacility=IsEarthworksAsset(out->assetName);
     return true;
 }
 bool Resolve(const Identity& identity,Address* address)
