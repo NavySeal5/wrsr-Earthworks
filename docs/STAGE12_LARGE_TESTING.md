@@ -1,6 +1,6 @@
 # Stage 12 — Large facility user review
 
-The Large Earthworks Facility is authored as an editable Blender scene and OBJ/MTL source. Its first in-game check still requires ModelViewer conversion and a user-run game session.
+The Large Earthworks Facility is integrated as Workshop item `9100000014` (`EarthworksDevelopmentFacilityLarge`). The project RML launcher stages the item and enables it alongside Small and Medium in the isolated Earthworks Development profile. Its in-game review remains user-run.
 
 ## Decisions implemented
 
@@ -21,13 +21,13 @@ The Large Earthworks Facility is authored as an editable Blender scene and OBJ/M
 2. Open ModelViewer manually and import `earthworks_facility_large.obj` from that object folder. Keep the imported material groups and their order intact.
 3. Save the model as `model.nmf` in that same object folder. ModelViewer's Save As appends `.nmf`; enter only `model` as the filename.
 4. Copy the resulting `model.nmf` to `assets/building/large/native/earthworks_facility_large.nmf`.
-5. Run `scripts/Stage-EarthworksBuilding-Large.ps1` to assemble the Workshop test item. The general diagnostics staging script will include it automatically once the native NMF exists.
+5. Run `scripts/Stage-EarthworksBuilding-Large.ps1` to assemble the Workshop test item. The general diagnostics staging script includes and enables it automatically once the native NMF exists.
 
 ## Fresh-world review checklist
 
-Use a fresh disposable save and select **Earthworks Facility (Large)** from the construction-office category.
+Run `launch-prototype.cmd` after closing the game and project-local RML. Its staging output should say Small, Medium, and Large are enabled. Start Earthworks Development, use a fresh disposable save, and select **Earthworks Facility (Large)** from the construction-office category.
 
-1. Check construction costs and phase progress. Confirm the listed resource quantities are the documented coefficients and the blueprint advances through construction.
+1. Check construction costs and phase progress. Compare Large's total displayed material quantities with Medium and confirm Large is about 30% higher overall. Confirm the blueprint advances through construction.
 2. Inspect the enlarged footprint and yard surface. Confirm the asphalt court fills the yard and meets the single road connector at the U opening / road-approach end.
 3. Confirm the U layout reads clearly: main service block at the closed end, its two-storey center above the dispatch section, single-storey side wings with both terminal garage ends open, no stalls in front of other stalls, and containers outside vehicle paths.
 4. Test the single road approach and confirm its snap point remains at the U opening while its direction is reversed from the previous build; confirm vehicles can enter and turn through the central aisle.

@@ -24,7 +24,11 @@
   "defaultPlugins": {},
   "workshopItems": {},
   "defaultWorkshopItems": {},
-  "developmentItems": {},
+  "developmentItems": {
+    "9100000012": true,
+    "9100000013": true,
+    "9100000014": true
+  },
   "defaultDevelopmentItems": {},
   "defaultAutoOrder": true,
   "hideDisabledPlugins": true,

@@ -14,6 +14,8 @@ The user approved a third, Large facility variant using visual proposal C. Its o
 
 **Current position**
 
+The Large facility is included in the isolated RML development preset: `Stage-Diagnostics.ps1` stages Small, Medium, and Large and marks development items `9100000012`–`9100000014` enabled. Runtime identity recognition already covers all three exact descriptors. This wires Large into the local mod test experience; it is not public publishing or Stage 12 acceptance. The user-run checklist is [STAGE12_LARGE_TESTING.md](STAGE12_LARGE_TESTING.md).
+
 The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a comparison, Stage 4b dedicated-facility checklist, Stage 4d vehicle allowlist, Stage 6 persistence and Stage 7 facility assignment are accepted by the user. Stage 4a fuel remains unmeasured. Stage 4c deferred the rail-office alternative; the regular construction-office prototype remains the previous test type. The dedicated facility blocks ordinary jobs on the verified direct assignment route. On 5 November the user changed the facility to vehicle-only work and selected the native `$TYPE_ROADDEPO` panel. Worker gating is removed under D90; see the Stage 12.2 entry below. Machine rate and native vehicle reservation remain provisional. See [Stage 4 remaining feasibility research](STAGE4_RESEARCH.md).
 
 On 6 November the user expanded facility capacity to four vehicle slots, two parallel positions per garage bay (D93). The building staging script now generates four parking entries and four matching routes. The config is staged, but in-game slot display and vehicle clearance/pathing still need user confirmation.

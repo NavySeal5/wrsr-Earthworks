@@ -84,5 +84,5 @@ $config.playlists[0].plugins = @([pscustomobject]@{
 })
 [IO.File]::WriteAllText((Join-Path $runtime 'rml\config.json'), ($config | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
 Write-Host "RML development runtime ready: $runtime"
-Write-Host "Earthworks Development selects $pluginId; the dedicated Earthworks workshop_wip item is staged locally."
+Write-Host "Earthworks Development selects $pluginId and enables the Small, Medium, and Large Earthworks facilities (9100000012-9100000014)."
 Write-Host 'The diagnostic preset is refreshed by staging. Your subscribed RML configuration is untouched. The game has not been launched.'
