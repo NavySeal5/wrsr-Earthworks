@@ -16,11 +16,17 @@ from mathutils import Vector
 
 
 ROOT = Path(__file__).resolve().parents[2]
+MEDIUM = "--medium" in sys.argv
+VARIANT = "medium" if MEDIUM else "small"
 OUT = ROOT / "assets" / "building" / "generated"
+if MEDIUM:
+    OUT = OUT / "medium"
 OUT.mkdir(parents=True, exist_ok=True)
-BLEND = OUT / "earthworks_facility.blend"
-OBJ = OUT / "earthworks_facility.obj"
-PREVIEW = ROOT / "docs" / "mockups" / "STAGE12_FACILITY_MODEL_PREVIEW.png"
+suffix = "_medium" if MEDIUM else ""
+BLEND = OUT / f"earthworks_facility{suffix}.blend"
+OBJ = OUT / f"earthworks_facility{suffix}.obj"
+preview_name = "STAGE12_FACILITY_MODEL_PREVIEW.png" if not MEDIUM else "STAGE12_FACILITY_MEDIUM_PREVIEW.png"
+PREVIEW = ROOT / "docs" / "mockups" / preview_name
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bake_atlas_patches import bake_patch
 
@@ -196,12 +202,16 @@ def make_building():
     for idx, x in enumerate((-22.15, -20.55)):
         add_box(f"tank_support_{idx+1}", (x, -1.0, 0.79), (0.22, 2.5, 1.0), STEEL, 0.035)
 
-    # Open two-bay steel canopy. The three column lines create exactly two bays.
-    x_left, x_mid, x_right = -5.6, 7.0, 19.6
+    # Open steel canopy. The medium layout extends the two-bay design with a
+    # second gable module, keeping four equal openings side-by-side.
+    canopy_modules = [(-5.6, 7.0, 19.6)]
+    if MEDIUM:
+        canopy_modules.append((19.6, 32.2, 44.8))
+    post_xs = sorted({x for module in canopy_modules for x in module})
     y_front, y_back = -9.2, 9.7
     eave_z, ridge_z = 6.5, 7.25
     for side_name, y in (("front", y_front), ("back", y_back)):
-        for idx, x in enumerate((x_left, x_mid, x_right)):
+        for idx, x in enumerate(post_xs):
             add_box(f"canopy_{side_name}_foot_{idx+1}", (x, y, 0.28), (1.05, 1.05, 0.56), CONCRETE, 0.08)
             add_box(f"canopy_{side_name}_post_{idx+1}", (x, y, 3.55), (0.48, 0.48, 6.05), STEEL, 0.035)
             add_box(f"canopy_{side_name}_safety_band_{idx+1}", (x, y - 0.26, 0.86), (0.50, 0.035, 0.80), SAFETY_RED, 0.015)
@@ -209,29 +219,35 @@ def make_building():
             add_box(f"canopy_{side_name}_stripe_a_{idx+1}", (x - 0.10, y - 0.285, 0.86), (0.07, 0.025, 0.72), CONCRETE, 0.01).rotation_euler[1] = math.radians(25)
             add_box(f"canopy_{side_name}_stripe_b_{idx+1}", (x + 0.12, y - 0.285, 0.86), (0.07, 0.025, 0.72), CONCRETE, 0.01).rotation_euler[1] = math.radians(25)
 
-    # Longitudinal roof rails on both outer edges and the center dividing line.
-    for idx, x in enumerate((x_left, x_mid, x_right)):
+    # Longitudinal roof rails follow every structural column line.
+    for idx, x in enumerate(post_xs):
         add_beam(f"canopy_longitudinal_rail_{idx+1}", (x, y_front, eave_z), (x, y_back, eave_z), 0.33, 0.40, STEEL, 0.04)
-    # Front/rear trusses and bracing, preserving the open vehicle approach.
-    for name, y in (("front", y_front), ("back", y_back)):
-        add_beam(f"{name}_truss_eave_left", (x_left, y, eave_z), (x_mid, y, ridge_z), 0.22, 0.28, STEEL)
-        add_beam(f"{name}_truss_eave_right", (x_mid, y, ridge_z), (x_right, y, eave_z), 0.22, 0.28, STEEL)
-        add_beam(f"{name}_truss_bottom", (x_left, y, eave_z - 0.18), (x_right, y, eave_z - 0.18), 0.20, 0.22, STEEL)
-        add_beam(f"{name}_truss_web_left", (x_left + 3.0, y, eave_z - 0.15), (x_mid, y, ridge_z - 0.25), 0.16, 0.18, STEEL)
-        add_beam(f"{name}_truss_web_right", (x_mid, y, ridge_z - 0.25), (x_right - 3.0, y, eave_z - 0.15), 0.16, 0.18, STEEL)
+    # Each pair of bays forms one pitched-roof module with a center ridge.
+    for module_index, (x_left, x_mid, x_right) in enumerate(canopy_modules, start=1):
+        for name, y in (("front", y_front), ("back", y_back)):
+            prefix = f"module_{module_index}_{name}"
+            add_beam(f"{prefix}_truss_eave_left", (x_left, y, eave_z), (x_mid, y, ridge_z), 0.22, 0.28, STEEL)
+            add_beam(f"{prefix}_truss_eave_right", (x_mid, y, ridge_z), (x_right, y, eave_z), 0.22, 0.28, STEEL)
+            add_beam(f"{prefix}_truss_bottom", (x_left, y, eave_z - 0.18), (x_right, y, eave_z - 0.18), 0.20, 0.22, STEEL)
+            add_beam(f"{prefix}_truss_web_left", (x_left + 3.0, y, eave_z - 0.15), (x_mid, y, ridge_z - 0.25), 0.16, 0.18, STEEL)
+            add_beam(f"{prefix}_truss_web_right", (x_mid, y, ridge_z - 0.25), (x_right - 3.0, y, eave_z - 0.15), 0.16, 0.18, STEEL)
 
     # A muted pitched roof. Its vanilla atlas texture carries the corrugation;
     # separate modeled ribs caused a doubled, bright striped appearance.
     roof_front = y_front - 0.35
     roof_back = y_back + 0.35
-    for side, xa, xb, za, zb in (("left", x_left - 0.45, x_mid, eave_z, ridge_z), ("right", x_mid, x_right + 0.45, ridge_z, eave_z)):
-        verts = [(xa, roof_front, za), (xb, roof_front, zb), (xb, roof_back, zb), (xa, roof_back, za)]
-        mesh = bpy.data.meshes.new(f"canopy_roof_{side}_mesh")
-        mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
-        mesh.materials.append(ROOF)
-        roof = bpy.data.objects.new(f"canopy_roof_{side}", mesh)
-        bpy.context.collection.objects.link(roof)
-        EXPORT_OBJECTS.append(roof)
+    for module_index, (x_left, x_mid, x_right) in enumerate(canopy_modules, start=1):
+        for side, xa, xb, za, zb in (
+            ("left", x_left - 0.45, x_mid, eave_z, ridge_z),
+            ("right", x_mid, x_right + 0.45, ridge_z, eave_z),
+        ):
+            verts = [(xa, roof_front, za), (xb, roof_front, zb), (xb, roof_back, zb), (xa, roof_back, za)]
+            mesh = bpy.data.meshes.new(f"canopy_roof_{module_index}_{side}_mesh")
+            mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
+            mesh.materials.append(ROOF)
+            roof = bpy.data.objects.new(f"canopy_roof_{module_index}_{side}", mesh)
+            bpy.context.collection.objects.link(roof)
+            EXPORT_OBJECTS.append(roof)
 
     # Parking markings and the two decorative center pads are intentionally
     # omitted; the native ground surface is provided by building metadata.
@@ -312,13 +328,20 @@ def apply_atlas_uvs(obj, material_name):
 
 
 def set_camera_and_render():
-    bpy.ops.object.camera_add(location=(-34.0, -42.0, 32.0))
+    if MEDIUM:
+        target = Vector((12.0, 0.0, 2.3))
+        camera_location = (-25.0, -68.0, 54.0)
+        ortho_scale = 91.0
+    else:
+        target = Vector((-1.0, 0.0, 2.3))
+        camera_location = (-34.0, -42.0, 32.0)
+        ortho_scale = 57.0
+    bpy.ops.object.camera_add(location=camera_location)
     camera = bpy.context.object
     camera.name = "preview_camera"
-    target = Vector((-1.0, 0.0, 2.3))
     camera.rotation_euler = (target - camera.location).to_track_quat("-Z", "Y").to_euler()
     camera.data.type = "ORTHO"
-    camera.data.ortho_scale = 57.0
+    camera.data.ortho_scale = ortho_scale
     bpy.context.scene.camera = camera
 
     for name, loc, energy, size in (
@@ -343,7 +366,7 @@ def set_camera_and_render():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 48
-    scene.render.resolution_x = 1400
+    scene.render.resolution_x = 1800 if MEDIUM else 1400
     scene.render.resolution_y = 1050
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
@@ -434,9 +457,9 @@ def main():
     set_camera_and_render()
     export_obj()
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND))
-    print(f"STAGE12_MODEL_OBJ={OBJ}")
-    print(f"STAGE12_MODEL_PREVIEW={PREVIEW}")
-    print(f"STAGE12_MODEL_BLEND={BLEND}")
+    print(f"STAGE12_{VARIANT.upper()}_MODEL_OBJ={OBJ}")
+    print(f"STAGE12_{VARIANT.upper()}_MODEL_PREVIEW={PREVIEW}")
+    print(f"STAGE12_{VARIANT.upper()}_MODEL_BLEND={BLEND}")
 
 
 if __name__ == "__main__":

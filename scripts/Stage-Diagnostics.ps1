@@ -54,6 +54,13 @@ $pluginId = "tesmio.earthworksplanning.$pluginVersion.$($dllHash.Substring(0, 8)
 $buildingStage = Join-Path $PSScriptRoot 'Stage-EarthworksBuilding.ps1'
 & $buildingStage
 if (-not $?) { throw 'Dedicated Earthworks building content staging failed.' }
+$mediumModel = Join-Path $root 'assets\building\medium\native\earthworks_facility_medium.nmf'
+if (Test-Path -LiteralPath $mediumModel) {
+    & (Join-Path $PSScriptRoot 'Stage-EarthworksBuilding-Medium.ps1')
+    if (-not $?) { throw 'Medium Earthworks building content staging failed.' }
+} else {
+    Write-Host 'Medium Earthworks item is not staged because its ModelViewer NMF conversion is not ready yet.'
+}
 $config = Get-Content -LiteralPath (Join-Path $root 'assets\rml\diagnostic-config.json') -Raw | ConvertFrom-Json
 $config.gamePath = Join-Path $game 'SOVIET64.exe'
 $config.plugins.PSObject.Properties.Remove('earthworks.planning')
