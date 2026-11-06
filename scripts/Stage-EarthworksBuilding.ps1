@@ -224,18 +224,16 @@ foreach ($node in @(
 }
 $custom.Add('$COST_RESOURCE_AUTO roof_woodsteel 0.8')
 $custom.Add('')
-# Use the road-depot native panel for a vehicle-only facility. Four matching
-# vehicle stations route arrivals/departures along the bay axes: two parallel
-# slots in each of the two canopy bays. Fuel storage is omitted for now; the
-# visible tank is decorative only.
+# Use the road-depot native panel for a vehicle-only facility. Keep four
+# parking slots in the canopy bays, but replace the four loading/unloading
+# stations with one vehicle station in the office forecourt. Fuel storage is
+# omitted for now; the visible tank is decorative only.
 $custom.Add('')
 # Model coordinates: canopy bays are centered at x=0.7 and x=13.3, each about
 # 12.6 m wide. Two parking lanes per bay are centered 6 m apart.
 # Move both parking anchors 5 m toward the rear of the bays so longer vehicles
 # sit farther beneath the canopy. Preserve the +Z heading toward the opening.
-foreach ($x in @('-2.3000', '3.7000', '10.3000', '16.3000')) {
-    $custom.Add('$VEHICLE_STATION ' + $x + ' 0.0000 15.0000 ' + $x + ' 0.0000 5.0000')
-}
+$custom.Add('$VEHICLE_STATION 9.5000 0.0000 -5.0000 15.5000 0.0000 -5.0000')
 foreach ($x in @('-2.3000', '3.7000', '10.3000', '16.3000')) {
     $custom.Add('$VEHICLE_PARKING ' + $x + ' 0.0000 -5.0000 ' + $x + ' 0.0000 5.0000')
 }
@@ -308,11 +306,11 @@ Copy-Item -Path (Join-Path $objectDir 'earthworks_*.dds') -Destination $targetOb
 
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
 $stationCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_STATION\s' }).Count
-if ($parkingCount -ne 4 -or $stationCount -ne 4) {
-    throw "Expected four parking slots and four matching vehicle stations, found $parkingCount parking slots and $stationCount stations"
+if ($parkingCount -ne 4 -or $stationCount -ne 1) {
+    throw "Expected four parking slots and one forecourt vehicle station, found $parkingCount parking slots and $stationCount stations"
 }
 Write-Host "Staged Stage 12 Earthworks facility at $target"
 Write-Host 'The native road-depot type is used; the vehicle allowlist and Earthworks project scheduler remain plugin-controlled.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
-Write-Host 'The custom model uses a textured muted material palette, with four parking slots (two per bay) and matching vehicle routes.'
+Write-Host 'The custom model uses four parking slots (two per bay) and one separate vehicle station in the office forecourt.'
 Write-Host 'No workers are required for Earthworks output. Fuel storage is omitted; the visible tank is decorative.'
