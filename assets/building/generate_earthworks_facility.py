@@ -263,54 +263,96 @@ def make_building():
 
 
 def make_large_building():
-    """Long U-shaped vehicle yard: 16 covered and 4 open-air stalls."""
-    # Rear service block spans between the two long garage wings. Its yard-side
-    # facade faces toward negative Y; native surface areas are configured later.
-    add_box("large_service_plinth", (0.0, 25.0, 0.38), (58.0, 15.0, 0.72), CONCRETE, 0.08)
-    add_box("large_service_hall", (0.0, 25.0, 4.4), (57.0, 14.0, 7.4), PLASTER, 0.08)
-    add_box("large_service_roof", (0.0, 25.0, 8.25), (58.0, 15.0, 0.38), OFFICE_ROOF, 0.06)
-    add_box("large_service_roof_front_edge", (0.0, 17.4, 8.25), (58.0, 0.25, 0.5), FRAME, 0.03)
+    """Articulated U-shaped vehicle yard: 16 covered and 4 open-air stalls."""
+    def roof_panel(name, vertices, mat):
+        mesh = bpy.data.meshes.new(name + "_mesh")
+        mesh.from_pydata(vertices, [], [tuple(range(len(vertices)))])
+        mesh.materials.append(mat)
+        obj = bpy.data.objects.new(name, mesh)
+        bpy.context.collection.objects.link(obj)
+        EXPORT_OBJECTS.append(obj)
 
-    # Yard-facing service facade: central entrance and two large loading doors.
-    add_box("large_loading_door_left", (-15.0, 17.85, 3.0), (7.4, 0.18, 5.6), FRAME, 0.04)
-    add_box("large_loading_door_left_inner", (-15.0, 17.72, 3.0), (6.8, 0.06, 5.0), STEEL, 0.03)
-    add_box("large_loading_door_right", (15.0, 17.85, 3.0), (7.4, 0.18, 5.6), FRAME, 0.04)
-    add_box("large_loading_door_right_inner", (15.0, 17.72, 3.0), (6.8, 0.06, 5.0), STEEL, 0.03)
-    add_box("large_entry_door", (0.0, 17.68, 2.45), (1.5, 0.12, 3.2), STEEL, 0.04)
-    for i, x in enumerate((-23.0, -7.5, 7.5, 23.0)):
-        add_window(f"large_service_window_{i+1}", x, 5.0, 2.3, 1.8, y=17.70)
-    add_box("large_service_safety_band", (0.0, 17.48, 0.95), (56.5, 0.14, 0.32), SAFETY_RED, 0.02)
-    # Three broad, shallow steps lead from the yard to the central doorway.
-    for idx, (depth, height) in enumerate(((0.44, 0.58), (0.72, 0.40), (1.0, 0.22))):
-        add_box(f"large_entry_step_{idx+1}", (0.0, 16.75 - idx * 0.68, height / 2), (2.8, 0.7, height), CONCRETE, 0.04)
+    # Rear operations building closes the U. A stepped dispatch office and a
+    # pair of loading bays make it read as a working depot, not a blank box.
+    add_box("large_service_plinth", (0.0, 27.0, 0.30), (57.0, 15.0, 0.56), CONCRETE, 0.08)
+    add_box("large_service_hall", (0.0, 27.5, 3.85), (56.0, 13.8, 6.7), PLASTER, 0.07)
+    add_box("large_dispatch_office", (23.0, 18.4, 3.5), (9.5, 4.0, 6.0), PLASTER, 0.05)
+    add_box("large_service_roof", (-1.0, 27.4, 7.45), (55.0, 14.6, 0.34), OFFICE_ROOF, 0.05)
+    add_box("large_office_roof", (23.0, 18.4, 6.7), (9.7, 4.2, 0.30), OFFICE_ROOF, 0.04)
+    add_box("large_service_roof_front_edge", (-1.0, 19.98, 7.42), (55.0, 0.28, 0.42), FRAME, 0.03)
+    for idx, x in enumerate((-15.0, 15.0), start=1):
+        add_box(f"large_loading_door_{idx}_surround", (x, 20.42, 3.0), (7.8, 0.28, 5.5), FRAME, 0.04)
+        add_box(f"large_loading_door_{idx}_panel", (x, 20.23, 3.0), (7.15, 0.08, 4.95), STEEL, 0.03)
+        for stripe in range(1, 5):
+            add_box(f"large_loading_door_{idx}_rib_{stripe}", (x, 20.15, 0.85 + stripe * 0.88), (6.95, 0.06, 0.06), FRAME, 0.01)
+    for x in (-27.0, -7.0, 10.5):
+        add_box(f"large_service_pier_{str(x).replace('-', 'm')}", (x, 20.23, 3.8), (0.55, 0.3, 6.3), CONCRETE, 0.03)
 
-    # Two side wings form the U. Each has six covered single-depth bays facing
-    # the central court; the two stalls nearest the opening on each side are
-    # open-air. Structural columns are placed between stalls, never in a slot.
-    for side, x_outer, x_inner in (("left", -46.0, -28.0), ("right", 46.0, 28.0)):
-        x_mid = (x_outer + x_inner) / 2.0
-        add_box(f"large_{side}_wing_backwall", (x_outer, 6.0, 3.2), (0.45, 37.0, 6.2), PLASTER, 0.05)
-        add_box(f"large_{side}_wing_endwall", (x_mid, 24.0, 3.2), (18.0, 0.45, 6.2), PLASTER, 0.04)
-        # A continuous low industrial roof covers eight rear stalls.
-        add_box(f"large_{side}_garage_roof", (x_mid, 6.5, 6.55), (18.2, 33.0, 0.36), ROOF, 0.05)
-        add_box(f"large_{side}_garage_roof_edge", (x_inner, 6.5, 6.55), (0.30, 33.0, 0.52), FRAME, 0.03)
-        for i, y in enumerate((-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)):
-            # Outer wall returns frame each individual vehicle bay; openings
-            # face inward and remain clear from the court aisle.
-            add_box(f"large_{side}_bay_divider_{i+1}", (x_outer + (1.0 if side == "left" else -1.0), y, 3.1), (0.25, 0.18, 5.9), STEEL, 0.02)
-        for i, y in enumerate((-19.0, -15.0, -7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)):
-            # Two stalls at the U mouth stay uncovered; posts are beyond the
-            # outside edge of those spaces and never obstruct their approach.
-            if y >= -7.0:
-                post_x = x_inner if side == "left" else x_inner
-                add_box(f"large_{side}_front_post_{i+1}", (post_x, y, 3.2), (0.38, 0.38, 6.0), STEEL, 0.025)
-                add_box(f"large_{side}_front_post_foot_{i+1}", (post_x, y, 0.24), (0.85, 0.85, 0.48), CONCRETE, 0.05)
+    # Dispatch frontage, with sheltered entrance and broad steps to the yard.
+    add_box("large_entry_door", (23.0, 16.28, 2.25), (1.5, 0.14, 3.5), FRAME, 0.04)
+    add_box("large_entry_door_inner", (23.0, 16.17, 2.25), (1.18, 0.08, 3.12), STEEL, 0.03)
+    for idx, x in enumerate((18.2, 23.0, 27.7), start=1):
+        add_window(f"large_dispatch_window_{idx}", x, 3.15, 2.4, 1.8, y=16.7)
+    add_box("large_dispatch_awning", (23.0, 15.85, 4.25), (4.8, 1.0, 0.18), OFFICE_ROOF, 0.03)
+    add_box("large_service_safety_band", (0.0, 20.10, 0.82), (55.0, 0.12, 0.28), SAFETY_RED, 0.02)
+    for idx, (width, depth, height) in enumerate(((2.0, 0.55, 0.48), (2.4, 0.6, 0.34), (2.8, 0.65, 0.2))):
+        add_box(f"large_entry_step_{idx+1}", (23.0, 15.4 - idx * 0.58, height / 2), (width, depth, height), CONCRETE, 0.04)
 
-    # Four open-air spaces continue the rows at the mouth of the U, two per
-    # wing. Keep them adjacent to the covered bays with an unobstructed aisle.
-    # Decorative shipping containers sit outside the left/rear wing, clear of
-    # vehicle routes and loading approaches.
-    for i, (x, y, mat) in enumerate(((-50.0, 12.0, CONTAINER_RED), (-50.0, 5.0, CONTAINER_BLUE), (50.0, 12.0, CONTAINER_RED)), start=1):
+    # Two prominent garage wings form the U around a broad, unobstructed court.
+    # Each wing has eight covered bays. The four remaining single-depth stalls
+    # are open-air at the U mouth, as specified in the accepted layout.
+    y_front, y_back = -11.0, 21.0
+    y_centers = (-7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0)
+    for side, sign in (("left", -1), ("right", 1)):
+        x_inner, x_outer = sign * 28.5, sign * 45.5
+        x_mid = (x_inner + x_outer) / 2.0
+        x_min, x_max = sorted((x_inner, x_outer))
+        # Low, articulated rear walls with clerestory lights leave the garages
+        # visually open while giving each wing a separate service-building form.
+        add_box(f"large_{side}_rear_wall_base", (x_outer, 5.0, 1.05), (0.36, 32.0, 2.1), PLASTER, 0.03)
+        for bay, y in enumerate(y_centers, start=1):
+            add_box(f"large_{side}_rear_panel_{bay}", (x_outer, y, 3.15), (0.30, 3.25, 1.55), PLASTER, 0.02)
+            add_box(f"large_{side}_clerestory_{bay}", (x_outer - sign * 0.19, y, 4.65), (0.08, 2.45, 0.65), GLASS, 0.01)
+            add_box(f"large_{side}_rear_pilaster_{bay}", (x_outer - sign * 0.22, y + 1.85, 2.9), (0.16, 0.18, 5.6), FRAME, 0.02)
+        add_box(f"large_{side}_rear_safety_band", (x_outer - sign * 0.21, 5.0, 0.62), (0.12, 31.8, 0.23), SAFETY_RED, 0.01)
+
+        # Repeated steel portal frames articulate the stalls from the courtyard.
+        ridge_x = sign * 37.0
+        for bay, y in enumerate(y_centers, start=1):
+            post_x = x_inner
+            add_box(f"large_{side}_portal_post_{bay}", (post_x, y + 1.85, 2.9), (0.34, 0.34, 5.6), STEEL, 0.025)
+            add_box(f"large_{side}_portal_foot_{bay}", (post_x, y + 1.85, 0.24), (0.78, 0.78, 0.48), CONCRETE, 0.04)
+            add_box(f"large_{side}_portal_girder_{bay}", (x_mid, y + 1.85, 5.72), (17.0, 0.32, 0.34), STEEL, 0.025)
+            add_beam(f"large_{side}_roof_truss_outer_{bay}", (x_outer, y + 1.85, 5.85), (ridge_x, y + 1.85, 7.02), 0.16, 0.18, STEEL)
+            add_beam(f"large_{side}_roof_truss_inner_{bay}", (ridge_x, y + 1.85, 7.02), (x_inner, y + 1.85, 5.85), 0.16, 0.18, STEEL)
+        add_box(f"large_{side}_rear_return", (x_mid, y_back, 3.0), (17.0, 0.36, 5.8), PLASTER, 0.04)
+
+        # Pitched metal roofs split at the ridge so the wings look like garages
+        # and respond to the light instead of reading as single flat slabs.
+        eave_z, ridge_z = 5.95, 7.15
+        for roof_side in ("outer", "inner"):
+            if sign < 0:
+                xa, xb = ((x_min - 0.35, ridge_x) if roof_side == "outer" else (ridge_x, x_max + 0.35))
+            else:
+                xa, xb = ((ridge_x, x_max + 0.35) if roof_side == "outer" else (x_min - 0.35, ridge_x))
+            za = eave_z if abs(xa) > abs(xb) else ridge_z
+            zb = eave_z if abs(xb) > abs(xa) else ridge_z
+            roof_panel(f"large_{side}_{roof_side}_pitched_roof", [
+                (xa, y_front - 0.35, za), (xb, y_front - 0.35, zb),
+                (xb, y_back + 0.35, zb), (xa, y_back + 0.35, za),
+            ], ROOF)
+        add_box(f"large_{side}_ridge_cap", (ridge_x, 5.0, ridge_z + 0.08), (0.22, 32.8, 0.18), FRAME, 0.03)
+        add_box(f"large_{side}_front_gutter", (x_mid, y_front - 0.22, eave_z + 0.03), (17.6, 0.18, 0.2), FRAME, 0.02)
+
+    # Small utility annex and decorative tank distinguish the service yard.
+    add_box("large_pump_house", (-22.0, 29.0, 2.3), (7.5, 7.0, 4.2), PLASTER, 0.05)
+    add_box("large_pump_house_roof", (-22.0, 29.0, 4.48), (7.8, 7.3, 0.28), OFFICE_ROOF, 0.03)
+    add_box("large_pump_house_door", (-22.0, 25.39, 1.55), (1.2, 0.12, 2.6), STEEL, 0.03)
+    add_cylinder("large_decorative_fuel_tank", (-27.0, 31.0, 3.2), 1.65, 6.2, TANK, vertices=20)
+    add_cylinder("large_decorative_tank_cap", (-27.0, 31.0, 6.35), 1.62, 0.18, FRAME, vertices=20, bevel=0.03)
+
+    # Shipping containers stay outside the parking slots, court and loading approaches.
+    for i, (x, y, mat) in enumerate(((-50.0, 9.0, CONTAINER_RED), (-50.0, 1.0, CONTAINER_BLUE), (50.0, 9.0, CONTAINER_RED)), start=1):
         add_box(f"large_container_{i}_body", (x, y, 1.3), (6.0, 2.45, 2.6), mat, 0.04)
         for rib in range(1, 8):
             xx = x - 2.8 + rib * 0.8
@@ -395,8 +437,8 @@ def apply_atlas_uvs(obj, material_name):
 def set_camera_and_render():
     if LARGE:
         target = Vector((0.0, 0.0, 2.8))
-        camera_location = (-82.0, -105.0, 78.0)
-        ortho_scale = 160.0
+        camera_location = (-34.0, -122.0, 82.0)
+        ortho_scale = 132.0
     elif MEDIUM:
         target = Vector((12.0, 0.0, 2.3))
         camera_location = (-25.0, -68.0, 54.0)
@@ -426,11 +468,46 @@ def set_camera_and_render():
         light.data.size = size
         light.rotation_euler = (Vector((0, 0, 2)) - light.location).to_track_quat("-Z", "Y").to_euler()
 
-    bpy.ops.mesh.primitive_plane_add(size=200.0, location=(0, 0, -0.02))
+    bpy.ops.mesh.primitive_plane_add(size=200.0, location=(0, 0, -0.06))
     ground = bpy.context.object
     ground.name = "preview_only_ground"
-    ground.data.materials.append(material("preview_ground", (0.25, 0.29, 0.25)))
-    ground.hide_set(True)
+    ground.data.materials.append(material("preview_ground", (0.22, 0.27, 0.19)))
+
+    if LARGE:
+        # The game paints these native ground areas from building.ini after
+        # placement. Show them only in the proposal render so the yard reads
+        # like the playable layout; they are intentionally excluded from OBJ.
+        asphalt_preview = material("preview_native_asphalt", (0.105, 0.115, 0.13), 0.94)
+        line_preview = material("preview_native_parking_lines", (0.78, 0.76, 0.68), 0.9)
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -1.5, -0.005))
+        court = bpy.context.object
+        court.name = "preview_only_native_asphalt_court"
+        court.dimensions = (92.0, 69.0, 0.05)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        court.data.materials.append(asphalt_preview)
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, -40.5, 0.0))
+        approach = bpy.context.object
+        approach.name = "preview_only_native_road_apron"
+        approach.dimensions = (12.0, 12.0, 0.05)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        approach.data.materials.append(asphalt_preview)
+        # Twenty individually readable, single-depth parking positions.
+        for side, x in (("left", -36.0), ("right", 36.0)):
+            for index, y in enumerate((-19.0, -15.0, -7.0, -3.0, 1.0, 5.0, 9.0, 13.0, 17.0, 21.0), start=1):
+                for edge_x in (x - 5.0, x + 5.0):
+                    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(edge_x, y, 0.028))
+                    stripe = bpy.context.object
+                    stripe.name = f"preview_only_{side}_parking_{index}_{edge_x}"
+                    stripe.dimensions = (0.09, 3.05, 0.018)
+                    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+                    stripe.data.materials.append(line_preview)
+                for end_y in (y - 1.5, y + 1.5):
+                    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(x, end_y, 0.028))
+                    stripe = bpy.context.object
+                    stripe.name = f"preview_only_{side}_parking_end_{index}_{end_y}"
+                    stripe.dimensions = (10.0, 0.09, 0.018)
+                    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+                    stripe.data.materials.append(line_preview)
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
