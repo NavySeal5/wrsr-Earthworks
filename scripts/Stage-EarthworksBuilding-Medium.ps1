@@ -243,7 +243,7 @@ $custom.Add('')
 # remains front-facing; the expanded apron gives vehicles room to turn in.
 $custom.Add('$CONNECTION_ROAD')
 $custom.Add('45.5000 0.0000 15.0000')
-$custom.Add('55.5000 0.0000 15.0000')
+$custom.Add('35.5000 0.0000 15.0000')
 $custom.Add('')
 $custom.Add('end')
 [IO.File]::WriteAllLines((Join-Path $objectDir 'building.ini'), $custom, [Text.UTF8Encoding]::new($false))
