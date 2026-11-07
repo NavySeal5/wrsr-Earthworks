@@ -78,7 +78,7 @@ extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease, 
 bool LeftTaken();
 bool InstallRuntime();
 void ClearInputLatches();
-Snapshot ReadSnapshot();
+const Snapshot& ReadSnapshot();
 void Enqueue(Command command);
 void NotifyNativeTerrainEdit(float x, float z, float brushRadius) noexcept;
 void StartOverlay();

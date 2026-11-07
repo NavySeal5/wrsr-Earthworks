@@ -221,7 +221,7 @@ void DrawGroup(unsigned char* base, const SegmentGroup& group)
 void DrawUnderUi()
 {
     if(!boundHost||!boundHost->exeBase) return;
-    const auto snapshot=ReadSnapshot();
+    const auto& snapshot=ReadSnapshot();
     if(!snapshot.ready||!snapshot.cameraValid) return;
     __try {
         auto* base=boundHost->exeBase;

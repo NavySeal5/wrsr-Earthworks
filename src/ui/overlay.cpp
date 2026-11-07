@@ -204,20 +204,20 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
     if(message==WM_LBUTTONDOWN&&handleIndex<MaxSitePoints&&GetForegroundWindow()==gameWindow) {
-        draggingSitePoint=handleIndex;const auto snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;
+        draggingSitePoint=handleIndex;const auto& snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex);
     }
     if(message==WM_MOUSEMOVE&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
-        const auto snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
+        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
     }
     if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
-        const auto snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
+        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
         if(snapshot.editingSiteId||snapshot.creatingSite)
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
         draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
     }
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
-        const auto snapshot=ReadSnapshot();
+        const auto& snapshot=ReadSnapshot();
         if(snapshot.siteEditorOpen&&!snapshot.creatingSite&&snapshot.mode==PickMode::None) {
             const bool insidePanel=(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam));
             const bool insideEditor=Hit(editorRect,lParam);
@@ -1250,7 +1250,7 @@ void Render(IDXGISwapChain* swap)
     if (!target && !CreateTarget(swap)) { ImGui::SetCurrentContext(previous); return; }
     ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame(); ImGui::NewFrame();
     const auto& io=ImGui::GetIO();
-    const auto snapshot=ReadSnapshot();
+    const auto& snapshot=ReadSnapshot();
     ImGui::GetBackgroundDrawList()->PushClipRect({65,85},{io.DisplaySize.x,io.DisplaySize.y-90},true);
     previewLinesUnderlay=gameUnderlayInstalled;
     DrawPreview(snapshot);

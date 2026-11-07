@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -1329,11 +1330,17 @@ void ClearInputLatches()
         if (keyboardCapture) host->exeBase[0xA54C91]=0;
     } __except(EXCEPTION_EXECUTE_HANDLER) { }
 }
-Snapshot ReadSnapshot()
+const Snapshot& ReadSnapshot()
 {
+    // Snapshots contain several large bounded tables. Reuse per-thread storage
+    // instead of making a large automatic object (or a by-value return) in the
+    // game render and window callbacks, whose stacks are limited.
+    static thread_local std::unique_ptr<Snapshot> storage;
+    if (!storage) storage = std::make_unique<Snapshot>();
+    auto& out = *storage;
     const bool available=AvailabilitySignal();
     std::lock_guard<std::mutex> lock(dataMutex);
-    Snapshot out=published;
+    out=published;
     if (!available) { out.ready=false; out.cursorValid=false; out.cameraValid=false; }
     return out;
 }
