@@ -957,7 +957,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);
     }
-    ImGui::PopStyleVar();ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);ImGui::PopStyleColor(4);
     editorPosition=ImGui::GetWindowPos();
     RememberRect(&editorRect);editorRectValid=true;ImGui::End();
 }
