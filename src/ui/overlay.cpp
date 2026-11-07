@@ -71,6 +71,8 @@ unsigned draggingSitePoint=MaxSitePoints;
 Point dragSitePoint{};
 Point dragSitePointStart{};
 bool draggingSitePointMoved=false;
+ULONGLONG dragSitePointArmedAt=0;
+constexpr ULONGLONG SitePointSelectDebounceMs=250;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
@@ -269,7 +271,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
         const uint32_t pointBit=1u<<handleIndex;
         const bool wasSoleSelected=!shiftDown&&snapshot.selectedSitePoint==handleIndex&&snapshot.selectedSitePointsMask==pointBit;
-        draggingSitePoint=wasSoleSelected?handleIndex:static_cast<unsigned>(MaxSitePoints);
+        draggingSitePoint=!shiftDown?handleIndex:static_cast<unsigned>(MaxSitePoints);
+        dragSitePointArmedAt=draggingSitePoint<MaxSitePoints?GetTickCount64()+(wasSoleSelected?0:SitePointSelectDebounceMs):0;
         draggingSitePointMoved=false;dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
         }
@@ -278,15 +281,16 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
             dragSitePoint=snapshot.cursor;
             const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
-            if(dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
+            if(GetTickCount64()>=dragSitePointArmedAt&&dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
         }
     }
     if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
-        if(draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite))
+        if(GetTickCount64()>=dragSitePointArmedAt&&draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite))
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
         draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
         draggingSitePointMoved=false;
+        dragSitePointArmedAt=0;
     }
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();

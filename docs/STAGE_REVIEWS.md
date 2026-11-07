@@ -700,8 +700,8 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Build and staging pending; confirm the button is hidden in the main menu/loading screens and appears after a world becomes ready.
 
 **Separate Site point selection from dragging — 8 November 2026**
-- Clicking an unselected point now only changes selection. A drag can begin only on a later mouse press when that point was already the sole selected point; multi-selected points and Shift-clicks cannot start a drag.
-- Build and staging pending; verify selection clicks do not move points and a separate drag still works.
+- This prior behavior required a separate press to drag a newly selected point. It is superseded by the 250 ms same-press debounce below: short clicks still only select; a held press can drag after the delay.
+- The earlier build/staging note is historical; see the current entry below.
 
 **Free-draw close by clicking near the first point — 8 November 2026**
 - Free draw now finishes the polygon when the player clicks within 5 m of its first point, provided at least three vertices have been placed. With fewer vertices, the click is rejected with guidance; it is never added as a duplicate point. The explicit Finish shape control remains available, and Square/Rectangle modes are unchanged.
@@ -711,6 +711,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 **Insert Site points directly on edges — 8 November 2026**
 - Hovering within 12 screen pixels of an editable Site edge shows a muted plus-point at the nearest valid location. Clicking the edge inserts a vertex at that location and selects it. The insertion stays at least 5 m from either endpoint; existing footprint validation and terrain-review rules are retained.
 - Build and staging pending; verify preview placement, insertion location, and rejection near endpoints in-game.
+
+**Debounced drag on first Site point selection — 8 November 2026**
+- A newly selected, unmodified point handle now becomes a drag candidate on that same press, but movement is ignored for the first 250 ms. A short click selects without moving; holding and dragging after the debounce allows movement. A point already singly selected remains immediately draggable, and Shift-click selection does not initiate a drag.
+- Build and staging succeeded as `0.16.12-site-point-select-debounce`; the diagnostic RML preset was refreshed. No in-game check was run. Verify short clicks, a held drag after 250 ms, an already-selected drag, and Shift-click behavior in-game.
 
 **Stage 13 progress indicator fix — 7 November 2026**
 - Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
