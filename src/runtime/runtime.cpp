@@ -813,6 +813,14 @@ void Process(const Command& command)
         break;
     case Action::ClearInspector: ResetWorkforce();current.mode=PickMode::None;break;
     case Action::LogInspector: LogWorkforce();break;
+    case Action::RefreshFacilities:
+        lastWorldFacilityScan=0;
+        lastProjectFacilityReadings=0;
+        RefreshProjectStatus();
+        ++current.revision;
+        Message("Facility names refreshed from the buildings.");
+        host->log("earthworks  manually refreshed facility names from native building instances");
+        break;
     }
 }
 void NotifyNativeTerrainEditImpl(float x,float z,float brushRadius) noexcept

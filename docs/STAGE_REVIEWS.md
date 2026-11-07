@@ -654,3 +654,7 @@ The user clarified that the requested label is the full title shown in the nativ
 **Facility table reads the stored building name — 7 November 2026**
 
 The user clarified that the table should read the name from the building rather than construct one. The stored instance name is the UTF-16 field at building +0x114, documented in the pinned RepublicMP source. The table now displays only this field, without composing a city/type label or deriving a substitute from the asset name. Empty instance names display Name unavailable. The native default title visible in the game building header is not yet confirmed to be stored on the building; resolving that title remains open. Build 0.14.16 is prepared for user review; no in-game test was run by the agent.
+
+**Facility name refresh control — 7 November 2026**
+
+Added a manual **Refresh** button beside the Facilities filters/count. It queues a game-thread refresh that invalidates the one-second facility scan and rereads the native instance-name field for each recognized facility, then refreshes machine readings. It does not construct the location/type title. If an unrenamed building still reads Building ##, that value is what the native instance-name field currently provides; a refresh cannot reveal a different title unless the game stores it elsewhere. Build 0.14.17-facility-name-refresh is prepared for user review. No in-game check was run by the agent.

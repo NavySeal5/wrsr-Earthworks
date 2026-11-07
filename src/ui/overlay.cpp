@@ -581,6 +581,7 @@ void DrawInterface(const Snapshot& s)
                 ImGui::EndDisabled();
                 ImGui::SeparatorText("Facilities");
                 if(ImGui::SmallButton(showAllFacilities?"Hide other Projects":"Show all facilities"))showAllFacilities=!showAllFacilities;
+                ImGui::SameLine();if(ImGui::SmallButton("Refresh"))Send(Action::RefreshFacilities);
                 ImGui::SameLine();ImGui::TextDisabled("%u found",s.facilityCandidateCount);
                 if(ImGui::BeginTable("facilityTable",4,ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,{0,190})) {
                     ImGui::TableSetupColumn("Facility",ImGuiTableColumnFlags_WidthStretch,2.2f);
