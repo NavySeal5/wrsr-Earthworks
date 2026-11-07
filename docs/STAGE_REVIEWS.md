@@ -658,3 +658,7 @@ The user clarified that the table should read the name from the building rather 
 **Facility name refresh control — 7 November 2026**
 
 Added a manual **Refresh** button beside the Facilities filters/count. It queues a game-thread refresh that invalidates the one-second facility scan and rereads the native instance-name field for each recognized facility, then refreshes machine readings. It does not construct the location/type title. If an unrenamed building still reads Building ##, that value is what the native instance-name field currently provides; a refresh cannot reveal a different title unless the game stores it elsewhere. Build 0.14.17-facility-name-refresh is prepared for user review. No in-game check was run by the agent.
+
+**Facility location/type fallback — 7 November 2026**
+
+The user authorized composing a fallback name after repeated refreshes showed only `Building ##` for unrenamed instances. The facility table now treats that generated label as unnamed and builds the fallback from the linked city name (`building +0x108` → city `+0x10`) plus the recognized facility type. A non-generic user rename remains unchanged. If the city cannot be read, the row falls back to the facility type. Build 0.14.18-facility-name-fallback is prepared for user review; no in-game test was run by the agent.

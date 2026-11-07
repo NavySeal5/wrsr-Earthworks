@@ -53,6 +53,24 @@ bool IsEarthworksAsset(const char* assetName)
         std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0 ||
         std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0;
 }
+const char* EarthworksDisplayName(const char* assetName)
+{
+    if(!assetName)return "Earthworks Facility";
+    const char* objectName=std::strrchr(assetName,'/');
+    objectName=objectName?objectName+1:assetName;
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
+    return "Earthworks Facility (Small)";
+}
+bool IsGeneratedBuildingName(const char* name,unsigned id)
+{
+    if(!name||!name[0])return true;
+    char generated[48]{};
+    sprintf_s(generated,"Building %u",id);
+    if(std::strcmp(name,generated)==0)return true;
+    sprintf_s(generated,"Building #%u",id);
+    return std::strcmp(name,generated)==0;
+}
 bool ReadUtf16(Address address,unsigned maxChars,char* out,size_t outSize)
 {
     if(!out||!outSize)return false;
@@ -86,9 +104,24 @@ bool DescribeBuilding(Address address,unsigned slot,BuildingReading* out)
     }
     out->earthworksFacility=IsEarthworksAsset(out->assetName);
     if(out->earthworksFacility) {
-        // Read only the name stored on this building instance. The default
-        // header shown by the game is not stored here; do not synthesize it.
         if(!ReadUtf16(address+0x114,64,out->displayName,sizeof(out->displayName)))return false;
+        // Unrenamed instances can carry the generic "Building ##" string in
+        // this field. Treat that as empty so the assignment list gets the
+        // useful city + configured facility-name fallback instead.
+        if(IsGeneratedBuildingName(out->displayName,out->id)) {
+            const char* facilityName=EarthworksDisplayName(out->assetName);
+            Address city=0;
+            char cityName[257]{};
+            if(Read(address+0x108,&city)&&city&&ReadUtf16(city+0x10,64,cityName,sizeof(cityName))&&cityName[0]) {
+                size_t used=std::min(std::strlen(cityName),sizeof(out->displayName)-1);
+                std::memcpy(out->displayName,cityName,used);
+                if(used+1<sizeof(out->displayName))out->displayName[used++]=' ';
+                const size_t suffix=std::min(std::strlen(facilityName),sizeof(out->displayName)-used-1);
+                std::memcpy(out->displayName+used,facilityName,suffix);
+                out->displayName[used+suffix]=0;
+            } else
+                strncpy_s(out->displayName,facilityName,_TRUNCATE);
+        }
     }
     return true;
 }
