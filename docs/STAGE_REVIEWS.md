@@ -666,3 +666,5 @@ The user authorized composing a fallback name after repeated refreshes showed on
 **Shorter facility fallback label — 7 November 2026**
 
 The user requested a narrower fallback label. The generated label now reads `<Location> Facility (<Size>)`, omitting “Earthworks” while preserving the size and user-renamed names. Build 0.14.19-short-facility-label is prepared for user review; no in-game test was run by the agent.
+
+The user accepted the facility UI. Facility assignment UI work is accepted for this stage; no additional in-game checks were requested.
