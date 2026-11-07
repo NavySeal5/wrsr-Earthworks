@@ -589,7 +589,7 @@ void DrawInterface(const Snapshot& s)
                         const auto siteLabelMax=ImGui::GetItemRectMax();
                         const float siteLabelY=siteLabelMin.y+(siteLabelMax.y-siteLabelMin.y-ImGui::GetTextLineHeight())*0.5f;
                         ImGui::GetWindowDrawList()->AddText({siteLabelMin.x+4.0f,siteLabelY},ImGui::GetColorU32(ImGuiCol_Text),label);
-                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.0f%%",site.progress*100.0f);centerCellItem(28.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
+                        ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.1f%%",site.progress*100.0f);centerCellItem(28.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
                         ImGui::TableNextColumn();
                         centerCellItem(32.0f);
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;

@@ -689,3 +689,8 @@ The user authorized composing a fallback name after repeated refreshes showed on
 The user requested a narrower fallback label. The generated label now reads `<Location> Facility (<Size>)`, omitting “Earthworks” while preserving the size and user-renamed names. Build 0.14.19-short-facility-label is prepared for user review; no in-game test was run by the agent.
 
 The user accepted the facility UI. Facility assignment UI work is accepted for this stage; no additional in-game checks were requested.
+
+**Stage 13 progress indicator fix — 7 November 2026**
+- Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
+- Progress text now shows tenths of a percent.
+- Build and staging succeeded as version `0.16.1-stage13-progress`, plugin ID `tesmio.earthworksplanning.0.16.1.stage13.progress.97d73815`, DLL SHA-256 `97D73815A14B930F5181A4DF647B909DF4BA62601116AA37F5260348C47F7B01`. No test executables or game were run; user verification instructions are in `STAGE13_TESTING.md`.

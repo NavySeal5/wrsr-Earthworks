@@ -31,7 +31,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Save/reload and work rules
 
 1. Save the republic and reload it. Confirm the Site polygon, all point heights, and the selected Project persist.
-2. Assign a facility and start a small Site only when ready to change terrain. Confirm progress follows the sloped surface shown by the preview.
+2. Assign a facility and start a small Site only when ready to change terrain. Watch the progress bar over multiple simulation-time intervals; it should advance in fractional steps rather than stay at 0% until completion. Save and reload a partly completed Site and confirm progress continues from its previous value.
 3. While a Site is Running, edit a vertex or height. It should pause automatically and require terrain review before resuming. Make one safe edit to a Paused Site and confirm review is still required. A Queued Site should remain editable without a pause.
 4. Confirm removing a point below three is refused. Confirm Finish shape and Save Site remain unavailable until the shape is valid and complete.
 

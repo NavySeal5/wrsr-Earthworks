@@ -8,7 +8,7 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 7;
+constexpr uint32_t StateSchemaVersion = 8;
 constexpr size_t MaxSavedProjects = 32;
 constexpr size_t MaxSavedEarthworks = 128;
 constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;
@@ -30,6 +30,9 @@ struct SavedEarthwork {
     ProjectStatus status = ProjectStatus::Draft;
     uint32_t executionCursor = 0;
     float progress = 0;
+    // Baseline terrain work measured on the native terrain grid at Site start.
+    // Kept separate from the coarse planning cut/fill estimate for UI progress.
+    float totalWorkM3 = 0;
     bool needsReview = false;
     float workRemainderM3 = 0;
     unsigned allocatedWorkers = 0, allocatedMachines = 0;

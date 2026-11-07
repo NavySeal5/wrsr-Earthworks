@@ -161,10 +161,11 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
         if(!e.id||!ValidName(e.name)||
             std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==state.projects.end()
             ||static_cast<uint8_t>(e.status)>static_cast<uint8_t>(ProjectStatus::Waiting)||!ValidPlan(e.plan)||!e.plan.complete
-            ||!std::isfinite(e.progress)||e.progress<0||e.progress>1||!std::isfinite(e.workRemainderM3)||e.workRemainderM3<0)return false;
+            ||!std::isfinite(e.progress)||e.progress<0||e.progress>1||!std::isfinite(e.totalWorkM3)||e.totalWorkM3<0
+            ||!std::isfinite(e.workRemainderM3)||e.workRemainderM3<0)return false;
         for(size_t j=0;j<i;++j)if(state.earthworks[j].id==e.id)return false;
         Put64(payload,e.id);Put64(payload,e.projectId);PutString(payload,e.name);payload.push_back(static_cast<uint8_t>(e.status));
-        Put32(payload,e.executionCursor);PutFloat(payload,e.progress);PutFloat(payload,e.workRemainderM3);
+        Put32(payload,e.executionCursor);PutFloat(payload,e.progress);PutFloat(payload,e.totalWorkM3);PutFloat(payload,e.workRemainderM3);
         payload.push_back(e.needsReview?1:0);PutPlan(payload,e.plan);
     }
     bytes->clear(); bytes->reserve(HeaderSize+payload.size());
@@ -179,13 +180,13 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
-    auto readPlan=[&](Plan* plan){return version==StateSchemaVersion?GetPlan(r,plan):GetLegacyPlan(r,plan);};
+    auto readPlan=[&](Plan* plan){return version>=7?GetPlan(r,plan):GetLegacyPlan(r,plan);};
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !readPlan(&parsed.draft)) return false;
-    if(version==StateSchemaVersion&&!r.String(&parsed.draftName))return false;
+    if(version>=7&&!r.String(&parsed.draftName))return false;
     if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;
     if(version==5) {
         char defaultName[MaxSavedNameBytes+1]{};sprintf_s(defaultName,"Site-%u",parsed.nextSiteNumber);
@@ -211,7 +212,9 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
         SavedEarthwork e;uint8_t status=0,review=0;
         if(!r.U64(&e.id)||!e.id||!r.U64(&e.projectId)||!r.String(&e.name)||!r.U8(&status)
             ||status>static_cast<uint8_t>(ProjectStatus::Waiting)||!r.U32(&e.executionCursor)||!r.Float(&e.progress)
-            ||e.progress<0||e.progress>1||!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1
+            ||e.progress<0||e.progress>1)return false;
+        if(version>=8&&(!r.Float(&e.totalWorkM3)||!std::isfinite(e.totalWorkM3)||e.totalWorkM3<0))return false;
+        if(!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1
             ||!readPlan(&e.plan)||!e.plan.complete)return false;
         e.status=static_cast<ProjectStatus>(status);e.needsReview=review!=0;
         if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==parsed.projects.end())return false;

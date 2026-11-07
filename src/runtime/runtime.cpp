@@ -416,6 +416,22 @@ bool SamplePlan(Plan* plan)
     }
     return true;
 }
+bool MeasureTerrainWork(const Plan& plan,const TerrainGrid& grid,const GridRect& rect,double* total)
+{
+    if(!total)return false;
+    double volume=0;
+    const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
+    if(!std::isfinite(cellArea)||cellArea<=0)return false;
+    for(int z=rect.z0;z<=rect.z1;++z)for(int x=rect.x0;x<=rect.x1;++x) {
+        const auto point=grid.At(x,z);float target=0,currentHeight=0;
+        if(!plan.Contains(point.x,point.z)||!plan.TargetAt(point.x,point.z,&target))continue;
+        if(!ReadHeight(point.x,point.z,&currentHeight))return false;
+        volume+=std::abs(static_cast<double>(target)-currentHeight)*cellArea;
+        if(!std::isfinite(volume)||volume>1.0e12)return false;
+    }
+    *total=volume;
+    return true;
+}
 void Process(const Command& command)
 {
     if (command.generation != current.generation || !current.ready) return;
@@ -868,7 +884,14 @@ pick_done:
                     static_cast<unsigned long long>(project.id),maxDifference,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
                 Message("Terrain changed since planning. Replan the footprint before starting.");break;
             }
+            double totalWork=0;
+            if(!MeasureTerrainWork(project.plan,grid,rect,&totalWork)) {
+                Message("Could not measure the Site's starting terrain work. It remains queued.");break;
+            }
+            project.totalWorkM3=static_cast<float>(totalWork);
+            project.progress=totalWork<=1e-6?0.0f:std::clamp(project.progress,0.0f,0.999999f);
             project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
+            host->log("earthworks  site=%llu started terrain work=%.3f m3",static_cast<unsigned long long>(project.id),totalWork);
             lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
             RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
         }
@@ -1007,7 +1030,16 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         Message("Terrain edit/readback failed. Project paused for review; inspect the area before resuming.");return;
     }
     project->workRemainderM3=static_cast<float>(std::max(0.0,static_cast<double>(project->workRemainderM3)-usedVolume));
-    const auto estimate=Estimate(project->plan);const double total=estimate.cut+estimate.fill;
+    if(project->totalWorkM3<=1e-6) {
+        double remaining=0;
+        if(MeasureTerrainWork(project->plan,grid,rect,&remaining)&&remaining>1e-6) {
+            const double fractionRemaining=std::max(1e-6,1.0-static_cast<double>(project->progress));
+            project->totalWorkM3=static_cast<float>(std::min(1.0e12,remaining/fractionRemaining));
+            host->log("earthworks  site=%llu initialized legacy progress denominator=%.3f m3",
+                static_cast<unsigned long long>(project->id),project->totalWorkM3);
+        }
+    }
+    const double total=project->totalWorkM3;
     if(total>0)project->progress=std::clamp(project->progress+static_cast<float>(usedVolume/total),0.0f,1.0f);
     const auto now=GetTickCount64();
     if(now-lastCompletionCheck>=500) {
