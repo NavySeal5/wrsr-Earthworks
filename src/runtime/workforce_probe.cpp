@@ -58,9 +58,9 @@ const char* EarthworksDisplayName(const char* assetName)
     if(!assetName)return "Earthworks Facility";
     const char* objectName=std::strrchr(assetName,'/');
     objectName=objectName?objectName+1:assetName;
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Earthworks Facility (Large)";
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Earthworks Facility (Medium)";
-    return "Earthworks Facility (Small)";
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Facility (Large)";
+    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Facility (Medium)";
+    return "Facility (Small)";
 }
 bool IsGeneratedBuildingName(const char* name,unsigned id)
 {

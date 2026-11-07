@@ -662,3 +662,7 @@ Added a manual **Refresh** button beside the Facilities filters/count. It queues
 **Facility location/type fallback — 7 November 2026**
 
 The user authorized composing a fallback name after repeated refreshes showed only `Building ##` for unrenamed instances. The facility table now treats that generated label as unnamed and builds the fallback from the linked city name (`building +0x108` → city `+0x10`) plus the recognized facility type. A non-generic user rename remains unchanged. If the city cannot be read, the row falls back to the facility type. Build 0.14.18-facility-name-fallback is prepared for user review; no in-game test was run by the agent.
+
+**Shorter facility fallback label — 7 November 2026**
+
+The user requested a narrower fallback label. The generated label now reads `<Location> Facility (<Size>)`, omitting “Earthworks” while preserving the size and user-renamed names. Build 0.14.19-short-facility-label is prepared for user review; no in-game test was run by the agent.
