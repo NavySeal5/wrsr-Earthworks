@@ -15,7 +15,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Shape modes
 
 1. Choose **New Site** and confirm the editor now offers **Free draw**, **Square**, and **Rectangle** before any map point is placed.
-2. In **Free draw**, click three or more vertices and confirm the outline follows the clicks. Click within 5 m of the first vertex and confirm the shape closes without adding another point. Repeat once using **Finish shape** to confirm the explicit control still works.
+2. In **Free draw**, click three or more vertices and confirm the outline follows the clicks. Click within 5 m of the first vertex and confirm the shape closes without adding another point. Also click directly on the first point handle and confirm it closes the shape rather than only selecting the point. Repeat once using **Finish shape** to confirm the explicit control still works.
 3. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
 4. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
 5. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.

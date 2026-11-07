@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.9-free-draw-close-near-first-point";
+    info->version = "0.16.10-free-draw-close-on-first-handle";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");
