@@ -695,6 +695,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Corrected the previous interpretation: only selected Site points should show height indicators. Each selected point now draws a high-contrast cut/fill-colored line from its planned height down to sampled ground, with a ground endpoint marker. The indicator is foreground-drawn so the terrain does not hide it. Shift-click toggles selection, including deselection; when selection is empty the height controls are disabled.
 - Build and staging are pending; this visual change needs user in-game review.
 
+**Launcher visibility outside active republic — 8 November 2026**
+- The Earthworks launcher button is now created only while the runtime reports a loaded world. Its cached hit-test rectangle is cleared in menus/loading states so it cannot intercept clicks there.
+- Build and staging pending; confirm the button is hidden in the main menu/loading screens and appears after a world becomes ready.
+
 **Stage 13 progress indicator fix — 7 November 2026**
 - Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
 - Progress text now shows tenths of a percent.
