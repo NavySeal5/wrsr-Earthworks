@@ -10,6 +10,8 @@ constexpr int GridCells = 24;
 constexpr int GridSide = GridCells + 1;
 constexpr size_t MaxSitePoints = 32;
 constexpr float MinSitePointSpacing = 5.0f;
+enum class SiteShapeMode : uint8_t { FreeDraw, Square, Rectangle };
+void BuildTwoCornerShape(Point anchor,Point cursor,SiteShapeMode mode,Point (&corners)[4]);
 struct SiteOutline {
     std::array<Point, MaxSitePoints> points{};
     uint8_t pointCount = 0;

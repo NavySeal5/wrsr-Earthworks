@@ -157,7 +157,12 @@ void Collect(const Snapshot& s, float width, float height)
         for(unsigned i=0;i<p.pointCount;++i) {
             if(i+1<p.pointCount)AddLine(s,p.points[i],p.points[i+1],0,width,height);
         }
-        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount)AddLine(s,p.points[p.pointCount-1],s.cursor,0,width,height);
+        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
+            if(s.shapeMode!=SiteShapeMode::FreeDraw&&p.pointCount==1) {
+                Point corners[4]{};BuildTwoCornerShape(p.points[0],s.cursor,s.shapeMode,corners);
+                for(unsigned i=0;i<4;++i)AddLine(s,corners[i],corners[(i+1)%4],0,width,height);
+            } else AddLine(s,p.points[p.pointCount-1],s.cursor,0,width,height);
+        }
         return;
     }
     for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {

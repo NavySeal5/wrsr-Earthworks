@@ -10,6 +10,16 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 4. Select each vertex in the editor. Set at least three different heights using the numeric field, then use **Sample point** and click a map location. The wireframe should interpolate the point heights into sloped triangular surfaces.
 5. Save the Site. Confirm it appears in the selected Project and that its name/status and polygon preview remain available.
 
+## Shape modes
+
+1. Choose **New Site** and confirm the editor now offers **Free draw**, **Square**, and **Rectangle** before any map point is placed.
+2. In **Free draw**, click three or more vertices, confirm the outline follows the clicks, then use **Finish shape**. This should behave as it did before the shape-mode change.
+3. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
+4. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
+5. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.
+6. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
+7. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
+
 ## Edit a saved Site
 
 1. Reopen the saved Site. Drag one vertex to a nearby position and release. The boundary should update, while the Site should not change the terrain.

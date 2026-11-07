@@ -32,6 +32,7 @@ uint64_t selectedProjectId=0;
 uint64_t editingSiteId=0;
 unsigned selectedSitePointIndex=0;
 bool siteEditorOpen=false,creatingSite=false;
+SiteShapeMode shapeMode=SiteShapeMode::FreeDraw;
 bool savePending = false;
 bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
@@ -281,7 +282,7 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
-    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     lastWorldFacilityScan=0;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
@@ -370,7 +371,7 @@ void RefreshProjectStatus()
     current.projectNeedsReview=false;
     current.projectProgress=0;
     current.selectedSiteName[0]=0;
-    current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;
+    current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;current.shapeMode=shapeMode;
     current.selectedSitePoint=selectedSitePointIndex;
     strncpy_s(current.siteDraftName,durableState.draftName.c_str(),_TRUNCATE);
     current.editorPlan=Plan{};
@@ -423,7 +424,7 @@ void Process(const Command& command)
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Click vertices to draw the Site boundary, then finish the shape.");break;}
         if(current.plan.first) {creatingSite=true;siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"Saved Site draft reopened.":"Continue adding Site boundary points.");break;}
-        history.Reset(); current.plan = Plan{}; Changed();
+        history.Reset(); current.plan = Plan{};shapeMode=SiteShapeMode::FreeDraw; Changed();
         SetDefaultDraftSiteName();
         editingSiteId=0;creatingSite=true;siteEditorOpen=true;
         selectedSitePointIndex=0;current.mode = PickMode::DrawSite;
@@ -432,8 +433,15 @@ void Process(const Command& command)
         break;
     case Action::Select:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
-        history.Reset();current.plan=Plan{};Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;selectedSitePointIndex=0;current.mode=PickMode::DrawSite;RefreshProjectStatus();
+        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;selectedSitePointIndex=0;current.mode=PickMode::DrawSite;RefreshProjectStatus();
         Message("Click at least three points around the Site boundary, then finish the shape.");break;
+    case Action::SetShapeMode:
+        if(!creatingSite||current.plan.complete||current.plan.pointCount>1||command.value<0.0f||command.value>2.0f)break;
+        shapeMode=static_cast<SiteShapeMode>(static_cast<unsigned>(command.value));
+        current.shapeMode=shapeMode;
+        current.mode=PickMode::DrawSite;
+        Message(shapeMode==SiteShapeMode::FreeDraw?"Free draw: click boundary points, then finish the shape.":shapeMode==SiteShapeMode::Square?"Square: click one corner, move to size it, then click to set it.":"Rectangle: click one corner, move to size it, then click the opposite corner.");
+        break;
     case Action::CloseSiteEditor:
         if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded because its editor was closed.");}
         else {siteEditorOpen=false;RefreshProjectStatus();}
@@ -511,6 +519,16 @@ void Process(const Command& command)
             Message("Height sampled. Adjust the target or select a new area."); Changed();
         } else if(current.mode==PickMode::DrawSite) {
             if(current.plan.pointCount>=MaxSitePoints){Message("This Site has reached its 32-point limit.");break;}
+            if(shapeMode!=SiteShapeMode::FreeDraw&&current.plan.pointCount==1) {
+                Point corners[4]{};BuildTwoCornerShape(current.plan.points[0],p,shapeMode,corners);
+                const float width=std::abs(corners[2].x-corners[0].x),depth=std::abs(corners[2].z-corners[0].z);
+                if(width<MinSitePointSpacing||depth<MinSitePointSpacing){Message("Square and Rectangle sides must each be at least 5 m.");goto pick_done;}
+                Plan candidate=current.plan;std::copy(std::begin(corners),std::end(corners),candidate.points.begin());candidate.pointCount=4;candidate.first=true;candidate.complete=false;candidate.RefreshBounds();
+                if(!ValidFootprint(candidate)){Message("That shape is invalid. Move farther from the first corner.");goto pick_done;}
+                if(!SamplePlan(&candidate)){Message("Could not sample the Site area. Keep it inside the terrain.");goto pick_done;}
+                history.Commit(current.plan);candidate.complete=true;current.plan=std::move(candidate);current.mode=PickMode::None;
+                selectedSitePointIndex=0;Changed();Message("Shape ready. Set point heights, then save the Site.");goto pick_done;
+            }
         if(current.plan.pointCount) {
                 for(unsigned i=0;i<current.plan.pointCount;++i) {
                     const double dx=static_cast<double>(p.x)-current.plan.points[i].x,dz=static_cast<double>(p.z)-current.plan.points[i].z;

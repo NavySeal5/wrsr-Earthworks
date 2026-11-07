@@ -5,6 +5,21 @@
 #include <limits>
 
 namespace ew {
+void BuildTwoCornerShape(Point anchor,Point cursor,SiteShapeMode mode,Point (&corners)[4])
+{
+    float x=cursor.x,z=cursor.z;
+    if(mode==SiteShapeMode::Square) {
+        const float side=std::max(std::abs(x-anchor.x),std::abs(z-anchor.z));
+        const float dx=x-anchor.x,dz=z-anchor.z;
+        x=anchor.x+(dx<0.0f?-side:side);
+        z=anchor.z+(dz<0.0f?-side:side);
+    }
+    corners[0]=anchor;
+    corners[1]={x,anchor.y,anchor.z};
+    corners[2]={x,anchor.y,z};
+    corners[3]={anchor.x,anchor.y,z};
+}
+
 namespace {
 struct Vertex { double x, z, d; };
 using Triangle = std::array<unsigned,3>;

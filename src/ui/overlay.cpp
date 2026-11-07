@@ -361,8 +361,12 @@ void DrawPreview(const Snapshot& s)
             ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,IM_COL32(255,235,135,235),12);
             if(i+1<p.pointCount)Line(s,p.points[i],p.points[i+1],fillColor,2.0f);
         }
-        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount)
-            Line(s,p.points[p.pointCount-1],s.cursor,fillColor,2.0f);
+        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
+            if(s.shapeMode!=SiteShapeMode::FreeDraw&&p.pointCount==1) {
+                Point corners[4]{};BuildTwoCornerShape(p.points[0],s.cursor,s.shapeMode,corners);
+                for(unsigned i=0;i<4;++i)Line(s,corners[i],corners[(i+1)%4],fillColor,2.0f);
+            } else Line(s,p.points[p.pointCount-1],s.cursor,fillColor,2.0f);
+        }
         return;
     }
     for (int z=0; z<GridCells; ++z) for (int x=0; x<GridCells; ++x) {
@@ -736,7 +740,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     static bool draftNameWasActive=false;
     static bool renameEditing=false,editorMinimized=false;
     static uint64_t renameEditingSite=0;
-    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.pointCount) {
+    if(!panelOpen||!s.siteEditorOpen||(!s.editorPlan.pointCount&&!s.creatingSite)) {
         editorRectValid=false;
         if(!s.siteEditorOpen)editorWasDragged=false;
         if(!s.creatingSite)draftNameWasActive=false;
@@ -820,6 +824,28 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             SendProjectText(Action::SetDraftSiteName,0,draftNameBuffer);
         ImGui::PopStyleVar();
         nameTextEditing|=ImGui::IsItemActive();
+        ImGui::TextUnformatted("Shape");
+        const char* shapeNames[]={"Free draw","Square","Rectangle"};
+        const bool canChangeShape=!plan.complete&&plan.pointCount<=1;
+        const float shapeWidth=(ImGui::GetContentRegionAvail().x-2.0f*ImGui::GetStyle().ItemSpacing.x)/3.0f;
+        for(unsigned i=0;i<3;++i) {
+            if(i)ImGui::SameLine();
+            const bool active=s.shapeMode==static_cast<SiteShapeMode>(i);
+            if(active)ImGui::PushStyleColor(ImGuiCol_Button,{0.84f,0.70f,0.52f,1.0f});
+            ImGui::BeginDisabled(!canChangeShape);
+            if(ImGui::Button(shapeNames[i],{shapeWidth,28.0f}))Send(Action::SetShapeMode,static_cast<float>(i));
+            ImGui::EndDisabled();
+            if(active)ImGui::PopStyleColor();
+        }
+        if(!plan.pointCount) {
+            ImGui::Separator();
+            if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Finish shape closes the polygon.");
+            else if(s.shapeMode==SiteShapeMode::Square)ImGui::TextWrapped("Click one corner, move the cursor to preview a map-aligned square, then click to set it.");
+            else ImGui::TextWrapped("Click one corner, move the cursor to preview a map-aligned rectangle, then click the opposite corner.");
+            if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::CancelSiteDraft);
+            ImGui::PopStyleVar();ImGui::PopStyleColor(4);
+            editorPosition=ImGui::GetWindowPos();RememberRect(&editorRect);editorRectValid=true;ImGui::End();return;
+        }
     } else if(renameEditing) {
         ImGui::SetNextItemWidth(155.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{8.0f,6.0f});
@@ -908,10 +934,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::EndDisabled();
     const bool finishedShape=plan.complete;
     if(s.creatingSite) {
-        ImGui::BeginDisabled(plan.pointCount<3||finishedShape);
-        if(ImGui::Button("Finish shape",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::FinishSite);
-        ImGui::EndDisabled();
-        if(!finishedShape)ImGui::TextDisabled("Click vertices in sequence; Finish shape closes the boundary.");
+        if(s.shapeMode==SiteShapeMode::FreeDraw) {
+            ImGui::BeginDisabled(plan.pointCount<3||finishedShape);
+            if(ImGui::Button("Finish shape",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::FinishSite);
+            ImGui::EndDisabled();
+            if(!finishedShape)ImGui::TextDisabled("Click vertices in sequence; Finish shape closes the boundary.");
+        } else if(!finishedShape)ImGui::TextDisabled(plan.pointCount==1?"Move the cursor to preview the shape; click again to set it.":"Click the first corner to begin the shape.");
     }
     const bool geometryEditable=editable&&finishedShape;
     ImGui::BeginDisabled(!geometryEditable);

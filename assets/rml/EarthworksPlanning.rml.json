@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.15.2-stage13-callback-snapshot-fix",
+  "version": "0.16.0-stage13-shape-modes",
   "description": "Plan Sites in named Projects, edit them on the map, and assign Earthworks facilities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },
