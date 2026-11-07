@@ -691,8 +691,8 @@ The user requested a narrower fallback label. The generated label now reads `<Lo
 
 The user accepted the facility UI. Facility assignment UI work is accepted for this stage; no additional in-game checks were requested.
 
-**Stage 13 vertex-to-ground wireframe — 7 November 2026**
-- Added a vertical cut/fill-colored wireframe connector at every vertex of a completed draft or selected Site, extending from its per-point planned height to the stored terrain height at that location.
+**Stage 13 selected point-to-ground indicator — 7 November 2026**
+- Corrected the previous interpretation: only selected Site points should show height indicators. Each selected point now draws a high-contrast cut/fill-colored line from its planned height down to sampled ground, with a ground endpoint marker. The indicator is foreground-drawn so the terrain does not hide it. Shift-click toggles selection, including deselection; when selection is empty the height controls are disabled.
 - Build and staging are pending; this visual change needs user in-game review.
 
 **Stage 13 progress indicator fix — 7 November 2026**

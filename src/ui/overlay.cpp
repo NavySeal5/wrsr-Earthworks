@@ -306,7 +306,6 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
     for (int i=0; i<count; ++i) if (!Project(s,clipped[i],&screen[i])) return;
     ImGui::GetBackgroundDrawList()->AddConvexPolyFilled(screen,count,(color & 0x00FFFFFFu) | (55u<<24));
 }
-void DrawPointGroundLinks(const Snapshot& s,const Plan& p);
 void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
 {
     if(p.pointCount<2) return;
@@ -321,7 +320,6 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
         const auto& a=p.points[i];const auto& b=p.points[(i+1)%p.pointCount];
         Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
     }
-    DrawPointGroundLinks(s,p);
 }
 template<class Shape>
 void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
@@ -329,16 +327,22 @@ void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
     if(p.pointCount<2)return;
     for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
 }
-void DrawPointGroundLinks(const Snapshot& s,const Plan& p)
+void DrawSelectedPointGroundLinks(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
 {
-    if(!p.complete)return;
+    if(!s.siteEditorOpen||!p.complete)return;
+    auto* draw=ImGui::GetForegroundDrawList();
     for(unsigned i=0;i<p.pointCount;++i) {
+        if(i!=selected&&!(selectedMask&(1u<<i)))continue;
         const auto& targetPoint=p.points[i];
         float ground=0;
         if(!p.GroundAt(targetPoint.x,targetPoint.z,&ground)||std::abs(targetPoint.y-ground)<0.01f)continue;
         const Point terrain{targetPoint.x,ground,targetPoint.z};
-        const ImU32 color=targetPoint.y>ground?fillColor:cutColor;
-        Line(s,targetPoint,terrain,color,2.0f);
+        ImVec2 top,bottom;
+        if(!Project(s,targetPoint,&top)||!Project(s,terrain,&bottom))continue;
+        const ImU32 color=targetPoint.y>ground?IM_COL32(62,221,166,255):IM_COL32(255,159,67,255);
+        draw->AddLine(top,bottom,IM_COL32(20,25,30,240),5.0f);
+        draw->AddLine(top,bottom,color,2.5f);
+        draw->AddCircleFilled(bottom,3.5f,color,12);
     }
 }
 void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
@@ -375,7 +379,10 @@ void DrawPreview(const Snapshot& s)
         else if(project.status==ProjectStatus::Cancelled)
             DrawQueuedOutline(s,project.outline,IM_COL32(170,135,135,170));
     }
-    if(s.siteEditorOpen)DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+    if(s.siteEditorOpen) {
+        DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+        DrawSelectedPointGroundLinks(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+    }
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
@@ -411,7 +418,6 @@ void DrawPreview(const Snapshot& s)
         if (x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
         if (z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
-    DrawPointGroundLinks(s,p);
     DrawQueuedOutline(s,p,IM_COL32(245,250,255,255));
 }
 bool CursorOnVisibleSite(const Snapshot& s)
@@ -932,7 +938,8 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const uint32_t selectedMask=s.selectedSitePointsMask;
     unsigned selectedCount=0;for(unsigned i=0;i<plan.pointCount;++i)if(selectedMask&(1u<<i))++selectedCount;
     char pointLabel[48]{};
-    if(selectedCount>1)sprintf_s(pointLabel,"%u points selected",selectedCount);
+    if(!selectedCount)strcpy_s(pointLabel,"No points selected");
+    else if(selectedCount>1)sprintf_s(pointLabel,"%u points selected",selectedCount);
     else sprintf_s(pointLabel,"Point %u",selectedPoint+1);
     if(ImGui::BeginCombo("##SelectedSitePoint",pointLabel)) {
         for(unsigned i=0;i<plan.pointCount;++i) {
@@ -944,13 +951,13 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::EndCombo();
     }
     ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
-    ImGui::TextDisabled("Shift-click adds points; click without Shift selects one.");
+    ImGui::TextDisabled("Shift-click toggles points; click without Shift selects one.");
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const float heightStep=input.KeyCtrl?10.0f:1.0f;
     auto applyHeight=[&](float height){SendSitePointValue(s.editingSiteId,selectedPoint,height);};
     auto adjustHeight=[&](float delta){SendSitePointValue(s.editingSiteId,selectedPoint,delta,true);};
-    ImGui::BeginDisabled(!editable);
+    ImGui::BeginDisabled(!editable||!selectedCount);
     if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;adjustHeight(-heightStep);}
     ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
     const bool changed=ImGui::InputFloat("##SitePointHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
@@ -958,7 +965,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
     ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;adjustHeight(heightStep);}
-    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nShift-click points to add them to the selection.\nHeight entry and map sampling set all selected points to the same height; −/+ preserve their height differences.",{22.0f,22.0f});
+    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling set all selected points to the same height; −/+ preserve their height differences.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Sample selected",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();

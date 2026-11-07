@@ -46,8 +46,7 @@ uint32_t PointMask(unsigned index)
 uint32_t ValidPointMask(uint32_t mask,unsigned pointCount)
 {
     const uint32_t valid=pointCount>=32?~uint32_t{0}:(pointCount?static_cast<uint32_t>((1u<<pointCount)-1u):0u);
-    mask&=valid;
-    return mask?mask:PointMask(pointCount?std::min<unsigned>(selectedSitePointIndex,pointCount-1):0);
+    return mask&valid;
 }
 void SelectSingleSitePoint(unsigned index)
 {
@@ -539,7 +538,7 @@ void Process(const Command& command)
         } else if(current.mode==PickMode::SampleSitePointTarget) {
             if(creatingSite) {
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,current.plan.pointCount);
-                if(selectedSitePointIndex>=current.plan.pointCount) {current.mode=PickMode::None;Message("Select a Site point before sampling its height.");break;}
+                if(selectedSitePointIndex>=current.plan.pointCount||!mask) {current.mode=PickMode::None;Message("Select at least one Site point before sampling its height.");break;}
                 history.Commit(current.plan);for(unsigned i=0;i<current.plan.pointCount;++i)if(mask&PointMask(i))current.plan.points[i].y=p.y;current.plan.RefreshBounds();
                 current.mode=PickMode::None;Changed();Message("Draft point height sampled; terrain remains unchanged.");
             } else {
@@ -548,7 +547,7 @@ void Process(const Command& command)
                     current.mode=PickMode::None;Message("The selected Site can no longer be edited.");break;
                 }
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,site->plan.pointCount);
-                if(selectedSitePointIndex>=site->plan.pointCount) {current.mode=PickMode::None;Message("Select a Site point before sampling its height.");break;}
+                if(selectedSitePointIndex>=site->plan.pointCount||!mask) {current.mode=PickMode::None;Message("Select at least one Site point before sampling its height.");break;}
                 if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
                 if(site->status==ProjectStatus::Paused)site->needsReview=true;
                 for(unsigned i=0;i<site->plan.pointCount;++i)if(mask&PointMask(i))site->plan.points[i].y=p.y;
@@ -610,9 +609,18 @@ pick_done:
         const Plan* plan=creatingSite?&current.plan:nullptr;
         if(!plan)if(auto* site=FindProject(editingSiteId))plan=&site->plan;
         if(!plan||command.pointIndex>=plan->pointCount)break;
-        selectedSitePointIndex=command.pointIndex;
-        if(command.value>0.5f)selectedSitePointsMask=ValidPointMask(selectedSitePointsMask,plan->pointCount)|PointMask(command.pointIndex);
-        else selectedSitePointsMask=PointMask(command.pointIndex);
+        if(command.value>0.5f) {
+            const uint32_t bit=PointMask(command.pointIndex);
+            const uint32_t currentMask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
+            selectedSitePointsMask=currentMask&bit?currentMask&~bit:currentMask|bit;
+            if(selectedSitePointsMask&bit)selectedSitePointIndex=command.pointIndex;
+            else if(selectedSitePointsMask) {
+                for(unsigned i=0;i<plan->pointCount;++i)if(selectedSitePointsMask&PointMask(i)){selectedSitePointIndex=i;break;}
+            }
+            else selectedSitePointIndex=command.pointIndex;
+        } else {
+            SelectSingleSitePoint(command.pointIndex);
+        }
         RefreshProjectStatus();break;
     }
     case Action::SetSitePointTarget:
@@ -622,6 +630,7 @@ pick_done:
         if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {Message("Select a valid Site point and height.");break;}
         if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){Message("Finished Sites cannot be edited.");break;}
         const uint32_t mask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
+        if(!mask){Message("Select at least one Site point before changing height.");break;}
         const bool relative=command.action==Action::AdjustSitePointTarget;
         bool valid=true;
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i)) {
