@@ -418,7 +418,7 @@ void DrawInterface(const Snapshot& s)
     nameTextEditing = false;
     popupRectValid=false;
     frameGeneration=s.generation;
-    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; buttonRect={}; return; }
+    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; editorRectValid=false; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
         const auto p=s.workforce.building.position;
         const auto colour=IM_COL32(255,100,255,255);
@@ -435,12 +435,12 @@ void DrawInterface(const Snapshot& s)
     ImGui::Begin("Earthworks launcher",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor();
-    if (ImGui::Button("Earthworks",{150,42})) {
+    if (ImGui::Button("Earthworks",{150,42}) && s.ready) {
         panelOpen=!panelOpen.load(); leftRelease=true;
         host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");
     }
     RememberRect(&buttonRect); ImGui::End();
-    if (!panelOpen) { panelRectValid=false;popupRectValid=false;editorRectValid=false; return; }
+    if (!s.ready || !panelOpen) { panelRectValid=false;popupRectValid=false;editorRectValid=false; return; }
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
     const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
     constexpr float headerHeight=56.0f;
