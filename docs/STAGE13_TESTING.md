@@ -5,7 +5,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Startup and draw/save a polygon
 
 1. Start the project-local RML development profile with `launch-prototype.cmd`. First confirm the game reaches the main menu without closing. Then load a test world and open Earthworks.
-2. Select a Project and choose **New Site**. Click four points around a clear area, keeping each point at least 5 m from every other point. Choose **Finish shape**. The boundary should close and the editor should show the polygon footprint and cut/fill estimates; terrain must remain unchanged.
+2. Select a Project and choose **New Site**. Click at least three points around a clear area, keeping each point at least 5 m from every other point. Click within 5 m of the first point. The polygon should finish without adding a duplicate point, and the editor should show its footprint and cut/fill estimates; terrain must remain unchanged. Also try a click more than 5 m from the first point and confirm it adds another vertex. Discard the draft afterward.
 3. Discard that draft, start another Site, and click six points to make an L-shaped/concave footprint. Finish it and confirm the wireframe follows the six-sided boundary instead of filling its bounding rectangle.
 4. Select each vertex in the editor. Set at least three different heights using the numeric field, then use **Sample selected** and click a map location. The wireframe should interpolate the point heights into sloped triangular surfaces.
 5. Select one or more shape points. Each selected point should show a clearly visible, colored line from its planned height down to the sampled current ground, with a marker at the ground endpoint. Unselected points should not show these height lines. Cut and fill points should use their corresponding preview colors.
@@ -15,7 +15,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Shape modes
 
 1. Choose **New Site** and confirm the editor now offers **Free draw**, **Square**, and **Rectangle** before any map point is placed.
-2. In **Free draw**, click three or more vertices, confirm the outline follows the clicks, then use **Finish shape**. This should behave as it did before the shape-mode change.
+2. In **Free draw**, click three or more vertices and confirm the outline follows the clicks. Click within 5 m of the first vertex and confirm the shape closes without adding another point. Repeat once using **Finish shape** to confirm the explicit control still works.
 3. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
 4. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
 5. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.

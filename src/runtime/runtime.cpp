@@ -439,6 +439,14 @@ bool SamplePlan(Plan* plan)
     }
     return true;
 }
+bool FinishCurrentSiteShape()
+{
+    if(!creatingSite||current.plan.complete){Message("There is no unfinished Site shape to finish.");return false;}
+    current.plan.RefreshBounds();
+    if(!ValidFootprint(current.plan)){Message("Site needs three or more spaced, non-crossing points with a valid area.");return false;}
+    if(!SamplePlan(&current.plan)){Message("Could not sample the Site area. Adjust the shape or keep it inside the terrain.");return false;}
+    current.plan.complete=true;current.mode=PickMode::None;history.Commit(current.plan);Changed();Message("Site shape ready. Set the heights of its points, then save the Site.");return true;
+}
 bool MeasureTerrainWork(const Plan& plan,const TerrainGrid& grid,const GridRect& rect,double* total)
 {
     if(!total)return false;
@@ -512,11 +520,7 @@ void Process(const Command& command)
         current.mode=PickMode::None;
         break;
     case Action::FinishSite: {
-        if(!creatingSite||current.plan.complete){Message("There is no unfinished Site shape to finish.");break;}
-        current.plan.RefreshBounds();
-        if(!ValidFootprint(current.plan)) {Message("Site needs three or more spaced, non-crossing points with a valid area.");break;}
-        if(!SamplePlan(&current.plan)) {Message("Could not sample the Site area. Adjust the shape or keep it inside the terrain.");break;}
-        current.plan.complete=true;current.mode=PickMode::None;history.Commit(current.plan);Changed();Message("Site shape ready. Set the heights of its points, then save the Site.");break;
+        FinishCurrentSiteShape();break;
     }
     case Action::Pick: {
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
@@ -560,6 +564,15 @@ void Process(const Command& command)
             current.plan.RefreshBounds();current.mode = PickMode::None;
             Message("Height sampled. Adjust the target or select a new area."); Changed();
         } else if(current.mode==PickMode::DrawSite) {
+            if(shapeMode==SiteShapeMode::FreeDraw&&current.plan.pointCount) {
+                const auto& first=current.plan.points[0];
+                const double dx=static_cast<double>(p.x)-first.x,dz=static_cast<double>(p.z)-first.z;
+                if(dx*dx+dz*dz<static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing) {
+                    if(current.plan.pointCount<3)Message("Add at least three boundary points before closing the shape.");
+                    else FinishCurrentSiteShape();
+                    goto pick_done;
+                }
+            }
             if(current.plan.pointCount>=MaxSitePoints){Message("This Site has reached its 32-point limit.");break;}
             if(shapeMode!=SiteShapeMode::FreeDraw&&current.plan.pointCount==1) {
                 Point corners[4]{};BuildTwoCornerShape(current.plan.points[0],p,shapeMode,corners);

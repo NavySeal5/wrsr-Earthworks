@@ -877,7 +877,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         if(!plan.pointCount) {
             ImGui::Separator();
-            if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Finish shape closes the polygon.");
+            if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Click within 5 m of the first point, or choose Finish shape, to close the polygon.");
             else if(s.shapeMode==SiteShapeMode::Square)ImGui::TextWrapped("Click one corner, move the cursor to preview a map-aligned square, then click to set it.");
             else ImGui::TextWrapped("Click one corner, move the cursor to preview a map-aligned rectangle, then click the opposite corner.");
             if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::CancelSiteDraft);
@@ -983,7 +983,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             ImGui::BeginDisabled(plan.pointCount<3||finishedShape);
             if(ImGui::Button("Finish shape",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::FinishSite);
             ImGui::EndDisabled();
-            if(!finishedShape)ImGui::TextDisabled("Click vertices in sequence; Finish shape closes the boundary.");
+            if(!finishedShape)ImGui::TextDisabled("Click within 5 m of the first point, or choose Finish shape, to close the boundary.");
         } else if(!finishedShape)ImGui::TextDisabled(plan.pointCount==1?"Move the cursor to preview the shape; click again to set it.":"Click the first corner to begin the shape.");
     }
     const bool geometryEditable=editable&&finishedShape;

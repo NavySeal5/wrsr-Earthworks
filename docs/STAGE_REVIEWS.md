@@ -703,6 +703,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Clicking an unselected point now only changes selection. A drag can begin only on a later mouse press when that point was already the sole selected point; multi-selected points and Shift-clicks cannot start a drag.
 - Build and staging pending; verify selection clicks do not move points and a separate drag still works.
 
+**Free-draw close by clicking near the first point — 8 November 2026**
+- Free draw now finishes the polygon when the player clicks within 5 m of its first point, provided at least three vertices have been placed. With fewer vertices, the click is rejected with guidance; it is never added as a duplicate point. The explicit Finish shape control remains available, and Square/Rectangle modes are unchanged.
+- Build and staging pending; user should verify both auto-close and normal vertex placement outside the 5 m radius.
+
 **Stage 13 progress indicator fix — 7 November 2026**
 - Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
 - Progress text now shows tenths of a percent.
