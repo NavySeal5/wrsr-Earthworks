@@ -62,6 +62,11 @@ bool targetHeightEditing = false;
 bool nameTextEditing = false;
 bool showAllFacilities = false;
 std::atomic<bool> areaPickCapture{false};
+RECT siteHandleRects[MaxSitePoints]{};
+unsigned siteHandlePointIndices[MaxSitePoints]{};
+unsigned siteHandleRectCount=0;
+unsigned draggingSitePoint=MaxSitePoints;
+Point dragSitePoint{};
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
@@ -74,6 +79,16 @@ void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGene
 void SendProjectValue(Action action,uint64_t projectId,float value)
 {
     Command command{};command.action=action;command.value=value;command.projectId=projectId;command.generation=frameGeneration;Enqueue(command);
+}
+void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value)
+{
+    Command command{};command.action=Action::SetSitePointTarget;command.value=value;command.projectId=projectId;
+    command.pointIndex=pointIndex;command.generation=frameGeneration;Enqueue(command);
+}
+void SendSitePointCommand(Action action,uint64_t projectId,unsigned pointIndex,Point point={})
+{
+    Command command{};command.action=action;command.projectId=projectId;command.pointIndex=pointIndex;
+    command.point=point;command.generation=frameGeneration;Enqueue(command);
 }
 void SendProjectText(Action action,uint64_t projectId,const char* text)
 {
@@ -164,7 +179,9 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     // widgets. Set it here too, before the game can poll C3D_INPUT for this
     // key, to cover the first key typed immediately after focusing a field.
     if(panelOpen && ImGui::GetIO().WantTextInput) keyboardCapture=true;
-    const bool over = Hit(buttonRect,lParam) || (panelRectValid && Hit(panelRect,lParam)) || (popupRectValid && Hit(popupRect,lParam)) || (editorRectValid && Hit(editorRect,lParam));
+    unsigned handleIndex=MaxSitePoints;
+    for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)){handleIndex=siteHandlePointIndices[i];break;}
+    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints;
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -186,6 +203,19 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     }
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
+    if(message==WM_LBUTTONDOWN&&handleIndex<MaxSitePoints&&GetForegroundWindow()==gameWindow) {
+        draggingSitePoint=handleIndex;const auto snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;
+        SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex);
+    }
+    if(message==WM_MOUSEMOVE&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
+        const auto snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
+    }
+    if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
+        const auto snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
+        if(snapshot.editingSiteId||snapshot.creatingSite)
+            SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
+        draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
+    }
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto snapshot=ReadSnapshot();
         if(snapshot.siteEditorOpen&&!snapshot.creatingSite&&snapshot.mode==PickMode::None) {
@@ -198,7 +228,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     if (message == WM_LBUTTONDOWN && leftOwned) {
         leftRelease = true;
-        if (mapPick && GetForegroundWindow() == gameWindow) Send(Action::Pick);
+        if (mapPick && GetForegroundWindow() == gameWindow&&handleIndex>=MaxSitePoints) Send(Action::Pick);
     }
     if (message == WM_LBUTTONUP) leftRelease = false;
     const bool otherMouse = message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK
@@ -271,54 +301,76 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
 }
 void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
 {
-    if(!p.complete) return;
+    if(p.pointCount<2) return;
     const ImU32 gray=IM_COL32(175,180,190,210);
-    for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
+    if(p.complete)for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
         const auto a=p.Vertex(x,z,true);
-        if(x<GridCells) Line(s,a,p.Vertex(x+1,z,true),gray,1.5f);
-        if(z<GridCells) Line(s,a,p.Vertex(x,z+1,true),gray,1.5f);
+        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
+        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
     }
-    const int corners[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
-    for(int i=0;i<4;++i) {
-        const auto a=p.Vertex(corners[i][0],corners[i][1],true);
-        const auto b=p.Vertex(corners[(i+1)%4][0],corners[(i+1)%4][1],true);
+    const unsigned edgeCount=p.complete?p.pointCount:p.pointCount-1;
+    for(unsigned i=0;i<edgeCount;++i) {
+        const auto& a=p.points[i];const auto& b=p.points[(i+1)%p.pointCount];
         Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
     }
 }
-void DrawQueuedOutline(const Snapshot& s,Point a,Point b,float targetHeight,ImU32 color)
+void DrawQueuedOutline(const Snapshot& s,const Plan& p,ImU32 color)
 {
-    const Point corners[]={{a.x,targetHeight,a.z},{b.x,targetHeight,a.z},{b.x,targetHeight,b.z},{a.x,targetHeight,b.z}};
-    for(int i=0;i<4;++i)Line(s,corners[i],corners[(i+1)%4],color,2.5f);
+    if(p.pointCount<2)return;
+    for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
+}
+void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected)
+{
+    if(!s.siteEditorOpen)return;
+    auto* draw=ImGui::GetForegroundDrawList();
+    for(unsigned i=0;i<p.pointCount&&siteHandleRectCount<MaxSitePoints;++i) {
+        ImVec2 screen{};if(!Project(s,p.points[i],&screen))continue;
+        const RECT candidate{static_cast<LONG>(screen.x-10.0f),static_cast<LONG>(screen.y-10.0f),
+            static_cast<LONG>(screen.x+10.0f),static_cast<LONG>(screen.y+10.0f)};
+        const auto overlaps=[](const RECT& a,const RECT& b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;};
+        if((panelRectValid&&overlaps(candidate,panelRect))||(editorRectValid&&overlaps(candidate,editorRect)))continue;
+        const float radius=i==selected?8.0f:6.0f;
+        draw->AddCircleFilled(screen,radius,i==selected?IM_COL32(255,245,130,255):IM_COL32(245,250,255,245),16);
+        draw->AddCircle(screen,radius,IM_COL32(55,65,75,255),16,1.5f);
+        siteHandleRects[siteHandleRectCount]=candidate;
+        siteHandlePointIndices[siteHandleRectCount++]=i;
+    }
 }
 void DrawPreview(const Snapshot& s)
 {
+    siteHandleRectCount=0;
     if (!s.ready || !s.cameraValid) return;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& project=s.projects[i];
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId)DrawQueuedWireframe(s,s.queuedPlan);
-            else DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(175,180,190,205));
+            else DrawQueuedOutline(s,project.plan,IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
-            DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(100,190,155,190));
+            DrawQueuedOutline(s,project.plan,IM_COL32(100,190,155,190));
         else if(project.status==ProjectStatus::Cancelled)
-            DrawQueuedOutline(s,project.a,project.b,project.target,IM_COL32(170,135,135,170));
+            DrawQueuedOutline(s,project.plan,IM_COL32(170,135,135,170));
     }
+    if(s.siteEditorOpen)DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint);
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
         ImVec2 first;
-        if (!gameUnderlayInstalled && Project(s,p.a,&first)) ImGui::GetBackgroundDrawList()->AddCircle(first,7,IM_COL32(255,235,135,255),16,2);
-        if (panelOpen && s.cursorValid && s.mode==PickMode::Corners) {
-            const Point a={p.a.x,p.target,p.a.z},b={s.cursor.x,p.target,p.a.z},c={s.cursor.x,p.target,s.cursor.z},d={p.a.x,p.target,s.cursor.z};
-            Line(s,a,b,fillColor,2); Line(s,b,c,fillColor,2); Line(s,c,d,fillColor,2); Line(s,d,a,fillColor,2);
+        for(unsigned i=0;i<p.pointCount;++i) {
+            ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,IM_COL32(255,235,135,235),12);
+            if(i+1<p.pointCount)Line(s,p.points[i],p.points[i+1],fillColor,2.0f);
         }
+        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount)
+            Line(s,p.points[p.pointCount-1],s.cursor,fillColor,2.0f);
         return;
     }
     for (int z=0; z<GridCells; ++z) for (int x=0; x<GridCells; ++x) {
-        const Point proposed[]={p.Vertex(x,z,true),p.Vertex(x+1,z,true),p.Vertex(x+1,z+1,true),p.Vertex(x,z+1,true)};
-        const float d[]={p.target-p.Vertex(x,z,false).y,p.target-p.Vertex(x+1,z,false).y,
-            p.target-p.Vertex(x+1,z+1,false).y,p.target-p.Vertex(x,z+1,false).y};
+        const Point ground[]={p.Vertex(x,z,false),p.Vertex(x+1,z,false),p.Vertex(x+1,z+1,false),p.Vertex(x,z+1,false)};
+        if(!p.Contains((ground[0].x+ground[2].x)*0.5f,(ground[0].z+ground[2].z)*0.5f))continue;
+        Point proposed[4];float d[4];bool valid=true;
+        for(unsigned i=0;i<4;++i) {valid=p.TargetAt(ground[i].x,ground[i].z,&proposed[i].y)&&valid;d[i]=proposed[i].y-ground[i].y;}
+        if(!valid)continue;
+        for(auto& point:proposed)point.x=ground[&point-proposed].x,point.z=ground[&point-proposed].z;
         for (int t=0; t<2; ++t) {
             const Point tri[]={proposed[0],proposed[t+1],proposed[t+2]};
             const float depths[]={d[0],d[t+1],d[t+2]};
@@ -327,25 +379,18 @@ void DrawPreview(const Snapshot& s)
     }
     for (int z=0; z<GridSide; ++z) for (int x=0; x<GridSide; ++x) {
         const auto a=p.Vertex(x,z,true); const auto ground=p.Vertex(x,z,false);
-        const ImU32 color=p.target>=ground.y ? fillColor:cutColor;
-        if (x<GridCells) Line(s,a,p.Vertex(x+1,z,true),color);
-        if (z<GridCells) Line(s,a,p.Vertex(x,z+1,true),color);
-        if (x==0 || z==0 || x==GridCells || z==GridCells) Line(s,a,ground,color,1.5f);
+        float targetHeight=0;const ImU32 color=p.TargetAt(a.x,a.z,&targetHeight)&&targetHeight>=ground.y ? fillColor:cutColor;
+        if (x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
+        if (z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
-    const int corners[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
-    for(int i=0;i<4;++i) {
-        const auto a=p.Vertex(corners[i][0],corners[i][1],true);
-        const auto b=p.Vertex(corners[(i+1)%4][0],corners[(i+1)%4][1],true);
-        Line(s,a,b,IM_COL32(245,250,255,255),2.5f);
-    }
+    DrawQueuedOutline(s,p,IM_COL32(245,250,255,255));
 }
 bool CursorOnVisibleSite(const Snapshot& s)
 {
     if(!s.cursorValid)return false;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
-        if(s.cursor.x>=std::min(site.a.x,site.b.x)&&s.cursor.x<=std::max(site.a.x,site.b.x)
-            &&s.cursor.z>=std::min(site.a.z,site.b.z)&&s.cursor.z<=std::max(site.a.z,site.b.z))return true;
+        if(site.plan.Contains(s.cursor.x,s.cursor.z))return true;
     }
     return false;
 }
@@ -355,8 +400,7 @@ bool CursorOnEditingSite(const Snapshot& s)
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
         if(site.id==s.editingSiteId)
-            return s.cursor.x>=std::min(site.a.x,site.b.x)&&s.cursor.x<=std::max(site.a.x,site.b.x)
-                &&s.cursor.z>=std::min(site.a.z,site.b.z)&&s.cursor.z<=std::max(site.a.z,site.b.z);
+            return site.plan.Contains(s.cursor.x,s.cursor.z);
     }
     return false;
 }
@@ -691,7 +735,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     static bool draftNameWasActive=false;
     static bool renameEditing=false,editorMinimized=false;
     static uint64_t renameEditingSite=0;
-    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.complete) {
+    if(!panelOpen||!s.siteEditorOpen||!s.editorPlan.pointCount) {
         editorRectValid=false;
         if(!s.siteEditorOpen)editorWasDragged=false;
         if(!s.creatingSite)draftNameWasActive=false;
@@ -701,7 +745,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     draftNameWasActive=s.creatingSite;
     if(!s.creatingSite&&renameEditingSite!=s.editingSiteId) {renameEditingSite=s.editingSiteId;renameEditing=false;}
     const Plan& plan=s.editorPlan;
-    const float width=400.0f,fullHeight=(s.creatingSite?400.0f:440.0f)+(s.creatingSite&&s.siteDraftError[0]?56.0f:0.0f);
+    const float width=420.0f,fullHeight=(s.creatingSite?590.0f:620.0f)+(s.siteDraftError[0]?48.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -817,67 +861,66 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::SetWindowFontScale(1.0f);
     }
     ImGui::Separator();
-    ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),static_cast<double>(plan.Width())*plan.Depth());
+    ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),plan.FootprintArea());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);
     const auto volume=Estimate(plan);
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",volume.cut);
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",volume.fill);
     ImGui::Separator();
+    const bool editable=(s.creatingSite)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
+    const unsigned selectedPoint=std::min<unsigned>(s.selectedSitePoint,plan.pointCount-1);
     static float editHeight=0;
     static uint64_t seenEditorRevision=~uint64_t{0},seenEditorSite=~uint64_t{0};
     if(seenEditorRevision!=s.revision||seenEditorSite!=s.editingSiteId) {
-        editHeight=plan.target;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
+        editHeight=plan.points[selectedPoint].y;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
     }
-    const bool editable=(s.creatingSite&&plan.complete)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
-    ImGui::BeginDisabled(!editable);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{6.0f,6.0f});
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Target height (m)");
-    ImGui::SameLine();
+    ImGui::Text("Vertices: %u / %zu (minimum spacing 5 m)",static_cast<unsigned>(plan.pointCount),MaxSitePoints);
+    ImGui::SetNextItemWidth(114.0f);
+    char pointLabel[32]{};sprintf_s(pointLabel,"Point %u",selectedPoint+1);
+    if(ImGui::BeginCombo("##SelectedSitePoint",pointLabel)) {
+        for(unsigned i=0;i<plan.pointCount;++i) {
+            char label[48]{};sprintf_s(label,"Point %u  (%.1f, %.1f)",i+1,plan.points[i].x,plan.points[i].z);
+            const bool selected=i==selectedPoint;
+            if(ImGui::Selectable(label,selected))SendSitePointCommand(Action::SelectSitePoint,s.editingSiteId,i);
+            if(selected)ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
+    ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const auto& input=ImGui::GetIO();
     const float heightStep=input.KeyCtrl?100.0f:(input.KeyShift?10.0f:1.0f);
-    auto applyHeight=[&](float height) {
-        if(s.creatingSite)Send(Action::Target,height);
-        else SendProjectValue(Action::SetSiteTarget,s.editingSiteId,height);
-    };
-    if(ImGui::Button("-##DecreaseTargetHeight",{24.0f,0.0f})) {editHeight-=heightStep;applyHeight(editHeight);}
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(80.0f);
-    const bool changed=ImGui::InputFloat("##TargetHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
-    targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
-    static uint64_t pauseRequestedForHeightEdit=0;
-    const bool siteIsWorking=s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting;
-    if(!s.creatingSite&&targetHeightEditing&&siteIsWorking&&pauseRequestedForHeightEdit!=s.editingSiteId) {
-        SendProjectAction(Action::PauseProject,s.editingSiteId);
-        pauseRequestedForHeightEdit=s.editingSiteId;
-    } else if(s.creatingSite||!siteIsWorking)pauseRequestedForHeightEdit=0;
-    ImGui::SameLine();
-    if(ImGui::Button("+##IncreaseTargetHeight",{24.0f,0.0f})) {editHeight+=heightStep;applyHeight(editHeight);}
-    ImGui::SameLine();
-    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Shift for 10 m, or Ctrl for 100 m.",{22.0f,22.0f});
-    ImGui::SameLine();
-    if(ImGui::Button("Apply height")||changed) {
-        applyHeight(editHeight);
-    }
-    ImGui::PopStyleVar();
-    ImGui::EndDisabled();
-    ImGui::PopStyleVar();
+    auto applyHeight=[&](float height){SendSitePointValue(s.editingSiteId,selectedPoint,height);};
     ImGui::BeginDisabled(!editable);
-    const float sampleButtonWidth=ImGui::GetContentRegionAvail().x;
-    const bool sampleTargetPressed=ImGui::Button("Sample target from map",{sampleButtonWidth,28});
-    const ImVec2 sampleButtonMin=ImGui::GetItemRectMin(),sampleButtonMax=ImGui::GetItemRectMax();
-    const ImVec2 sampleInfoMin{sampleButtonMax.x-25.0f,sampleButtonMin.y+3.0f};
-    const ImVec2 sampleInfoMax{sampleButtonMax.x-3.0f,sampleButtonMin.y+25.0f};
-    const bool sampleInfoHovered=targetHeightInfoIcon&&ImGui::IsMouseHoveringRect(sampleInfoMin,sampleInfoMax,true);
-    if(targetHeightInfoIcon) {
-        const ImTextureRef infoTexture(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(targetHeightInfoIcon)));
-        ImGui::GetWindowDrawList()->AddImage(infoTexture,sampleInfoMin,sampleInfoMax,{0,0},{1,1},
-            sampleInfoHovered?IM_COL32_WHITE:IM_COL32(209,209,209,255));
-    }
-    if(sampleTargetPressed)Send(Action::SampleSiteTarget);
-    if(sampleInfoHovered)NativeTooltip("Click this button, then click a point on the map to set the target height.");
+    if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;applyHeight(editHeight);}
+    ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
+    const bool changed=ImGui::InputFloat("##SitePointHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
+    targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
+    if(changed)applyHeight(editHeight);
+    if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
+    ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;applyHeight(editHeight);}
+    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Shift for 10 m, or Ctrl for 100 m.",{22.0f,22.0f});
+    ImGui::SameLine();
+    if(ImGui::Button("Sample point",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
+    const bool finishedShape=plan.complete;
+    if(s.creatingSite) {
+        ImGui::BeginDisabled(plan.pointCount<3||finishedShape);
+        if(ImGui::Button("Finish shape",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::FinishSite);
+        ImGui::EndDisabled();
+        if(!finishedShape)ImGui::TextDisabled("Click vertices in sequence; Finish shape closes the boundary.");
+    }
+    const bool geometryEditable=editable&&finishedShape;
+    ImGui::BeginDisabled(!geometryEditable);
+    const float half=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
+    if(ImGui::Button("Add point on next edge",{half,28.0f}))SendSitePointCommand(Action::AddSitePoint,s.editingSiteId,selectedPoint);
+    ImGui::SameLine();
+    if(ImGui::Button("Remove selected point",{ImGui::GetContentRegionAvail().x,28.0f}))SendSitePointCommand(Action::RemoveSitePoint,s.editingSiteId,selectedPoint);
+    ImGui::EndDisabled();
+    if(!s.creatingSite&&editable)ImGui::TextDisabled("Editing pauses active work and requires terrain review before resuming.");
+    ImGui::PopStyleVar();
     if(s.creatingSite) {
         const bool draftInvalid=s.siteDraftError[0]!=0;
         if(draftInvalid)ImGui::TextColored({0.67f,0.15f,0.12f,1.0f},"%s",s.siteDraftError);

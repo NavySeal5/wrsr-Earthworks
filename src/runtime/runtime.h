@@ -8,9 +8,9 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, NewSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SampleSiteTarget, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities };
-enum class PickMode { Corners, Sample, None, InspectBuilding, SampleSiteTarget };
-struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; char text[MaxSavedNameBytes+1]{}; };
+enum class Action { Pick, Select, NewSite, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities };
+enum class PickMode { DrawSite, Sample, None, InspectBuilding, SampleSitePointTarget };
+struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; unsigned pointIndex = 0; Point point{}; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
 struct ProjectFacilityBrief {
     unsigned id=0,eligibleMachines=0;
@@ -29,6 +29,7 @@ struct ProjectBrief {
     unsigned allocatedWorkers = 0, allocatedMachines = 0;
     float progress = 0;
     bool needsReview = false;
+    Plan plan{};
     Point a{},b{};
     float target = 0;
 };
@@ -50,6 +51,7 @@ struct Snapshot {
     char siteDraftName[MaxSavedNameBytes+1] = "Site-1";
     bool siteEditorOpen = false, creatingSite = false;
     uint64_t editingSiteId = 0;
+    unsigned selectedSitePoint = 0;
     Plan editorPlan{};
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;

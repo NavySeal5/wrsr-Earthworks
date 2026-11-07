@@ -8,7 +8,7 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 6;
+constexpr uint32_t StateSchemaVersion = 7;
 constexpr size_t MaxSavedProjects = 32;
 constexpr size_t MaxSavedEarthworks = 128;
 constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;

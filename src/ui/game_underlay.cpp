@@ -125,10 +125,9 @@ void AddShadeTriangle(const Snapshot& s,const Point* triangle,const float* depth
     }
 }
 
-void DrawOutline(const Snapshot& s, Point a, Point b, float target, int group, float width, float height)
+void DrawOutline(const Snapshot& s, const Plan& plan, int group, float width, float height)
 {
-    const Point corners[]={{a.x,target,a.z},{b.x,target,a.z},{b.x,target,b.z},{a.x,target,b.z}};
-    for(int i=0;i<4;++i) AddLine(s,corners[i],corners[(i+1)%4],group, width,height);
+    for(unsigned i=0;i<plan.pointCount;++i) AddLine(s,plan.points[i],plan.points[(i+1)%plan.pointCount],group,width,height);
 }
 
 void Collect(const Snapshot& s, float width, float height)
@@ -143,34 +142,35 @@ void Collect(const Snapshot& s, float width, float height)
                 const auto& p=s.queuedPlan;
                 for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
                     const auto a=p.Vertex(x,z,true);
-                    if(x<GridCells) AddLine(s,a,p.Vertex(x+1,z,true),2, width,height);
-                    if(z<GridCells) AddLine(s,a,p.Vertex(x,z+1,true),2, width,height);
+                    if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
+                    if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
                 }
-                const int c[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
-                for(int k=0;k<4;++k) AddLine(s,p.Vertex(c[k][0],c[k][1],true),p.Vertex(c[(k+1)%4][0],c[(k+1)%4][1],true),3,width,height);
-            } else DrawOutline(s,project.a,project.b,project.target,2,width,height);
-        } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.a,project.b,project.target,0,width,height);
-        else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.a,project.b,project.target,1,width,height);
+                DrawOutline(s,p,3,width,height);
+            } else DrawOutline(s,project.plan,2,width,height);
+        } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.plan,0,width,height);
+        else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.plan,1,width,height);
     }
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
-        if(panelOpen && s.cursorValid && s.mode==PickMode::Corners) {
-            const Point a={p.a.x,p.target,p.a.z},b={s.cursor.x,p.target,p.a.z},c={s.cursor.x,p.target,s.cursor.z},d={p.a.x,p.target,s.cursor.z};
-            AddLine(s,a,b,0,width,height);AddLine(s,b,c,0,width,height);AddLine(s,c,d,0,width,height);AddLine(s,d,a,0,width,height);
+        for(unsigned i=0;i<p.pointCount;++i) {
+            if(i+1<p.pointCount)AddLine(s,p.points[i],p.points[i+1],0,width,height);
         }
+        if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount)AddLine(s,p.points[p.pointCount-1],s.cursor,0,width,height);
         return;
     }
     for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
         const auto a=p.Vertex(x,z,true);
-        const int group=p.target>=p.Vertex(x,z,false).y?0:1;
-        if(x<GridCells) AddLine(s,a,p.Vertex(x+1,z,true),group,width,height);
-        if(z<GridCells) AddLine(s,a,p.Vertex(x,z+1,true),group,width,height);
+        float target=0;const int group=p.TargetAt(a.x,a.z,&target)&&target>=p.Vertex(x,z,false).y?0:1;
+        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
+        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
     }
     for(int z=0;z<GridCells;++z) for(int x=0;x<GridCells;++x) {
-        const Point proposed[]={p.Vertex(x,z,true),p.Vertex(x+1,z,true),p.Vertex(x+1,z+1,true),p.Vertex(x,z+1,true)};
-        const float depths[]={p.target-p.Vertex(x,z,false).y,p.target-p.Vertex(x+1,z,false).y,
-            p.target-p.Vertex(x+1,z+1,false).y,p.target-p.Vertex(x,z+1,false).y};
+        const Point ground[]={p.Vertex(x,z,false),p.Vertex(x+1,z,false),p.Vertex(x+1,z+1,false),p.Vertex(x,z+1,false)};
+        if(!p.Contains((ground[0].x+ground[2].x)*0.5f,(ground[0].z+ground[2].z)*0.5f))continue;
+        Point proposed[4];float depths[4];bool valid=true;
+        for(unsigned i=0;i<4;++i) {valid=p.TargetAt(ground[i].x,ground[i].z,&proposed[i].y)&&valid;depths[i]=proposed[i].y-ground[i].y;proposed[i].x=ground[i].x;proposed[i].z=ground[i].z;}
+        if(!valid)continue;
         for(int t=0;t<2;++t) {
             const Point triangle[]={proposed[0],proposed[t+1],proposed[t+2]};
             const float triangleDepth[]={depths[0],depths[t+1],depths[t+2]};
@@ -178,8 +178,7 @@ void Collect(const Snapshot& s, float width, float height)
             AddShadeTriangle(s,triangle,triangleDepth,-1,6,width,height);
         }
     }
-    const int c[][2]={{0,0},{GridCells,0},{GridCells,GridCells},{0,GridCells}};
-    for(int k=0;k<4;++k) AddLine(s,p.Vertex(c[k][0],c[k][1],true),p.Vertex(c[(k+1)%4][0],c[(k+1)%4][1],true),4,width,height);
+    DrawOutline(s,p,4,width,height);
 }
 
 bool BindWhiteTexture(unsigned char* base)

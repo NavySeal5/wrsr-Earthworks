@@ -1,21 +1,39 @@
 #pragma once
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace ew {
 struct Point { float x = 0, y = 0, z = 0; };
 constexpr int GridCells = 24;
 constexpr int GridSide = GridCells + 1;
+constexpr size_t MaxSitePoints = 32;
+constexpr float MinSitePointSpacing = 5.0f;
 struct Plan {
     bool first = false, complete = false;
+    // a/b/target are retained for legacy-state decoding and diagnostics.
     Point a{}, b{};
     float target = 0;
+    std::array<Point, MaxSitePoints> points{};
+    uint8_t pointCount = 0;
+    std::array<std::array<unsigned,3>, MaxSitePoints-2> triangles{};
+    uint8_t triangleCount = 0;
     std::array<float, GridSide * GridSide> ground{};
-    float Width() const { return std::abs(b.x - a.x); }
-    float Depth() const { return std::abs(b.z - a.z); }
+    float MinX() const;
+    float MaxX() const;
+    float MinZ() const;
+    float MaxZ() const;
+    float Width() const { return MaxX()-MinX(); }
+    float Depth() const { return MaxZ()-MinZ(); }
+    double FootprintArea() const;
+    bool Contains(float x,float z) const;
+    bool TargetAt(float x,float z,float* out) const;
+    void RefreshBounds();
     Point Vertex(int x, int z, bool proposed) const;
 };
+bool ValidFootprint(const Plan& plan);
+bool FootprintsOverlap(const Plan& a,const Plan& b);
 struct Volumes { double cut = 0, fill = 0; };
 Volumes Estimate(const Plan& plan);
 class History {

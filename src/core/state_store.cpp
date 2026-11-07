@@ -10,7 +10,7 @@ namespace ew {
 namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
-constexpr size_t PlanSize = 2 + 7 * sizeof(float) + GridSide * GridSide * sizeof(float);
+constexpr size_t PlanSize = 2 + 7 * sizeof(float) + 1 + MaxSitePoints * 3 * sizeof(float) + GridSide * GridSide * sizeof(float);
 constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
     + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
 
@@ -75,9 +75,11 @@ void PutPlan(std::vector<uint8_t>& out, const Plan& p)
     out.push_back(p.first ? 1 : 0); out.push_back(p.complete ? 1 : 0);
     PutFloat(out,p.a.x); PutFloat(out,p.a.y); PutFloat(out,p.a.z);
     PutFloat(out,p.b.x); PutFloat(out,p.b.y); PutFloat(out,p.b.z); PutFloat(out,p.target);
+    out.push_back(p.pointCount);
+    for(unsigned i=0;i<p.pointCount;++i){PutFloat(out,p.points[i].x);PutFloat(out,p.points[i].y);PutFloat(out,p.points[i].z);}
     for (float h : p.ground) PutFloat(out,h);
 }
-bool GetPlan(Reader& r, Plan* p)
+bool GetLegacyPlan(Reader& r, Plan* p)
 {
     uint8_t first=0, complete=0;
     if (!p || !r.U8(&first) || !r.U8(&complete) || first>1 || complete>1) return false;
@@ -85,15 +87,39 @@ bool GetPlan(Reader& r, Plan* p)
     if (!r.Float(&p->a.x) || !r.Float(&p->a.y) || !r.Float(&p->a.z)
         || !r.Float(&p->b.x) || !r.Float(&p->b.y) || !r.Float(&p->b.z) || !r.Float(&p->target)) return false;
     for (float& h : p->ground) if (!r.Float(&h)) return false;
-    if (p->complete && (p->Width() <= 0 || p->Depth() <= 0)) return false;
+    if(p->complete) {
+        p->pointCount=4;
+        p->points[0]={std::min(p->a.x,p->b.x),p->target,std::min(p->a.z,p->b.z)};
+        p->points[1]={std::max(p->a.x,p->b.x),p->target,std::min(p->a.z,p->b.z)};
+        p->points[2]={std::max(p->a.x,p->b.x),p->target,std::max(p->a.z,p->b.z)};
+        p->points[3]={std::min(p->a.x,p->b.x),p->target,std::max(p->a.z,p->b.z)};
+        if (p->Width() <= 0 || p->Depth() <= 0) return false;
+    } else if(p->first) {p->pointCount=1;p->points[0]=p->a;}
+    p->RefreshBounds();
     return true;
+}
+bool GetPlan(Reader& r, Plan* p)
+{
+    uint8_t first=0,complete=0,count=0;
+    if(!p||!r.U8(&first)||!r.U8(&complete)||first>1||complete>1)return false;
+    p->first=first!=0;p->complete=complete!=0;
+    if(!r.Float(&p->a.x)||!r.Float(&p->a.y)||!r.Float(&p->a.z)||!r.Float(&p->b.x)||!r.Float(&p->b.y)
+        ||!r.Float(&p->b.z)||!r.Float(&p->target)||!r.U8(&count)||count>MaxSitePoints)return false;
+    p->pointCount=count;
+    for(unsigned i=0;i<count;++i)if(!r.Float(&p->points[i].x)||!r.Float(&p->points[i].y)||!r.Float(&p->points[i].z))return false;
+    for(float& h:p->ground)if(!r.Float(&h))return false;
+    if(p->complete) {p->RefreshBounds();if(!ValidFootprint(*p))return false;}
+    return !p->first||p->pointCount>0;
 }
 bool ValidPlan(const Plan& p)
 {
     const float values[] = {p.a.x,p.a.y,p.a.z,p.b.x,p.b.y,p.b.z,p.target};
     for (float v : values) if (!std::isfinite(v)) return false;
+    if(p.pointCount>MaxSitePoints)return false;
+    for(unsigned i=0;i<p.pointCount;++i)if(!std::isfinite(p.points[i].x)||!std::isfinite(p.points[i].y)||!std::isfinite(p.points[i].z))return false;
     for (float h : p.ground) if (!std::isfinite(h)) return false;
-    return !p.complete || (p.Width() > 0 && p.Depth() > 0);
+    if(p.complete)return ValidFootprint(p);
+    return !p.first||p.pointCount>0;
 }
 bool ValidName(const std::string& value)
 {
@@ -153,11 +179,12 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
-    if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !GetPlan(r,&parsed.draft)) return false;
+    auto readPlan=[&](Plan* plan){return version==StateSchemaVersion?GetPlan(r,plan):GetLegacyPlan(r,plan);};
+    if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !readPlan(&parsed.draft)) return false;
     if(version==StateSchemaVersion&&!r.String(&parsed.draftName))return false;
     if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;
     if(version==5) {
@@ -185,7 +212,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
         if(!r.U64(&e.id)||!e.id||!r.U64(&e.projectId)||!r.String(&e.name)||!r.U8(&status)
             ||status>static_cast<uint8_t>(ProjectStatus::Waiting)||!r.U32(&e.executionCursor)||!r.Float(&e.progress)
             ||e.progress<0||e.progress>1||!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1
-            ||!GetPlan(r,&e.plan)||!e.plan.complete)return false;
+            ||!readPlan(&e.plan)||!e.plan.complete)return false;
         e.status=static_cast<ProjectStatus>(status);e.needsReview=review!=0;
         if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==parsed.projects.end())return false;
         for(const auto& prior:parsed.earthworks)if(prior.id==e.id)return false;

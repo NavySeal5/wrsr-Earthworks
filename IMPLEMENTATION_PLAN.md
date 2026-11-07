@@ -275,25 +275,26 @@ Stage 12 is divided into the user's three requested parts: (12.1) design/model a
 
 Replace the current four-corner, constant-height Site shape with a footprint defined by more than four points. Each footprint point can carry its own target elevation so the planned surface can represent slopes and ramps. Sites remain editable after creation: players can add, remove, or reposition points and change Site parameters, then review the updated geometry before work continues.
 
-Before implementation, settle the map interaction for creating and adjusting points, how the player changes individual point heights, and what happens when an edited Site has already started. Preserve existing Site validation, save/reload behavior, overlap protection and terrain-change review. Editing an active Site must respect the existing decision that it be paused first; geometry/height changes to a paused or partly completed Site should require terrain review before resuming unless the user revises that rule.
+Agreed interaction and limits (D105–D106): draw by clicking vertices in sequence and use **Finish shape** to close the polygon; select and drag existing vertices; add a vertex on an edge; remove vertices while retaining at least three; enter or sample an individual vertex height; and interpolate the resulting surface as planar triangles. Editing a running Site automatically pauses it, and any geometry/height change to an active or paused Site requires terrain review before resuming. Limit footprints to 32 vertices with 5 m minimum spacing. Reject self-intersection, invalid area, overlaps with reserved Sites, and invalid/out-of-range heights. Preserve project and save/load behavior.
 
-Important design questions for the Stage 13 kickoff:
+Implementation checklist:
 
-- How are points created and edited (for example, sequential map clicks to draw a polygon, then selecting/dragging vertices, or a dedicated vertex-edit mode)?
-- How does the player set each point's height (individual numeric editor, map sampling, or both)? How is a site's overall surface interpolated between vertices?
-- Which parameters remain editable after creation, and how should editing affect queued, paused, running, partly completed, or review-required Sites? Carry forward the current pause-and-review safeguards unless the user changes them.
-- What minimum spacing, maximum point count, shape validation, undo, and preview feedback are needed so invalid or unexpectedly large shapes are clear before saving?
-
-Implementation should support a closed multi-point footprint, per-point elevations, add/remove/move point editing on an existing Site, live preview and estimates, undo/cancel, persistence, and validation for invalid/self-intersecting/too-small geometry. Keep the prior shape usable as a simple four-point case. Any geometry limits or fallback behavior must be visible and agreed before adoption.
+- Support a simple four-point flat Site as well as concave/multi-point polygons.
+- Show the polygon boundary, per-vertex controls and cut/fill preview; keep the footprint boundary sharp.
+- Allow saved Sites to be edited by selecting/dragging vertices, adding at an edge, removing a vertex, and changing point heights.
+- Update terrain sampling, overlap checks, execution, estimates, and durable storage to use polygon footprints and interpolated heights.
+- Show clear validation when a shape fails point spacing, vertex count, area, intersection, overlap, or terrain bounds.
+- A geometry/height edit must pause an active Site and require terrain review before any further work.
 
 In-game checklist:
 
-1. Create a simple four-point flat Site and compare its behavior with the existing rectangle workflow.
-2. Create a multi-point footprint and edit its corners/edges; check preview, dimensions, cut/fill estimates, and validation messages.
-3. Set different point heights to create a slope and a ramp; inspect transitions and the resulting terrain after an agreed small execution test.
-4. Reopen a saved Site, add/remove/move points, change parameters, save/reload, and confirm the edits persist.
-5. Check queued, paused, running, partly completed, and review-required Site behavior against the agreed edit rules.
-6. Check undo/cancel and ensure invalid geometry cannot be confirmed or resumed.
+1. Draw and finish a flat four-point Site; confirm the editor preview and saving work.
+2. Draw a concave Site with more than four points; confirm its boundary, cut/fill estimate and footprint area match the polygon.
+3. Select different points, enter different heights and sample a point from the map; verify the wireframe forms slopes/ramps between vertices.
+4. Reopen a saved Site, drag a vertex, add a vertex on an edge, remove a vertex, and save/reload; confirm the edited points and heights persist.
+5. Confirm a running Site pauses on an edit, a paused/edited Site requires review before resuming, and a queued Site remains editable.
+6. Confirm points closer than 5 m, more than 32 points, self-crossing shapes, overlapping reserved Sites, and removal below three points are rejected with a clear message.
+7. Run a small slope/ramp Site and confirm terrain execution follows the previewed interpolated surface. No test should be performed by the agent; this is a user-run acceptance check.
 
 Acceptance evidence: the user confirms point editing is understandable, the preview represents the intended surface, geometry survives save/reload, and terrain execution matches the approved height surface. This stage expands Site geometry/editing; it does not finalize balance.
 
