@@ -67,6 +67,8 @@ unsigned siteHandlePointIndices[MaxSitePoints]{};
 unsigned siteHandleRectCount=0;
 unsigned draggingSitePoint=MaxSitePoints;
 Point dragSitePoint{};
+Point dragSitePointStart{};
+bool draggingSitePointMoved=false;
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
@@ -80,15 +82,15 @@ void SendProjectValue(Action action,uint64_t projectId,float value)
 {
     Command command{};command.action=action;command.value=value;command.projectId=projectId;command.generation=frameGeneration;Enqueue(command);
 }
-void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value)
+void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value,bool adjust=false)
 {
-    Command command{};command.action=Action::SetSitePointTarget;command.value=value;command.projectId=projectId;
+    Command command{};command.action=adjust?Action::AdjustSitePointTarget:Action::SetSitePointTarget;command.value=value;command.projectId=projectId;
     command.pointIndex=pointIndex;command.generation=frameGeneration;Enqueue(command);
 }
-void SendSitePointCommand(Action action,uint64_t projectId,unsigned pointIndex,Point point={})
+void SendSitePointCommand(Action action,uint64_t projectId,unsigned pointIndex,Point point={},bool additive=false)
 {
     Command command{};command.action=action;command.projectId=projectId;command.pointIndex=pointIndex;
-    command.point=point;command.generation=frameGeneration;Enqueue(command);
+    command.point=point;command.value=additive?1.0f:0.0f;command.generation=frameGeneration;Enqueue(command);
 }
 void SendProjectText(Action action,uint64_t projectId,const char* text)
 {
@@ -204,17 +206,22 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
     if(message==WM_LBUTTONDOWN&&handleIndex<MaxSitePoints&&GetForegroundWindow()==gameWindow) {
-        draggingSitePoint=handleIndex;const auto& snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;
-        SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex);
+        draggingSitePoint=handleIndex;draggingSitePointMoved=false;const auto& snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
+        SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},(GetKeyState(VK_SHIFT)&0x8000)!=0);
     }
     if(message==WM_MOUSEMOVE&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
-        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
+        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
+            dragSitePoint=snapshot.cursor;
+            const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
+            if(dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
+        }
     }
     if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
-        if(snapshot.editingSiteId||snapshot.creatingSite)
+        if(draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite))
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
         draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
+        draggingSitePointMoved=false;
     }
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();
@@ -320,7 +327,7 @@ void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
     if(p.pointCount<2)return;
     for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
 }
-void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected)
+void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
 {
     if(!s.siteEditorOpen)return;
     auto* draw=ImGui::GetForegroundDrawList();
@@ -330,8 +337,10 @@ void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected)
             static_cast<LONG>(screen.x+10.0f),static_cast<LONG>(screen.y+10.0f)};
         const auto overlaps=[](const RECT& a,const RECT& b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;};
         if((panelRectValid&&overlaps(candidate,panelRect))||(editorRectValid&&overlaps(candidate,editorRect)))continue;
-        const float radius=i==selected?8.0f:6.0f;
-        draw->AddCircleFilled(screen,radius,i==selected?IM_COL32(255,245,130,255):IM_COL32(245,250,255,245),16);
+        const bool isSelected=(selectedMask&(1u<<i))!=0;
+        const float radius=i==selected?8.0f:(isSelected?7.0f:6.0f);
+        const ImU32 color=i==selected?IM_COL32(255,245,130,255):(isSelected?IM_COL32(120,220,255,255):IM_COL32(245,250,255,245));
+        draw->AddCircleFilled(screen,radius,color,16);
         draw->AddCircle(screen,radius,IM_COL32(55,65,75,255),16,1.5f);
         siteHandleRects[siteHandleRectCount]=candidate;
         siteHandlePointIndices[siteHandleRectCount++]=i;
@@ -352,7 +361,7 @@ void DrawPreview(const Snapshot& s)
         else if(project.status==ProjectStatus::Cancelled)
             DrawQueuedOutline(s,project.outline,IM_COL32(170,135,135,170));
     }
-    if(s.siteEditorOpen)DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint);
+    if(s.siteEditorOpen)DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
     const auto& p=s.plan;
     if (!p.first) return;
     if (!p.complete) {
@@ -904,33 +913,39 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::Text("Vertices: %u / %zu (minimum spacing 5 m)",static_cast<unsigned>(plan.pointCount),MaxSitePoints);
     ImGui::SetNextItemWidth(114.0f);
-    char pointLabel[32]{};sprintf_s(pointLabel,"Point %u",selectedPoint+1);
+    const auto& input=ImGui::GetIO();
+    const uint32_t selectedMask=s.selectedSitePointsMask;
+    unsigned selectedCount=0;for(unsigned i=0;i<plan.pointCount;++i)if(selectedMask&(1u<<i))++selectedCount;
+    char pointLabel[48]{};
+    if(selectedCount>1)sprintf_s(pointLabel,"%u points selected",selectedCount);
+    else sprintf_s(pointLabel,"Point %u",selectedPoint+1);
     if(ImGui::BeginCombo("##SelectedSitePoint",pointLabel)) {
         for(unsigned i=0;i<plan.pointCount;++i) {
-            char label[48]{};sprintf_s(label,"Point %u  (%.1f, %.1f)",i+1,plan.points[i].x,plan.points[i].z);
-            const bool selected=i==selectedPoint;
-            if(ImGui::Selectable(label,selected))SendSitePointCommand(Action::SelectSitePoint,s.editingSiteId,i);
+            char label[64]{};sprintf_s(label,"%s Point %u  (%.1f, %.1f)",(selectedMask&(1u<<i))?"[x]":"[ ]",i+1,plan.points[i].x,plan.points[i].z);
+            const bool selected=(selectedMask&(1u<<i))!=0;
+            if(ImGui::Selectable(label,selected))SendSitePointCommand(Action::SelectSitePoint,s.editingSiteId,i,{},input.KeyShift);
             if(selected)ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
     }
     ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
+    ImGui::TextDisabled("Shift-click adds points; click without Shift selects one.");
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
-    const auto& input=ImGui::GetIO();
-    const float heightStep=input.KeyCtrl?100.0f:(input.KeyShift?10.0f:1.0f);
+    const float heightStep=input.KeyCtrl?10.0f:1.0f;
     auto applyHeight=[&](float height){SendSitePointValue(s.editingSiteId,selectedPoint,height);};
+    auto adjustHeight=[&](float delta){SendSitePointValue(s.editingSiteId,selectedPoint,delta,true);};
     ImGui::BeginDisabled(!editable);
-    if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;applyHeight(editHeight);}
+    if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;adjustHeight(-heightStep);}
     ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
     const bool changed=ImGui::InputFloat("##SitePointHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
-    ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;applyHeight(editHeight);}
-    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m.\nHold Shift for 10 m, or Ctrl for 100 m.",{22.0f,22.0f});
+    ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;adjustHeight(heightStep);}
+    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nShift-click points to add them to the selection.\nHeight entry and map sampling set all selected points to the same height; −/+ preserve their height differences.",{22.0f,22.0f});
     ImGui::SameLine();
-    if(ImGui::Button("Sample point",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
+    if(ImGui::Button("Sample selected",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
     const bool finishedShape=plan.complete;
     if(s.creatingSite) {

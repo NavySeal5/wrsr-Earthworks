@@ -8,7 +8,7 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, NewSite, SetShapeMode, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities };
+enum class Action { Pick, Select, NewSite, SetShapeMode, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, AdjustSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities };
 enum class PickMode { DrawSite, Sample, None, InspectBuilding, SampleSitePointTarget };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; unsigned pointIndex = 0; Point point{}; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
@@ -54,6 +54,7 @@ struct Snapshot {
     SiteShapeMode shapeMode = SiteShapeMode::FreeDraw;
     uint64_t editingSiteId = 0;
     unsigned selectedSitePoint = 0;
+    uint32_t selectedSitePointsMask = 1;
     Plan editorPlan{};
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;

@@ -31,6 +31,7 @@ DurableState durableState;
 uint64_t selectedProjectId=0;
 uint64_t editingSiteId=0;
 unsigned selectedSitePointIndex=0;
+uint32_t selectedSitePointsMask=1;
 bool siteEditorOpen=false,creatingSite=false;
 SiteShapeMode shapeMode=SiteShapeMode::FreeDraw;
 bool savePending = false;
@@ -38,6 +39,21 @@ bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
 ULONGLONG lastProjectFacilityReadings = 0;
 ULONGLONG lastWorldFacilityScan = 0;
+uint32_t PointMask(unsigned index)
+{
+    return index<MaxSitePoints?static_cast<uint32_t>(1u<<index):0u;
+}
+uint32_t ValidPointMask(uint32_t mask,unsigned pointCount)
+{
+    const uint32_t valid=pointCount>=32?~uint32_t{0}:(pointCount?static_cast<uint32_t>((1u<<pointCount)-1u):0u);
+    mask&=valid;
+    return mask?mask:PointMask(pointCount?std::min<unsigned>(selectedSitePointIndex,pointCount-1):0);
+}
+void SelectSingleSitePoint(unsigned index)
+{
+    selectedSitePointIndex=index;
+    selectedSitePointsMask=PointMask(index);
+}
 using LateFn = void (*)(__int64);
 using LoadFn = void (*)();
 using HeightFn = float (*)(void*, const float*);
@@ -282,6 +298,7 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
+    SelectSingleSitePoint(0);
     durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     lastWorldFacilityScan=0;
     durableState.projects.push_back({1,"Project 1",{}});
@@ -376,6 +393,7 @@ void RefreshProjectStatus()
     current.selectedSiteName[0]=0;
     current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;current.shapeMode=shapeMode;
     current.selectedSitePoint=selectedSitePointIndex;
+    current.selectedSitePointsMask=selectedSitePointsMask;
     strncpy_s(current.siteDraftName,durableState.draftName.c_str(),_TRUNCATE);
     current.editorPlan=Plan{};
     current.projectFacilityDistance=0;
@@ -409,6 +427,9 @@ void RefreshProjectStatus()
         } else {
             siteEditorOpen=false;editingSiteId=0;current.siteEditorOpen=false;current.editingSiteId=0;
         }
+        selectedSitePointIndex=current.editorPlan.pointCount?std::min<unsigned>(selectedSitePointIndex,current.editorPlan.pointCount-1):0;
+        selectedSitePointsMask=ValidPointMask(selectedSitePointsMask,current.editorPlan.pointCount);
+        current.selectedSitePoint=selectedSitePointIndex;current.selectedSitePointsMask=selectedSitePointsMask;
     }
 }
 bool SamplePlan(Plan* plan)
@@ -446,13 +467,13 @@ void Process(const Command& command)
         history.Reset(); current.plan = Plan{};shapeMode=SiteShapeMode::FreeDraw; Changed();
         SetDefaultDraftSiteName();
         editingSiteId=0;creatingSite=true;siteEditorOpen=true;
-        selectedSitePointIndex=0;current.mode = PickMode::DrawSite;
+        SelectSingleSitePoint(0);current.mode = PickMode::DrawSite;
         RefreshProjectStatus();
         Message("Click at least three points around the Site boundary, then finish the shape.");
         break;
     case Action::Select:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
-        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;selectedSitePointIndex=0;current.mode=PickMode::DrawSite;RefreshProjectStatus();
+        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;SelectSingleSitePoint(0);current.mode=PickMode::DrawSite;RefreshProjectStatus();
         Message("Click at least three points around the Site boundary, then finish the shape.");break;
     case Action::SetShapeMode:
         if(!creatingSite||current.plan.complete||current.plan.pointCount>1||command.value<0.0f||command.value>2.0f)break;
@@ -512,23 +533,26 @@ void Process(const Command& command)
                 return item.plan.Contains(p.x,p.z);
             });
             if(site!=durableState.earthworks.end()) {
-                editingSiteId=site->id;selectedProjectId=site->id;creatingSite=false;siteEditorOpen=true;panelOpen=true;
+                editingSiteId=site->id;selectedProjectId=site->id;creatingSite=false;siteEditorOpen=true;panelOpen=true;SelectSingleSitePoint(0);
                 RefreshProjectStatus();Message("Site editor opened.");
             }
         } else if(current.mode==PickMode::SampleSitePointTarget) {
             if(creatingSite) {
+                const uint32_t mask=ValidPointMask(selectedSitePointsMask,current.plan.pointCount);
                 if(selectedSitePointIndex>=current.plan.pointCount) {current.mode=PickMode::None;Message("Select a Site point before sampling its height.");break;}
-                history.Commit(current.plan);current.plan.points[selectedSitePointIndex].y=p.y;current.plan.RefreshBounds();
+                history.Commit(current.plan);for(unsigned i=0;i<current.plan.pointCount;++i)if(mask&PointMask(i))current.plan.points[i].y=p.y;current.plan.RefreshBounds();
                 current.mode=PickMode::None;Changed();Message("Draft point height sampled; terrain remains unchanged.");
             } else {
                 auto* site=FindProject(editingSiteId);
                 if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {
                     current.mode=PickMode::None;Message("The selected Site can no longer be edited.");break;
                 }
+                const uint32_t mask=ValidPointMask(selectedSitePointsMask,site->plan.pointCount);
                 if(selectedSitePointIndex>=site->plan.pointCount) {current.mode=PickMode::None;Message("Select a Site point before sampling its height.");break;}
                 if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
                 if(site->status==ProjectStatus::Paused)site->needsReview=true;
-                site->plan.points[selectedSitePointIndex].y=p.y;site->plan.RefreshBounds();current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
+                for(unsigned i=0;i<site->plan.pointCount;++i)if(mask&PointMask(i))site->plan.points[i].y=p.y;
+                site->plan.RefreshBounds();current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
                 RefreshProjectStatus();Message(site->needsReview?"Point height sampled. Review this Site before resuming.":"Point height sampled; terrain remains unchanged.");
             }
         } else if (current.mode == PickMode::Sample) {
@@ -546,7 +570,7 @@ void Process(const Command& command)
                 if(!ValidFootprint(candidate)){Message("That shape is invalid. Move farther from the first corner.");goto pick_done;}
                 if(!SamplePlan(&candidate)){Message("Could not sample the Site area. Keep it inside the terrain.");goto pick_done;}
                 history.Commit(current.plan);candidate.complete=true;current.plan=std::move(candidate);current.mode=PickMode::None;
-                selectedSitePointIndex=0;Changed();Message("Shape ready. Set point heights, then save the Site.");goto pick_done;
+                SelectSingleSitePoint(0);Changed();Message("Shape ready. Set point heights, then save the Site.");goto pick_done;
             }
         if(current.plan.pointCount) {
                 for(unsigned i=0;i<current.plan.pointCount;++i) {
@@ -556,7 +580,7 @@ void Process(const Command& command)
                 p.y=current.plan.points[0].y;
             }
             history.Commit(current.plan);current.plan.points[current.plan.pointCount++]=p;current.plan.first=true;current.plan.complete=false;
-            current.plan.RefreshBounds();selectedSitePointIndex=current.plan.pointCount-1;Message("Site boundary point added.");Changed();
+            current.plan.RefreshBounds();SelectSingleSitePoint(current.plan.pointCount-1);Message("Site boundary point added.");Changed();
         }
 pick_done:
         break;
@@ -582,21 +606,37 @@ pick_done:
         site->plan.RefreshBounds();editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;
         RefreshProjectStatus();Message(pausedForEdit?"Site paused and target updated. Review terrain before resuming.":site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
     }
-    case Action::SelectSitePoint:
-        if(creatingSite)selectedSitePointIndex=std::min<unsigned>(command.pointIndex,current.plan.pointCount?current.plan.pointCount-1:0);
-        else if(auto* site=FindProject(editingSiteId);site&&command.pointIndex<site->plan.pointCount)selectedSitePointIndex=command.pointIndex;
+    case Action::SelectSitePoint: {
+        const Plan* plan=creatingSite?&current.plan:nullptr;
+        if(!plan)if(auto* site=FindProject(editingSiteId))plan=&site->plan;
+        if(!plan||command.pointIndex>=plan->pointCount)break;
+        selectedSitePointIndex=command.pointIndex;
+        if(command.value>0.5f)selectedSitePointsMask=ValidPointMask(selectedSitePointsMask,plan->pointCount)|PointMask(command.pointIndex);
+        else selectedSitePointsMask=PointMask(command.pointIndex);
         RefreshProjectStatus();break;
-    case Action::SetSitePointTarget: {
+    }
+    case Action::SetSitePointTarget:
+    case Action::AdjustSitePointTarget: {
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {Message("Select a valid Site point and height.");break;}
         if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){Message("Finished Sites cannot be edited.");break;}
+        const uint32_t mask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
+        const bool relative=command.action==Action::AdjustSitePointTarget;
+        bool valid=true;
+        for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i)) {
+            const float height=relative?plan->points[i].y+command.value:command.value;
+            if(!std::isfinite(height)||std::abs(height)>=100000)valid=false;
+        }
+        if(!valid){Message("The adjusted height is outside the allowed range.");break;}
         if(site) {
             const bool active=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
             if(active)site->status=ProjectStatus::Paused;
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
         }
-        plan->points[command.pointIndex].y=command.value;plan->RefreshBounds();selectedSitePointIndex=command.pointIndex;
+        for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i))
+            plan->points[i].y=relative?plan->points[i].y+command.value:command.value;
+        plan->RefreshBounds();selectedSitePointIndex=command.pointIndex;selectedSitePointsMask=mask;
         if(site){editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;RefreshProjectStatus();Message(site->needsReview?"Point height changed. Review this Site before resuming.":"Point height changed; terrain remains unchanged.");}
         else {Changed();Message("Point height changed; terrain is unchanged.");}
         break;
@@ -645,7 +685,7 @@ pick_done:
             if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
         }
-        *plan=std::move(edited);
+        *plan=std::move(edited);selectedSitePointsMask=PointMask(selectedSitePointIndex);
         if(site){if(site->status==ProjectStatus::Paused)site->needsReview=true;editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;RefreshProjectStatus();Message(site->needsReview?"Site geometry changed. Review terrain before resuming.":"Site geometry updated; terrain is unchanged.");}
         else {Changed();Message("Draft Site geometry updated.");}
         break;
@@ -783,7 +823,7 @@ pick_done:
     }
     case Action::SelectProject:
         if(auto* site=FindProject(command.projectId);site&&site->projectId==durableState.selectedProjectId) {
-            selectedProjectId=site->id;editingSiteId=site->id;creatingSite=false;siteEditorOpen=true;RefreshProjectStatus();
+            selectedProjectId=site->id;editingSiteId=site->id;creatingSite=false;siteEditorOpen=true;SelectSingleSitePoint(0);RefreshProjectStatus();
         }
         break;
     case Action::RemoveProject: {

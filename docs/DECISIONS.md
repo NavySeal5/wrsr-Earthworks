@@ -1,6 +1,6 @@
 **Gameplay and UX decision register**
 
-Updated 4 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
+Updated 7 November 2026. This register separates the user's confirmed intent from proposed implementation rules. A recommendation or prototype value is not an accepted decision.
 
 **Confirmed decisions**
 
@@ -101,7 +101,9 @@ Updated 4 November 2026. This register separates the user's confirmed intent fro
 | D104 | Target the Large facility's displayed material totals at about 130% of Medium's, not 130% higher raw coefficients. Normalize the coefficients for construction-node mesh surface area; retain work coefficients | User clarified “building cost” means total displayed cost. The Large model has substantially more construction geometry, so raw coefficient scaling made expected total material requirements much higher than the intended 30% increase. New geometry-normalized values are provisional until the user checks fresh build-menu quantities. 6 November 2026 |
 | D105 | Move the former balancing/candidate package to Stage 14. Stage 13 adds multi-point Site footprints, per-point elevations for slopes/ramps, and post-creation point/height editing | User requested Stage 13/14 renumbering and expanded Site geometry/editing scope, 7 November 2026 |
 | D106 | Draw by sequential map clicks and Finish shape; edit vertices by selecting/dragging, insert points on edges, remove points while keeping at least three; set each vertex height by numeric entry or map sampling; interpolate the surface with planar triangles; automatically pause active work and require terrain review after geometry/height edits; cap at 32 points with 5 m minimum spacing | User answers for Stage 13 kickoff, 7 November 2026. Self-intersections, invalid areas, overlaps with reserved Sites and invalid/out-of-bounds elevations must be rejected. In-game acceptance remains pending |
+| D107 | In the Site editor, Shift-click adds vertices to a multi-selection; clicking without Shift returns to single-point selection. Height entry and map sampling set every selected point to the same height, while +/- apply a relative delta to each selected point. Ctrl changes +/- steps from 1 m to 10 m; Shift is no longer a height-step modifier. | User instruction, 7 November 2026 |
 | D107 | Use 12% as the working maximum longitudinal road grade for Earthworks planning and evaluation (approximately 6.8°). This is a project design limit, not a confirmed hard-coded WRSR road-placement limit | User selected “12 grade” after calculating a 5 m rise over a 40 m road span (12.5% grade, approximately 7.1°); the game’s universal maximum was not found in public documentation, 7 November 2026 |
+| D108 | Use 37° (approximately 75% grade) as the working maximum safe vanilla terrain slope, for terrain work only; this does not change the separate 12% longitudinal road-grade limit | User: “mark 37 grade as the max safe vanilla grade just for terrain”; interpreted as 37° based on the immediately preceding 37.8° slope-angle calculation. This is a terrain-only working limit, not a verified engine-enforced vanilla maximum, 7 November 2026 |
 
 D17/D18 settle the first prototype's selection, preview, sharp edges and opening control. They do not settle released tool scope, office behaviour, project persistence or autonomous execution. The D16 batch authorization ends with the accepted planning prototype; normal review gates resume.
 
