@@ -306,6 +306,7 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
     for (int i=0; i<count; ++i) if (!Project(s,clipped[i],&screen[i])) return;
     ImGui::GetBackgroundDrawList()->AddConvexPolyFilled(screen,count,(color & 0x00FFFFFFu) | (55u<<24));
 }
+void DrawPointGroundLinks(const Snapshot& s,const Plan& p);
 void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
 {
     if(p.pointCount<2) return;
@@ -320,12 +321,25 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
         const auto& a=p.points[i];const auto& b=p.points[(i+1)%p.pointCount];
         Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
     }
+    DrawPointGroundLinks(s,p);
 }
 template<class Shape>
 void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
 {
     if(p.pointCount<2)return;
     for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
+}
+void DrawPointGroundLinks(const Snapshot& s,const Plan& p)
+{
+    if(!p.complete)return;
+    for(unsigned i=0;i<p.pointCount;++i) {
+        const auto& targetPoint=p.points[i];
+        float ground=0;
+        if(!p.GroundAt(targetPoint.x,targetPoint.z,&ground)||std::abs(targetPoint.y-ground)<0.01f)continue;
+        const Point terrain{targetPoint.x,ground,targetPoint.z};
+        const ImU32 color=targetPoint.y>ground?fillColor:cutColor;
+        Line(s,targetPoint,terrain,color,2.0f);
+    }
 }
 void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
 {
@@ -397,6 +411,7 @@ void DrawPreview(const Snapshot& s)
         if (x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
         if (z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
+    DrawPointGroundLinks(s,p);
     DrawQueuedOutline(s,p,IM_COL32(245,250,255,255));
 }
 bool CursorOnVisibleSite(const Snapshot& s)

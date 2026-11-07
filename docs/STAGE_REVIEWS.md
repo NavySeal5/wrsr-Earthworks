@@ -691,6 +691,10 @@ The user requested a narrower fallback label. The generated label now reads `<Lo
 
 The user accepted the facility UI. Facility assignment UI work is accepted for this stage; no additional in-game checks were requested.
 
+**Stage 13 vertex-to-ground wireframe — 7 November 2026**
+- Added a vertical cut/fill-colored wireframe connector at every vertex of a completed draft or selected Site, extending from its per-point planned height to the stored terrain height at that location.
+- Build and staging are pending; this visual change needs user in-game review.
+
 **Stage 13 progress indicator fix — 7 November 2026**
 - Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
 - Progress text now shows tenths of a percent.
