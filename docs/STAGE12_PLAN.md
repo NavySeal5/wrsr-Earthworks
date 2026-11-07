@@ -78,7 +78,7 @@ On a fresh test save, place at least two Earthworks facilities and an ordinary c
 
 ## Deferred to Stage 13 or later
 
-Final machine productivity/balance, facility range, build/maintenance costs, fuel-store capacity and fuel consumption/refuelling rules, quarried-stone accounting, and release settings. Stage 12 uses visibly provisional values where a test needs them. Vehicle reservations, machine animations, active-area construction prevention and non-rectangular Sites also remain outside this stage.
+Flexible multi-point Site geometry and post-creation editing are Stage 13. Final machine productivity/balance, facility range, build/maintenance costs, fuel-store capacity and fuel consumption/refuelling rules, quarried-stone accounting, and release settings are Stage 14. Stage 12 uses visibly provisional values where a test needs them. Vehicle reservations, machine animations and active-area construction prevention also remain outside this stage.
 
 ## Open decisions to resolve at the relevant checkpoint
 
@@ -86,5 +86,5 @@ Final machine productivity/balance, facility range, build/maintenance costs, fue
 - Review the current Large preview against the concept, then convert its OBJ through ModelViewer and stage the native item. Review all 20 parking positions, pathing, two stations, construction phases, asphalt coverage and demolition cleanup using [STAGE12_LARGE_TESTING.md](STAGE12_LARGE_TESTING.md).
 - For 12.2, decide whether the inherited native construction-office panel is sufficient after seeing it with the new building, or whether a custom player-facing panel is necessary and technically supported.
 - For 12.3, show eligible-machine counts per assigned facility when readings are reliable; show a clear unavailable state instead of misleading zeroes. Worker counts are no longer an operating prerequisite (D90).
-- Keep the machine-rate scale provisional through Stage 12 and review final productivity during Stage 13.
+- Keep the machine-rate scale provisional through Stage 12 and review final productivity during Stage 14.
 - `$TYPE_ROADDEPO` is the selected native-panel prototype. Fuel storage, consumption and refuelling are deferred (D91).

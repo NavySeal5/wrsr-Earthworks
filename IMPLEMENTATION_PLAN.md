@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 5 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The current facility filter allows only bulldozers and excavators (D92); the earlier dumper/bus allowance is superseded. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Queued grey-wireframe visibility, stale-state, Save As, autosave and corrupt/mismatched companion checks were not reported as tested and remain documented as unverified. See the stage review log for evidence and progression.
+Updated 7 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The current facility filter allows only bulldozers and excavators (D92); the earlier dumper/bus allowance is superseded. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Queued grey-wireframe visibility, stale-state, Save As, autosave and corrupt/mismatched companion checks were not reported as tested and remain documented as unverified. Stage 13 is now flexible Site geometry/editing; Stage 14 is balance/candidate work. See the stage review log for evidence and progression.
 
 **1. What we are building**
 
@@ -34,7 +34,7 @@ The user authorized continuing without intermediate acceptance stops through the
 
 **3. Review findings and changes to the earlier plan**
 
-The earlier plan bundled terrain access, office integration, preview, execution and persistence into milestones that were too large for useful in-game feedback. This revision separates those concerns into eleven observable stages, including the user-requested UI and facility-presentation stage before balancing.
+The earlier plan bundled terrain access, office integration, preview, execution and persistence into milestones that were too large for useful in-game feedback. This revision separates those concerns into observable stages, including the user-requested UI and facility-presentation stage, flexible Site geometry/editing, and then balancing.
 
 It also treated several proposals as requirements without user confirmation. The numbers 20 workers, four machines, a 1,000-metre range and a 5-centimetre completion tolerance are not approved gameplay settings. A single active project, priority ordering, soil abstraction, omitted fuel costs, cancellation leaving completed work and rejection of all overlaps are also proposals rather than settled release rules.
 
@@ -71,7 +71,8 @@ The diagnostic profile currently enables zero Workshop items. Its first test wor
 | 10a | Player-facing UI | Plan and Projects tabs present the workflow clearly; technical diagnostics are absent | Tab layout, project/facility selection flow, message clarity |
 | 11 | Named Projects and in-context Site editing | Named Projects contain Sites managed from a filtered list and map-anchored editor | Site creation/editing workflow, editor placement and Project/facility interaction |
 | 12 | Purpose-built Earthworks facilities | Small and Medium vehicle-only facilities are placeable and identifiable in game | Final road access, vehicle clearance, build costs, native panel, and Project integration |
-| 13 | Balanced candidate package | Agreed workflow works in intended gameplay settings and a clean install | Rates, limits, release scope and intended gameplay settings |
+| 13 | Flexible Site geometry and editing | Sites support multi-point footprints, per-point heights, and later editing without breaking saved projects | Point placement/editing controls, geometry validation, terrain review, and how edits interact with Site state |
+| 14 | Balanced candidate package | Agreed workflow works in intended gameplay settings and a clean install | Rates, limits, release scope and intended gameplay settings |
 
 Every row is a separate in-game review boundary. A stage may be split further if its checklist becomes too broad. Splitting never removes an existing acceptance gate. Public publishing is a separate user decision.
 
@@ -268,19 +269,45 @@ Acceptance evidence: the user confirms the end-to-end Project/Site workflow and 
 
 **17. Stage 12 — purpose-built Earthworks facility**
 
-Stage 12 is divided into the user's three requested parts: (12.1) design/model and placeable items, (12.2) the buildings' native UI, and (12.3) integration between facility readings/management and the Projects workflow. Each part ends with a user-run in-game review before proceeding. The accepted Small model has two canopy bays and four slots. The new Medium variant uses four canopy bays and eight slots, a single loading/unloading station in front of the office, and a far-right road connection pointing outward; its construction material quantities scale with the added canopy/ground area while the office recipe stays the same (D94). Both are vehicle-only `$TYPE_ROADDEPO` items, with no fuel storage; the tank remains decorative. Only excavators and bulldozers are permitted (D92). Preserve automatic recognition, no ordinary construction jobs and Project ownership rules. Machine productivity remains provisional for Stage 13 balance review. Detailed checkpoints and acceptance criteria are in [Stage 12 plan](docs/STAGE12_PLAN.md).
+Stage 12 is divided into the user's three requested parts: (12.1) design/model and placeable items, (12.2) the buildings' native UI, and (12.3) integration between facility readings/management and the Projects workflow. Each part ends with a user-run in-game review before proceeding. The accepted Small model has two canopy bays and four slots. The Medium variant uses four canopy bays and eight slots, a single loading/unloading station in front of the office, and a far-right road connection pointing outward; its construction material quantities scale with the added canopy/ground area while the office recipe stays the same (D94). The Large U-shaped variant has 20 vehicle slots. All are vehicle-only `$TYPE_ROADDEPO` items, with no fuel storage; the tank remains decorative. Only excavators and bulldozers are permitted (D92). Preserve automatic recognition, no ordinary construction jobs and Project ownership rules. Machine productivity remains provisional for Stage 14 balance review. Detailed checkpoints and acceptance criteria are in [Stage 12 plan](docs/STAGE12_PLAN.md).
 
-**18. Stage 13 — balance and candidate package**
+**18. Stage 13 — flexible Site geometry and editing**
 
-After Stage 12 is accepted, review rates, final worker capacity, office range, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
+Replace the current four-corner, constant-height Site shape with a footprint defined by more than four points. Each footprint point can carry its own target elevation so the planned surface can represent slopes and ramps. Sites remain editable after creation: players can add, remove, or reposition points and change Site parameters, then review the updated geometry before work continues.
+
+Before implementation, settle the map interaction for creating and adjusting points, how the player changes individual point heights, and what happens when an edited Site has already started. Preserve existing Site validation, save/reload behavior, overlap protection and terrain-change review. Editing an active Site must respect the existing decision that it be paused first; geometry/height changes to a paused or partly completed Site should require terrain review before resuming unless the user revises that rule.
+
+Important design questions for the Stage 13 kickoff:
+
+- How are points created and edited (for example, sequential map clicks to draw a polygon, then selecting/dragging vertices, or a dedicated vertex-edit mode)?
+- How does the player set each point's height (individual numeric editor, map sampling, or both)? How is a site's overall surface interpolated between vertices?
+- Which parameters remain editable after creation, and how should editing affect queued, paused, running, partly completed, or review-required Sites? Carry forward the current pause-and-review safeguards unless the user changes them.
+- What minimum spacing, maximum point count, shape validation, undo, and preview feedback are needed so invalid or unexpectedly large shapes are clear before saving?
+
+Implementation should support a closed multi-point footprint, per-point elevations, add/remove/move point editing on an existing Site, live preview and estimates, undo/cancel, persistence, and validation for invalid/self-intersecting/too-small geometry. Keep the prior shape usable as a simple four-point case. Any geometry limits or fallback behavior must be visible and agreed before adoption.
+
+In-game checklist:
+
+1. Create a simple four-point flat Site and compare its behavior with the existing rectangle workflow.
+2. Create a multi-point footprint and edit its corners/edges; check preview, dimensions, cut/fill estimates, and validation messages.
+3. Set different point heights to create a slope and a ramp; inspect transitions and the resulting terrain after an agreed small execution test.
+4. Reopen a saved Site, add/remove/move points, change parameters, save/reload, and confirm the edits persist.
+5. Check queued, paused, running, partly completed, and review-required Site behavior against the agreed edit rules.
+6. Check undo/cancel and ensure invalid geometry cannot be confirmed or resumed.
+
+Acceptance evidence: the user confirms point editing is understandable, the preview represents the intended surface, geometry survives save/reload, and terrain execution matches the approved height surface. This stage expands Site geometry/editing; it does not finalize balance.
+
+**19. Stage 14 — balance and candidate package**
+
+After Stages 12 and 13 are accepted, review rates, facility range/capacity, costs/fuel/soil scope, supported terrain tools, large-project limits, completion feedback and intended gameplay settings. Features not yet chosen remain outside the candidate rather than being silently added.
 
 Implementation: tune the accepted behaviour, finish necessary presentation, set measured performance limits, and prepare an installable candidate with source/notices and clear compatibility notes. Public uploading is not part of this stage.
 
 In-game checklist:
 
-1. Complete the agreed workflow in the intended gameplay settings, including representative cut and fill projects.
+1. Complete the agreed workflow in the intended gameplay settings, including representative cuts, fills, slopes, and ramps.
 2. Compare duration/costs with the user's expectations; adjust and repeat.
-3. Run the agreed maximum project/queue size and inspect frame-time impact.
+3. Run the agreed maximum Site/project/queue size and inspect frame-time impact.
 4. Install the candidate cleanly, reload the test saves and verify upgrade/disable behaviour.
 5. Review messages, inputs and completion feedback in normal play.
 6. Test any explicitly promised cloud/mod interoperability separately.
