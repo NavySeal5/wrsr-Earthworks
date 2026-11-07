@@ -29,7 +29,7 @@ struct ProjectBrief {
     unsigned allocatedWorkers = 0, allocatedMachines = 0;
     float progress = 0;
     bool needsReview = false;
-    Plan plan{};
+    SiteOutline outline{};
     Point a{},b{};
     float target = 0;
 };

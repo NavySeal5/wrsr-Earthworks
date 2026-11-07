@@ -358,7 +358,8 @@ void RefreshProjectStatus()
         target.allocatedWorkers=source.status==ProjectStatus::Running?source.allocatedWorkers:0;
         target.allocatedMachines=source.status==ProjectStatus::Running?source.allocatedMachines:0;
         target.progress=source.progress;target.needsReview=source.needsReview;
-        target.plan=source.plan;target.a=source.plan.a;target.b=source.plan.b;target.target=source.plan.target;
+        target.outline.points=source.plan.points;target.outline.pointCount=source.plan.pointCount;
+        target.a=source.plan.a;target.b=source.plan.b;target.target=source.plan.target;
     }
     current.projectTotal=current.projectCount;
     current.projectQueued=false;current.projectId=0;

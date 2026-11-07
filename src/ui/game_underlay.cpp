@@ -125,7 +125,8 @@ void AddShadeTriangle(const Snapshot& s,const Point* triangle,const float* depth
     }
 }
 
-void DrawOutline(const Snapshot& s, const Plan& plan, int group, float width, float height)
+template<class Shape>
+void DrawOutline(const Snapshot& s, const Shape& plan, int group, float width, float height)
 {
     for(unsigned i=0;i<plan.pointCount;++i) AddLine(s,plan.points[i],plan.points[(i+1)%plan.pointCount],group,width,height);
 }
@@ -146,9 +147,9 @@ void Collect(const Snapshot& s, float width, float height)
                     if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
                 }
                 DrawOutline(s,p,3,width,height);
-            } else DrawOutline(s,project.plan,2,width,height);
-        } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.plan,0,width,height);
-        else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.plan,1,width,height);
+            } else DrawOutline(s,project.outline,2,width,height);
+        } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.outline,0,width,height);
+        else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.outline,1,width,height);
     }
     const auto& p=s.plan;
     if (!p.first) return;

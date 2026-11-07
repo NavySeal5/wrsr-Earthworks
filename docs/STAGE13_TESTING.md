@@ -2,9 +2,9 @@
 
 This build replaces rectangular flat Sites with editable polygon Sites. Use a fresh disposable save or a clear area in a copy of your test save. The agent has not performed in-game tests; these checks are for the user to run.
 
-## Draw and save a polygon
+## Startup and draw/save a polygon
 
-1. Start the project-local RML development profile with `launch-prototype.cmd`, load a test world, and open Earthworks.
+1. Start the project-local RML development profile with `launch-prototype.cmd`. First confirm the game reaches the main menu without closing. Then load a test world and open Earthworks.
 2. Select a Project and choose **New Site**. Click four points around a clear area, keeping each point at least 5 m from every other point. Choose **Finish shape**. The boundary should close and the editor should show the polygon footprint and cut/fill estimates; terrain must remain unchanged.
 3. Discard that draft, start another Site, and click six points to make an L-shaped/concave footprint. Finish it and confirm the wireframe follows the six-sided boundary instead of filling its bounding rectangle.
 4. Select each vertex in the editor. Set at least three different heights using the numeric field, then use **Sample point** and click a map location. The wireframe should interpolate the point heights into sloped triangular surfaces.

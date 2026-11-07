@@ -314,7 +314,8 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
         Line(s,a,b,IM_COL32(205,210,220,235),2.5f);
     }
 }
-void DrawQueuedOutline(const Snapshot& s,const Plan& p,ImU32 color)
+template<class Shape>
+void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
 {
     if(p.pointCount<2)return;
     for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
@@ -345,11 +346,11 @@ void DrawPreview(const Snapshot& s)
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId)DrawQueuedWireframe(s,s.queuedPlan);
-            else DrawQueuedOutline(s,project.plan,IM_COL32(175,180,190,205));
+            else DrawQueuedOutline(s,project.outline,IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
-            DrawQueuedOutline(s,project.plan,IM_COL32(100,190,155,190));
+            DrawQueuedOutline(s,project.outline,IM_COL32(100,190,155,190));
         else if(project.status==ProjectStatus::Cancelled)
-            DrawQueuedOutline(s,project.plan,IM_COL32(170,135,135,170));
+            DrawQueuedOutline(s,project.outline,IM_COL32(170,135,135,170));
     }
     if(s.siteEditorOpen)DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint);
     const auto& p=s.plan;
@@ -390,7 +391,7 @@ bool CursorOnVisibleSite(const Snapshot& s)
     if(!s.cursorValid)return false;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
-        if(site.plan.Contains(s.cursor.x,s.cursor.z))return true;
+        if(site.outline.Contains(s.cursor.x,s.cursor.z))return true;
     }
     return false;
 }
@@ -400,7 +401,7 @@ bool CursorOnEditingSite(const Snapshot& s)
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
         if(site.id==s.editingSiteId)
-            return site.plan.Contains(s.cursor.x,s.cursor.z);
+            return site.outline.Contains(s.cursor.x,s.cursor.z);
     }
     return false;
 }

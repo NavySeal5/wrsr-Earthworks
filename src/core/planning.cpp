@@ -117,16 +117,22 @@ void Plan::RefreshBounds()
         }
     }
 }
-bool Plan::Contains(float x,float z) const
+bool ContainsPolygon(const Point* points,unsigned count,float x,float z)
 {
-    if(pointCount<3)return x>=MinX()&&x<=MaxX()&&z>=MinZ()&&z<=MaxZ();
+    if(!points||count<3||count>MaxSitePoints)return false;
     const Point p{x,0,z};bool inside=false;
-    for(unsigned i=0,j=pointCount-1;i<pointCount;j=i++) {
+    for(unsigned i=0,j=count-1;i<count;j=i++) {
         const auto& previous=points[j];const auto& current=points[i];
         if(OnSegment(previous,current,p))return true;
         if(((previous.z>z)!=(current.z>z))&&(x<(static_cast<double>(current.x)-previous.x)*(z-previous.z)/(static_cast<double>(current.z)-previous.z)+previous.x))inside=!inside;
     }
     return inside;
+}
+bool SiteOutline::Contains(float x,float z) const { return ContainsPolygon(points.data(),pointCount,x,z); }
+bool Plan::Contains(float x,float z) const
+{
+    if(pointCount<3)return x>=MinX()&&x<=MaxX()&&z>=MinZ()&&z<=MaxZ();
+    return ContainsPolygon(points.data(),pointCount,x,z);
 }
 bool Plan::TargetAt(float x,float z,float* out) const
 {

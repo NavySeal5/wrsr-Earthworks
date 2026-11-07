@@ -10,6 +10,11 @@ constexpr int GridCells = 24;
 constexpr int GridSide = GridCells + 1;
 constexpr size_t MaxSitePoints = 32;
 constexpr float MinSitePointSpacing = 5.0f;
+struct SiteOutline {
+    std::array<Point, MaxSitePoints> points{};
+    uint8_t pointCount = 0;
+    bool Contains(float x,float z) const;
+};
 struct Plan {
     bool first = false, complete = false;
     // a/b/target are retained for legacy-state decoding and diagnostics.
@@ -34,6 +39,7 @@ struct Plan {
 };
 bool ValidFootprint(const Plan& plan);
 bool FootprintsOverlap(const Plan& a,const Plan& b);
+bool ContainsPolygon(const Point* points,unsigned pointCount,float x,float z);
 struct Volumes { double cut = 0, fill = 0; };
 Volumes Estimate(const Plan& plan);
 class History {
