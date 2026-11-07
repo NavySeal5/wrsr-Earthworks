@@ -24,7 +24,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 
 ## Edit a saved Site
 
-1. Reopen the saved Site. Drag one vertex to a nearby position and release. The boundary should update, while the Site should not change the terrain.
+1. Reopen the saved Site. Click an unselected vertex and release; it should only select the point and must not move it, even if the pointer shifted slightly during that click. Then begin a separate drag from the now singly selected vertex and move it nearby. The boundary should update, while the Site should not change the terrain.
 2. Select an edge and use **Add point on next edge**. Confirm the new point appears on that edge, can be selected, and can receive an independent height.
 3. Remove a selected point. Confirm the polygon remains valid and has at least three points.
 4. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.

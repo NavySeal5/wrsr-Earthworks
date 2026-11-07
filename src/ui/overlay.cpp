@@ -206,8 +206,13 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (message == WM_MOUSEMOVE) mouseCapture=over;
     const bool leftMessage = message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_LBUTTONDBLCLK;
     if(message==WM_LBUTTONDOWN&&handleIndex<MaxSitePoints&&GetForegroundWindow()==gameWindow) {
-        draggingSitePoint=handleIndex;draggingSitePointMoved=false;const auto& snapshot=ReadSnapshot();dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
-        SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},(GetKeyState(VK_SHIFT)&0x8000)!=0);
+        const auto& snapshot=ReadSnapshot();
+        const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
+        const uint32_t pointBit=1u<<handleIndex;
+        const bool wasSoleSelected=!shiftDown&&snapshot.selectedSitePoint==handleIndex&&snapshot.selectedSitePointsMask==pointBit;
+        draggingSitePoint=wasSoleSelected?handleIndex:static_cast<unsigned>(MaxSitePoints);
+        draggingSitePointMoved=false;dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
+        SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
     }
     if(message==WM_MOUSEMOVE&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
