@@ -72,7 +72,10 @@ Point dragSitePoint{};
 Point dragSitePointStart{};
 bool draggingSitePointMoved=false;
 ULONGLONG dragSitePointArmedAt=0;
+bool dragSitePointCommitPending=false;
+ULONGLONG dragSitePointReleasedAt=0;
 constexpr ULONGLONG SitePointSelectDebounceMs=250;
+constexpr ULONGLONG SitePointPreviewCommitGraceMs=1000;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
@@ -272,6 +275,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const uint32_t pointBit=1u<<handleIndex;
         const bool wasSoleSelected=!shiftDown&&snapshot.selectedSitePoint==handleIndex&&snapshot.selectedSitePointsMask==pointBit;
         draggingSitePoint=!shiftDown?handleIndex:static_cast<unsigned>(MaxSitePoints);
+        dragSitePointCommitPending=false;
         dragSitePointArmedAt=draggingSitePoint<MaxSitePoints?GetTickCount64()+(wasSoleSelected?0:SitePointSelectDebounceMs):0;
         draggingSitePointMoved=false;dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
@@ -286,11 +290,13 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     }
     if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
-        if(GetTickCount64()>=dragSitePointArmedAt&&draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite))
+        if(GetTickCount64()>=dragSitePointArmedAt&&draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite)) {
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
-        draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
-        draggingSitePointMoved=false;
-        dragSitePointArmedAt=0;
+            dragSitePointCommitPending=true;dragSitePointReleasedAt=GetTickCount64();
+        } else {
+            draggingSitePoint=static_cast<unsigned>(MaxSitePoints);draggingSitePointMoved=false;
+            dragSitePointArmedAt=0;dragSitePointCommitPending=false;
+        }
     }
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();
@@ -444,15 +450,50 @@ void DrawSiteEdgeInsertionPreview(const Snapshot& s)
     draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},IM_COL32(45,50,55,210),1.5f);
     draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},IM_COL32(45,50,55,210),1.5f);
 }
+bool BuildDraggedSitePlan(const Plan& source,unsigned pointIndex,Point cursor,Plan* output)
+{
+    if(!output||pointIndex>=source.pointCount)return false;
+    *output=source;
+    const Plan original=source;
+    output->points[pointIndex].x=cursor.x;output->points[pointIndex].z=cursor.z;
+    output->RefreshBounds();
+    if(output->complete) {
+        for(int z=0;z<GridSide;++z)for(int x=0;x<GridSide;++x) {
+            const float worldX=output->MinX()+output->Width()*static_cast<float>(x)/GridCells;
+            const float worldZ=output->MinZ()+output->Depth()*static_cast<float>(z)/GridCells;
+            float ground=0;
+            if(original.GroundAt(worldX,worldZ,&ground))output->ground[static_cast<size_t>(z*GridSide+x)]=ground;
+        }
+        output->RefreshBounds();
+    }
+    return true;
+}
 void DrawPreview(const Snapshot& s)
 {
     siteHandleRectCount=0;
-    if (!s.ready || !s.cameraValid) return;
+    if (!s.ready || !s.cameraValid) {SetInteractiveSitePreview(0,nullptr);return;}
+    Plan liveSitePlan{};const Plan* livePlan=nullptr;uint64_t liveSiteId=0;
+    if(s.siteEditorOpen&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
+        &&draggingSitePoint<s.editorPlan.pointCount) {
+        liveSiteId=s.creatingSite?0:s.editingSiteId;
+        if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
+    } else if(dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
+        const auto& point=s.editorPlan.points[draggingSitePoint];
+        const float dx=point.x-dragSitePoint.x,dz=point.z-dragSitePoint.z;
+        if(dx*dx+dz*dz<=0.25f||GetTickCount64()-dragSitePointReleasedAt>=SitePointPreviewCommitGraceMs) {
+            draggingSitePoint=static_cast<unsigned>(MaxSitePoints);draggingSitePointMoved=false;
+            dragSitePointArmedAt=0;dragSitePointCommitPending=false;
+        } else {
+            liveSiteId=s.creatingSite?0:s.editingSiteId;
+            if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
+        }
+    }
+    SetInteractiveSitePreview(livePlan?liveSiteId:0,livePlan);
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& project=s.projects[i];
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
-            if(project.id==s.editingSiteId)DrawQueuedWireframe(s,s.queuedPlan);
+            if(project.id==s.editingSiteId)DrawQueuedWireframe(s,livePlan&&liveSiteId==project.id?*livePlan:s.queuedPlan);
             else DrawQueuedOutline(s,project.outline,IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
             DrawQueuedOutline(s,project.outline,IM_COL32(100,190,155,190));
@@ -460,11 +501,12 @@ void DrawPreview(const Snapshot& s)
             DrawQueuedOutline(s,project.outline,IM_COL32(170,135,135,170));
     }
     if(s.siteEditorOpen) {
-        DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+        const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
+        DrawSitePointHandles(s,editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
         DrawSiteEdgeInsertionPreview(s);
-        DrawSelectedPointGroundLinks(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+        DrawSelectedPointGroundLinks(s,editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
     }
-    const auto& p=s.plan;
+    const auto& p=livePlan&&liveSiteId==0?*livePlan:s.plan;
     if (!p.first) return;
     if (!p.complete) {
         ImVec2 first;

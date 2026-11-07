@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 
 namespace ew {
 namespace {
@@ -45,6 +46,10 @@ using SetTextureFn = void (*)(void*, unsigned, void*);
 using UiFn = __int64 (*)(void*);
 UiFn originalUi = nullptr;
 const TsmHost* boundHost = nullptr;
+std::mutex interactivePreviewMutex;
+Plan interactivePreviewPlan{};
+uint64_t interactivePreviewSiteId=0;
+bool interactivePreviewActive=false;
 
 struct SegmentGroup { float values[MaxSegments * 4]{}; int count = 0; ImU32 color = 0; float width = 1.5f; };
 SegmentGroup groups[GroupCount];
@@ -59,6 +64,15 @@ void ResetGroups()
     groups[5].color = IM_COL32(62,221,166,55); groups[5].width = ShadeRowPixels;
     groups[6].color = IM_COL32(255,159,67,55); groups[6].width = ShadeRowPixels;
     for (auto& group : groups) group.count = 0;
+}
+
+bool CopyInteractiveSitePreview(Plan* plan,uint64_t* siteId)
+{
+    if(!plan||!siteId)return false;
+    std::lock_guard<std::mutex> lock(interactivePreviewMutex);
+    if(!interactivePreviewActive)return false;
+    *plan=interactivePreviewPlan;*siteId=interactivePreviewSiteId;
+    return true;
 }
 
 bool Project(const Snapshot& s, Point p, float width, float height, float* x, float* y)
@@ -131,7 +145,7 @@ void DrawOutline(const Snapshot& s, const Shape& plan, int group, float width, f
     for(unsigned i=0;i<plan.pointCount;++i) AddLine(s,plan.points[i],plan.points[(i+1)%plan.pointCount],group,width,height);
 }
 
-void Collect(const Snapshot& s, float width, float height)
+void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,uint64_t liveSiteId)
 {
     ResetGroups();
     if (!s.ready || !s.cameraValid) return;
@@ -140,7 +154,7 @@ void Collect(const Snapshot& s, float width, float height)
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId && s.queuedPlan.complete) {
-                const auto& p=s.queuedPlan;
+                const auto& p=livePlan&&liveSiteId==project.id?*livePlan:s.queuedPlan;
                 for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
                     const auto a=p.Vertex(x,z,true,s.terrainCellSize);
                     if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
@@ -151,7 +165,7 @@ void Collect(const Snapshot& s, float width, float height)
         } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.outline,0,width,height);
         else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.outline,1,width,height);
     }
-    const auto& p=s.plan;
+    const auto& p=livePlan&&liveSiteId==0?*livePlan:s.plan;
     if (!p.first) return;
     if (!p.complete) {
         for(unsigned i=0;i<p.pointCount;++i) {
@@ -228,12 +242,14 @@ void DrawUnderUi()
     if(!boundHost||!boundHost->exeBase) return;
     const auto& snapshot=ReadSnapshot();
     if(!snapshot.ready||!snapshot.cameraValid) return;
+    Plan preview{};const Plan* previewPtr=nullptr;uint64_t previewId=0;
+    if(CopyInteractiveSitePreview(&preview,&previewId))previewPtr=&preview;
     __try {
         auto* base=boundHost->exeBase;
         const float width=static_cast<float>(*reinterpret_cast<int*>(base+ScreenWidthRva));
         const float height=static_cast<float>(*reinterpret_cast<int*>(base+ScreenHeightRva));
         if(width<=0||height<=0) return;
-        Collect(snapshot,width,height);
+        Collect(snapshot,width,height,previewPtr,previewId);
         auto* panel=base+PanelRva;
         reinterpret_cast<BeginFn>(*reinterpret_cast<void**>(base+PanelBeginIat))(panel,nullptr,false);
         __try {
@@ -264,5 +280,12 @@ bool InstallGameUnderlay(const TsmHost* hookHost)
         return false;
     }
     return true;
+}
+
+void SetInteractiveSitePreview(uint64_t siteId,const Plan* plan)
+{
+    std::lock_guard<std::mutex> lock(interactivePreviewMutex);
+    if(!plan){interactivePreviewActive=false;interactivePreviewSiteId=0;return;}
+    interactivePreviewPlan=*plan;interactivePreviewSiteId=siteId;interactivePreviewActive=true;
 }
 }

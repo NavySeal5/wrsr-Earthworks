@@ -25,11 +25,12 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Edit a saved Site
 
 1. Reopen the saved Site. Click an unselected vertex and release within 250 ms; it should only select the point and must not move it. Then press and hold an unselected vertex for at least 250 ms before dragging; it should move during that same press. Already-selected points should retain immediate drag behavior. The boundary should update, while the Site should not change the terrain.
-2. Select an edge and use **Add point on next edge**. Confirm the new point appears on that edge, can be selected, and can receive an independent height.
-3. Hover over a different edge. A grey, plus-marked point preview should appear on the edge. Click the edge at the preview and confirm the new point is inserted at that position and selected. Try near both ends; positions less than 5 m from an endpoint should not offer insertion.
-4. Remove a selected point. Confirm the polygon remains valid and has at least three points.
-5. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.
-6. Confirm the editor reports a 32-point limit. Test exceeding it only if convenient; do not spend time placing 32 points if the counter and disabled control already make the limit clear.
+2. During a drag, keep the mouse button held and move the point across a few metres. Confirm the wireframe boundary/grid and the point handle follow the cursor continuously, before release. Release to commit the edit; the preview should remain at the accepted location. If validation rejects the final shape, the point should return to its prior saved location and terrain should remain unchanged.
+3. Select an edge and use **Add point on next edge**. Confirm the new point appears on that edge, can be selected, and can receive an independent height.
+4. Hover over a different edge. A grey, plus-marked point preview should appear on the edge. Click the edge at the preview and confirm the new point is inserted at that position and selected. Try near both ends; positions less than 5 m from an endpoint should not offer insertion.
+5. Remove a selected point. Confirm the polygon remains valid and has at least three points.
+6. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.
+7. Confirm the editor reports a 32-point limit. Test exceeding it only if convenient; do not spend time placing 32 points if the counter and disabled control already make the limit clear.
 
 ## Save/reload and work rules
 
