@@ -36,14 +36,16 @@ struct Plan {
     double FootprintArea() const;
     bool Contains(float x,float z) const;
     bool TargetAt(float x,float z,float* out) const;
+    bool GroundAt(float x,float z,float* out) const;
+    bool BlendedTargetAt(float x,float z,float blendWidth,float* out) const;
     void RefreshBounds();
-    Point Vertex(int x, int z, bool proposed) const;
+    Point Vertex(int x, int z, bool proposed,float blendWidth=0.0f) const;
 };
 bool ValidFootprint(const Plan& plan);
 bool FootprintsOverlap(const Plan& a,const Plan& b);
 bool ContainsPolygon(const Point* points,unsigned pointCount,float x,float z);
 struct Volumes { double cut = 0, fill = 0; };
-Volumes Estimate(const Plan& plan);
+Volumes Estimate(const Plan& plan,float blendWidth=0.0f);
 class History {
 public:
     void Commit(const Plan& plan);

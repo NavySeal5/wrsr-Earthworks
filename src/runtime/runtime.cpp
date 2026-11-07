@@ -260,7 +260,7 @@ const SavedProject* FacilityOwner(uint32_t facilityId)
 void Changed()
 {
     durableState.draft = current.plan;
-    current.volumes = Estimate(current.plan);
+    current.volumes = Estimate(current.plan,current.terrainCellSize);
     ++current.revision;
     RefreshProjectStatus();
     host->log("earthworks  draft-only revision=%llu world=%llu complete=%d target=%.3f area=%.2f cut=%.2f fill=%.2f",
@@ -295,6 +295,9 @@ void ResetWorld()
 }
 void RefreshProjectStatus()
 {
+    TerrainGrid terrainGrid{};
+    current.terrainCellSize=ReadTerrainGrid(TerrainObject(),&terrainGrid)?std::min(terrainGrid.stepX,terrainGrid.stepZ):0.0f;
+    current.volumes=Estimate(current.plan,current.terrainCellSize);
     const auto now=GetTickCount64();
     const bool refreshFacilityReadings=now-lastProjectFacilityReadings>=500;
     const auto previousFacilities=current.assignedFacilities;
@@ -424,7 +427,7 @@ bool MeasureTerrainWork(const Plan& plan,const TerrainGrid& grid,const GridRect&
     if(!std::isfinite(cellArea)||cellArea<=0)return false;
     for(int z=rect.z0;z<=rect.z1;++z)for(int x=rect.x0;x<=rect.x1;++x) {
         const auto point=grid.At(x,z);float target=0,currentHeight=0;
-        if(!plan.Contains(point.x,point.z)||!plan.TargetAt(point.x,point.z,&target))continue;
+        if(!plan.Contains(point.x,point.z)||!plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&target))continue;
         if(!ReadHeight(point.x,point.z,&currentHeight))return false;
         volume+=std::abs(static_cast<double>(target)-currentHeight)*cellArea;
         if(!std::isfinite(volume)||volume>1.0e12)return false;
@@ -1013,7 +1016,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         const int x=rect.x0+static_cast<int>(linear%static_cast<uint32_t>(rect.x1-rect.x0+1));
         const int z=rect.z0+static_cast<int>(linear/static_cast<uint32_t>(rect.x1-rect.x0+1));
         const auto point=grid.At(x,z);float currentHeight=0,targetHeight=0;
-        if(!project->plan.Contains(point.x,point.z)||!project->plan.TargetAt(point.x,point.z,&targetHeight))continue;
+        if(!project->plan.Contains(point.x,point.z)||!project->plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&targetHeight))continue;
         if(!ReadHeight(point.x,point.z,&currentHeight)) {failed=true;break;}
         const float difference=targetHeight-currentHeight;
         if(std::abs(difference)<=precision)continue;
@@ -1046,7 +1049,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         lastCompletionCheck=now;bool complete=true;
         for(int z=rect.z0;z<=rect.z1 && complete;++z)for(int x=rect.x0;x<=rect.x1;++x) {
             const auto point=grid.At(x,z);float value=0,targetHeight=0;
-            if(!project->plan.Contains(point.x,point.z)||!project->plan.TargetAt(point.x,point.z,&targetHeight))continue;
+            if(!project->plan.Contains(point.x,point.z)||!project->plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&targetHeight))continue;
             if(!ReadHeight(point.x,point.z,&value) || std::abs(targetHeight-value)>precision*1.1) {complete=false;break;}
         }
         if(complete) {project->progress=1;project->status=ProjectStatus::Completed;RefreshProjectStatus();Message("Earthworks Site completed.");}
@@ -1195,7 +1198,6 @@ void HookedLoad()
     if (loadResult==StateLoadResult::Loaded) {
         durableState=std::move(loaded);
         current.plan=durableState.draft;
-        current.volumes=Estimate(current.plan);
         RefreshProjectStatus();
         if(current.projectFacilityId)SelectEarthworksFacility(current.projectFacilityId);
         ++current.revision;

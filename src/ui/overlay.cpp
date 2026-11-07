@@ -304,9 +304,9 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
     if(p.pointCount<2) return;
     const ImU32 gray=IM_COL32(175,180,190,210);
     if(p.complete)for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
-        const auto a=p.Vertex(x,z,true);
-        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
-        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
+        const auto a=p.Vertex(x,z,true,s.terrainCellSize);
+        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
+        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
     }
     const unsigned edgeCount=p.complete?p.pointCount:p.pointCount-1;
     for(unsigned i=0;i<edgeCount;++i) {
@@ -373,7 +373,7 @@ void DrawPreview(const Snapshot& s)
         const Point ground[]={p.Vertex(x,z,false),p.Vertex(x+1,z,false),p.Vertex(x+1,z+1,false),p.Vertex(x,z+1,false)};
         if(!p.Contains((ground[0].x+ground[2].x)*0.5f,(ground[0].z+ground[2].z)*0.5f))continue;
         Point proposed[4];float d[4];bool valid=true;
-        for(unsigned i=0;i<4;++i) {valid=p.TargetAt(ground[i].x,ground[i].z,&proposed[i].y)&&valid;d[i]=proposed[i].y-ground[i].y;}
+        for(unsigned i=0;i<4;++i) {valid=p.BlendedTargetAt(ground[i].x,ground[i].z,s.terrainCellSize,&proposed[i].y)&&valid;d[i]=proposed[i].y-ground[i].y;}
         if(!valid)continue;
         for(auto& point:proposed)point.x=ground[&point-proposed].x,point.z=ground[&point-proposed].z;
         for (int t=0; t<2; ++t) {
@@ -383,10 +383,10 @@ void DrawPreview(const Snapshot& s)
         }
     }
     for (int z=0; z<GridSide; ++z) for (int x=0; x<GridSide; ++x) {
-        const auto a=p.Vertex(x,z,true); const auto ground=p.Vertex(x,z,false);
-        float targetHeight=0;const ImU32 color=p.TargetAt(a.x,a.z,&targetHeight)&&targetHeight>=ground.y ? fillColor:cutColor;
-        if (x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
-        if (z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
+        const auto a=p.Vertex(x,z,true,s.terrainCellSize); const auto ground=p.Vertex(x,z,false);
+        float targetHeight=0;const ImU32 color=p.BlendedTargetAt(a.x,a.z,s.terrainCellSize,&targetHeight)&&targetHeight>=ground.y ? fillColor:cutColor;
+        if (x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
+        if (z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
     DrawQueuedOutline(s,p,IM_COL32(245,250,255,255));
 }
@@ -890,7 +890,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::Separator();
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),plan.FootprintArea());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);
-    const auto volume=Estimate(plan);
+    const auto volume=Estimate(plan,s.terrainCellSize);
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",volume.cut);
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.0f m3",volume.fill);
     ImGui::Separator();

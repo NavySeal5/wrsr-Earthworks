@@ -160,12 +160,47 @@ bool Plan::TargetAt(float x,float z,float* out) const
     }
     return false;
 }
-Point Plan::Vertex(int x,int z,bool proposed) const
+bool Plan::GroundAt(float x,float z,float* out) const
+{
+    if(!out||!complete||Width()<=0||Depth()<=0)return false;
+    const float gx=std::clamp((x-MinX())/Width()*GridCells,0.0f,static_cast<float>(GridCells));
+    const float gz=std::clamp((z-MinZ())/Depth()*GridCells,0.0f,static_cast<float>(GridCells));
+    const int x0=static_cast<int>(gx),z0=static_cast<int>(gz);
+    const int x1=std::min(x0+1,GridCells),z1=std::min(z0+1,GridCells);
+    const float tx=gx-static_cast<float>(x0),tz=gz-static_cast<float>(z0);
+    const auto at=[&](int ix,int iz){return ground[static_cast<size_t>(iz*GridSide+ix)];};
+    const float top=at(x0,z0)+(at(x1,z0)-at(x0,z0))*tx;
+    const float bottom=at(x0,z1)+(at(x1,z1)-at(x0,z1))*tx;
+    *out=top+(bottom-top)*tz;
+    return std::isfinite(*out);
+}
+bool Plan::BlendedTargetAt(float x,float z,float blendWidth,float* out) const
+{
+    if(!TargetAt(x,z,out))return false;
+    if(pointCount<3||!std::isfinite(blendWidth)||blendWidth<=0||!Contains(x,z))return true;
+    double nearestSquared=std::numeric_limits<double>::infinity();
+    for(unsigned i=0;i<pointCount;++i) {
+        const auto& edgeStart=points[i];const auto& edgeEnd=points[(i+1)%pointCount];
+        const double dx=static_cast<double>(edgeEnd.x)-edgeStart.x,dz=static_cast<double>(edgeEnd.z)-edgeStart.z;
+        const double lengthSquared=dx*dx+dz*dz;
+        const double t=lengthSquared>0?std::clamp(((static_cast<double>(x)-edgeStart.x)*dx+(static_cast<double>(z)-edgeStart.z)*dz)/lengthSquared,0.0,1.0):0.0;
+        const double ex=static_cast<double>(x)-(edgeStart.x+t*dx),ez=static_cast<double>(z)-(edgeStart.z+t*dz);
+        nearestSquared=std::min(nearestSquared,ex*ex+ez*ez);
+    }
+    float original=0;
+    if(!GroundAt(x,z,&original))return false;
+    const float distance=static_cast<float>(std::sqrt(nearestSquared));
+    const float t=std::clamp(distance/blendWidth,0.0f,1.0f);
+    const float weight=t*t*(3.0f-2.0f*t);
+    *out=original+(static_cast<float>(*out)-original)*weight;
+    return std::isfinite(*out);
+}
+Point Plan::Vertex(int x,int z,bool proposed,float blendWidth) const
 {
     const float px=MinX()+Width()*static_cast<float>(x)/GridCells;
     const float pz=MinZ()+Depth()*static_cast<float>(z)/GridCells;
     float y=ground[static_cast<size_t>(z*GridSide+x)];
-    if(proposed)TargetAt(px,pz,&y);
+    if(proposed)BlendedTargetAt(px,pz,blendWidth,&y);
     return {px,y,pz};
 }
 bool ValidFootprint(const Plan& p)
@@ -196,7 +231,7 @@ bool FootprintsOverlap(const Plan& a,const Plan& b)
         if(SegmentsIntersect(a.points[i],a.points[(i+1)%a.pointCount],b.points[j],b.points[(j+1)%b.pointCount]))return true;
     return a.Contains(b.points[0].x,b.points[0].z)||b.Contains(a.points[0].x,a.points[0].z);
 }
-Volumes Estimate(const Plan& plan)
+Volumes Estimate(const Plan& plan,float blendWidth)
 {
     Volumes out;
     if (!plan.complete || !ValidFootprint(plan)) return out;
@@ -205,7 +240,7 @@ Volumes Estimate(const Plan& plan)
             plan.Vertex(x+1,z+1,false), plan.Vertex(x,z+1,false)};
         if(!plan.Contains((p[0].x+p[2].x)*0.5f,(p[0].z+p[2].z)*0.5f))continue;
         Point proposed[4];bool targetValid=true;
-        for(unsigned i=0;i<4;++i)targetValid=plan.TargetAt(p[i].x,p[i].z,&proposed[i].y)&&targetValid;
+        for(unsigned i=0;i<4;++i)targetValid=plan.BlendedTargetAt(p[i].x,p[i].z,blendWidth,&proposed[i].y)&&targetValid;
         if(!targetValid)continue;
         for (int t = 0; t < 2; ++t) {
             const Point q[] = {proposed[0], proposed[t+1], proposed[t+2]};

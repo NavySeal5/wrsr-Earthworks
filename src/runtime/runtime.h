@@ -40,6 +40,7 @@ struct Snapshot {
     ProjectStatus projectStatus = ProjectStatus::Draft;
     bool projectNeedsReview = false;
     float projectProgress = 0;
+    float terrainCellSize = 0;
     uint64_t generation = 0, revision = 0;
     uint64_t projectId = 0;
     size_t projectCount = 0, projectTotal = 0;

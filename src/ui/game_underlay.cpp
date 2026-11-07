@@ -142,9 +142,9 @@ void Collect(const Snapshot& s, float width, float height)
             if(project.id==s.editingSiteId && s.queuedPlan.complete) {
                 const auto& p=s.queuedPlan;
                 for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
-                    const auto a=p.Vertex(x,z,true);
-                    if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
-                    if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
+                    const auto a=p.Vertex(x,z,true,s.terrainCellSize);
+                    if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
+                    if(z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,2,width,height);}
                 }
                 DrawOutline(s,p,3,width,height);
             } else DrawOutline(s,project.outline,2,width,height);
@@ -166,16 +166,16 @@ void Collect(const Snapshot& s, float width, float height)
         return;
     }
     for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
-        const auto a=p.Vertex(x,z,true);
-        float target=0;const int group=p.TargetAt(a.x,a.z,&target)&&target>=p.Vertex(x,z,false).y?0:1;
-        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
-        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
+        const auto a=p.Vertex(x,z,true,s.terrainCellSize);
+        float target=0;const int group=p.BlendedTargetAt(a.x,a.z,s.terrainCellSize,&target)&&target>=p.Vertex(x,z,false).y?0:1;
+        if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
+        if(z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))AddLine(s,a,b,group,width,height);}
     }
     for(int z=0;z<GridCells;++z) for(int x=0;x<GridCells;++x) {
         const Point ground[]={p.Vertex(x,z,false),p.Vertex(x+1,z,false),p.Vertex(x+1,z+1,false),p.Vertex(x,z+1,false)};
         if(!p.Contains((ground[0].x+ground[2].x)*0.5f,(ground[0].z+ground[2].z)*0.5f))continue;
         Point proposed[4];float depths[4];bool valid=true;
-        for(unsigned i=0;i<4;++i) {valid=p.TargetAt(ground[i].x,ground[i].z,&proposed[i].y)&&valid;depths[i]=proposed[i].y-ground[i].y;proposed[i].x=ground[i].x;proposed[i].z=ground[i].z;}
+        for(unsigned i=0;i<4;++i) {valid=p.BlendedTargetAt(ground[i].x,ground[i].z,s.terrainCellSize,&proposed[i].y)&&valid;depths[i]=proposed[i].y-ground[i].y;proposed[i].x=ground[i].x;proposed[i].z=ground[i].z;}
         if(!valid)continue;
         for(int t=0;t<2;++t) {
             const Point triangle[]={proposed[0],proposed[t+1],proposed[t+2]};

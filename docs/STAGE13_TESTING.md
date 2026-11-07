@@ -35,4 +35,16 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 3. While a Site is Running, edit a vertex or height. It should pause automatically and require terrain review before resuming. Make one safe edit to a Paused Site and confirm review is still required. A Queued Site should remain editable without a pause.
 4. Confirm removing a point below three is refused. Confirm Finish shape and Save Site remain unavailable until the shape is valid and complete.
 
+## Boundary blend for ramps
+
+This build blends the target back to the Site's sampled starting terrain at its boundary, reaching the requested interpolated target one native terrain cell inward. Use a fresh, clear test area; do not reuse a Site where an earlier run may already have changed the terrain.
+
+1. Draw a Rectangle with one long edge higher than the opposite edge, creating a ramp. Keep the Site away from roads, buildings, and other objects.
+2. Before starting, inspect the colored preview. The cut/fill shading and wireframe should taper at all boundaries rather than show a full-height jump right at the outline.
+3. Start the Site and watch the two long edges as work advances. They should meet the unchanged surrounding ground without forming the paired dents/berms seen on the earlier ramp. The requested slope should remain visible across the interior.
+4. Let the Site complete, then inspect all four edges from a low camera angle. The terrain outside the Site should remain unchanged, and the blend band should be confined to approximately one terrain cell inside the boundary.
+5. Save and reload a partly completed Site. Confirm that its original sampled boundary heights are retained and the transition continues consistently.
+
+Report edge dents/berms, an unexpectedly wide blend, a visible flat lip, or any mismatch between the preview and the finished terrain. The blend is provisional pending this in-game check.
+
 Report any crash, unexpected terrain change during planning/editing, boundary/height mismatch, incorrect save/reload, invalid edit acceptance, or failure to pause/review. Stage 13 remains pending until the in-game result is reviewed.
