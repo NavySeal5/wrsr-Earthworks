@@ -675,11 +675,22 @@ pick_done:
         if(command.action==Action::AddSitePoint) {
             if(edited.pointCount>=MaxSitePoints||index>=edited.pointCount){Message("Cannot add another point here.");break;}
             const unsigned next=(index+1)%edited.pointCount;
-            Point midpoint{(edited.points[index].x+edited.points[next].x)*0.5f,(edited.points[index].y+edited.points[next].y)*0.5f,(edited.points[index].z+edited.points[next].z)*0.5f};
             const double dx=static_cast<double>(edited.points[index].x)-edited.points[next].x,dz=static_cast<double>(edited.points[index].z)-edited.points[next].z;
-            if(dx*dx+dz*dz<4.0*MinSitePointSpacing*MinSitePointSpacing){Message("This edge is too short to add a point while keeping the 5 m spacing.");break;}
+            if(command.value>0.5f) {
+                const double edgeLengthSquared=dx*dx+dz*dz;
+                const double ax=static_cast<double>(command.point.x)-edited.points[index].x,az=static_cast<double>(command.point.z)-edited.points[index].z;
+                const double bx=static_cast<double>(command.point.x)-edited.points[next].x,bz=static_cast<double>(command.point.z)-edited.points[next].z;
+                const double spacingSquared=static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing;
+                if(!std::isfinite(command.point.x)||!std::isfinite(command.point.y)||!std::isfinite(command.point.z)
+                    ||edgeLengthSquared<4.0*spacingSquared||ax*ax+az*az<spacingSquared||bx*bx+bz*bz<spacingSquared) {
+                    Message("Choose a point at least 5 m from both ends of the edge.");break;
+                }
+            } else if(dx*dx+dz*dz<4.0*MinSitePointSpacing*MinSitePointSpacing) {
+                Message("This edge is too short to add a point while keeping the 5 m spacing.");break;
+            }
+            const Point insertedPoint=command.value>0.5f?command.point:Point{(edited.points[index].x+edited.points[next].x)*0.5f,(edited.points[index].y+edited.points[next].y)*0.5f,(edited.points[index].z+edited.points[next].z)*0.5f};
             for(unsigned i=edited.pointCount;i>next;--i)edited.points[i]=edited.points[i-1];
-            edited.points[next]=midpoint;++edited.pointCount;selectedSitePointIndex=next;
+            edited.points[next]=insertedPoint;++edited.pointCount;selectedSitePointIndex=next;
         } else if(command.action==Action::RemoveSitePoint) {
             if(edited.pointCount<=3||index>=edited.pointCount){Message("A Site needs at least three points.");break;}
             for(unsigned i=index;i+1<edited.pointCount;++i)edited.points[i]=edited.points[i+1];

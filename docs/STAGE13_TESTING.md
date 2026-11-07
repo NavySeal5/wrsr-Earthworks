@@ -26,9 +26,10 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 
 1. Reopen the saved Site. Click an unselected vertex and release; it should only select the point and must not move it, even if the pointer shifted slightly during that click. Then begin a separate drag from the now singly selected vertex and move it nearby. The boundary should update, while the Site should not change the terrain.
 2. Select an edge and use **Add point on next edge**. Confirm the new point appears on that edge, can be selected, and can receive an independent height.
-3. Remove a selected point. Confirm the polygon remains valid and has at least three points.
-4. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.
-5. Confirm the editor reports a 32-point limit. Test exceeding it only if convenient; do not spend time placing 32 points if the counter and disabled control already make the limit clear.
+3. Hover over a different edge. A grey, plus-marked point preview should appear on the edge. Click the edge at the preview and confirm the new point is inserted at that position and selected. Try near both ends; positions less than 5 m from an endpoint should not offer insertion.
+4. Remove a selected point. Confirm the polygon remains valid and has at least three points.
+5. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.
+6. Confirm the editor reports a 32-point limit. Test exceeding it only if convenient; do not spend time placing 32 points if the counter and disabled control already make the limit clear.
 
 ## Save/reload and work rules
 

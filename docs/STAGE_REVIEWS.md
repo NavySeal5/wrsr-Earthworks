@@ -708,6 +708,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Clicking the first point's visible handle is routed to the same close action during an unfinished Free draw. In all other contexts it retains normal selection behavior.
 - Build and staging succeeded as `0.16.10-free-draw-close-on-first-handle`; the diagnostic RML preset was refreshed. No in-game check was run. User should verify both auto-close paths and normal vertex placement outside the 5 m radius.
 
+**Insert Site points directly on edges — 8 November 2026**
+- Hovering within 12 screen pixels of an editable Site edge shows a muted plus-point at the nearest valid location. Clicking the edge inserts a vertex at that location and selects it. The insertion stays at least 5 m from either endpoint; existing footprint validation and terrain-review rules are retained.
+- Build and staging pending; verify preview placement, insertion location, and rejection near endpoints in-game.
+
 **Stage 13 progress indicator fix — 7 November 2026**
 - Replaced the Site progress denominator based on coarse UI cut/fill estimates with a starting-work volume measured across the native terrain grid when the Site starts. Accumulated terrain changes now divide by that stable baseline, including sites where the coarse planner estimate is zero. The denominator is saved with the Site; schema 8 reads schema 7 plans and initializes old records lazily when they run again.
 - Progress text now shows tenths of a percent.

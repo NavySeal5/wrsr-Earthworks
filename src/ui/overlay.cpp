@@ -14,8 +14,10 @@
 #include "../core/productivity.h"
 #include "imgui_impl_dx11.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -69,9 +71,11 @@ unsigned draggingSitePoint=MaxSitePoints;
 Point dragSitePoint{};
 Point dragSitePointStart{};
 bool draggingSitePointMoved=false;
+struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
 const ImU32 cutColor = IM_COL32(255,159,67,255), fillColor = IM_COL32(62,221,166,255);
+bool Project(const Snapshot& s,Point p,ImVec2* out);
 void Send(Action action, float value = 0)
 {
     if(action==Action::Select || action==Action::NewSite || action==Action::Sample || action==Action::SampleSiteTarget || action==Action::InspectBuilding) pickCancelledByEscape=false;
@@ -97,6 +101,47 @@ void SendProjectText(Action action,uint64_t projectId,const char* text)
     Command command{};command.action=action;command.generation=frameGeneration;command.projectId=projectId;
     if(text)strncpy_s(command.text,text,_TRUNCATE);
     Enqueue(command);
+}
+bool FindSiteEdgeAtScreen(const Snapshot& s,float x,float y,SiteEdgePreview* result)
+{
+    if(!result||!s.siteEditorOpen||s.mode!=PickMode::None||!s.editorPlan.complete||s.editorPlan.pointCount<3
+        ||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled)))return false;
+    constexpr float hitRadius=12.0f;
+    const float maxDistanceSquared=hitRadius*hitRadius;
+    SiteEdgePreview best{};best.distanceSquared=maxDistanceSquared;
+    bool found=false;
+    const auto& plan=s.editorPlan;
+    for(unsigned i=0;i<plan.pointCount;++i) {
+        const auto& a=plan.points[i];
+        const auto& b=plan.points[(i+1)%plan.pointCount];
+        const double dx=static_cast<double>(b.x)-a.x,dz=static_cast<double>(b.z)-a.z;
+        const double lengthSquared=dx*dx+dz*dz;
+        if(lengthSquared<4.0*MinSitePointSpacing*MinSitePointSpacing)continue;
+        ImVec2 screenA{},screenB{};
+        if(!Project(s,a,&screenA)||!Project(s,b,&screenB))continue;
+        const double edgeLength=std::sqrt(lengthSquared);
+        const double minT=MinSitePointSpacing/edgeLength,maxT=1.0-minT;
+        auto pointAt=[&](double t) {return Point{static_cast<float>(a.x+t*(b.x-a.x)),static_cast<float>(a.y+t*(b.y-a.y)),static_cast<float>(a.z+t*(b.z-a.z))};};
+        auto distanceAt=[&](double t,ImVec2* projected) {
+            ImVec2 screen{};if(!Project(s,pointAt(t),&screen))return std::numeric_limits<float>::infinity();
+            if(projected)*projected=screen;
+            const float ex=x-screen.x,ey=y-screen.y;return ex*ex+ey*ey;
+        };
+        double low=minT,high=maxT;
+        for(int iteration=0;iteration<20;++iteration) {
+            const double left=low+(high-low)/3.0,right=high-(high-low)/3.0;
+            if(distanceAt(left,nullptr)<distanceAt(right,nullptr))high=right;else low=left;
+        }
+        const double t=(low+high)*0.5;
+        ImVec2 projected{};const float distanceSquared=distanceAt(t,&projected);
+        if(distanceSquared>=best.distanceSquared)continue;
+        best.edge=i;best.t=static_cast<float>(t);
+        best.screen=projected;
+        best.point=pointAt(t);
+        best.distanceSquared=distanceSquared;found=true;
+    }
+    if(found)*result=best;
+    return found;
 }
 void SendProjectAction(Action action,uint64_t projectId)
 {
@@ -183,7 +228,15 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if(panelOpen && ImGui::GetIO().WantTextInput) keyboardCapture=true;
     unsigned handleIndex=MaxSitePoints;
     for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)){handleIndex=siteHandlePointIndices[i];break;}
-    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints;
+    bool edgeInsertHandled=false;
+    if(message==WM_LBUTTONDOWN&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
+        const auto& snapshot=ReadSnapshot();SiteEdgePreview edge{};
+        if(FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&edge)) {
+            SendSitePointCommand(Action::AddSitePoint,snapshot.editingSiteId,edge.edge,edge.point,true);
+            edgeInsertHandled=true;
+        }
+    }
+    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled;
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -376,6 +429,17 @@ void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint
         siteHandlePointIndices[siteHandleRectCount++]=i;
     }
 }
+void DrawSiteEdgeInsertionPreview(const Snapshot& s)
+{
+    const auto& mouse=ImGui::GetIO().MousePos;
+    SiteEdgePreview edge{};
+    if(!FindSiteEdgeAtScreen(s,mouse.x,mouse.y,&edge))return;
+    auto* draw=ImGui::GetForegroundDrawList();
+    draw->AddCircleFilled(edge.screen,9.0f,IM_COL32(115,120,125,150),16);
+    draw->AddCircle(edge.screen,9.0f,IM_COL32(60,65,70,190),16,1.5f);
+    draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},IM_COL32(45,50,55,210),1.5f);
+    draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},IM_COL32(45,50,55,210),1.5f);
+}
 void DrawPreview(const Snapshot& s)
 {
     siteHandleRectCount=0;
@@ -393,6 +457,7 @@ void DrawPreview(const Snapshot& s)
     }
     if(s.siteEditorOpen) {
         DrawSitePointHandles(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+        DrawSiteEdgeInsertionPreview(s);
         DrawSelectedPointGroundLinks(s,s.editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
     }
     const auto& p=s.plan;
