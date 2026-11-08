@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game_underlay.h"
 #include "imgui.h"
+#include "../core/terrain_grid.h"
 #include <windows.h>
 #include <algorithm>
 #include <array>
@@ -156,6 +157,15 @@ void DrawOutline(const Snapshot& s, const Shape& plan, int group, float width, f
     for(unsigned i=0;i<plan.pointCount;++i) AddLine(s,plan.points[i],plan.points[(i+1)%plan.pointCount],group,width,height);
 }
 
+Point DrawingCursor(const Snapshot& s)
+{
+    if(!s.creatingSite||!s.lockToGrid||!s.terrainGridValid)return s.cursor;
+    TerrainGrid grid{};
+    grid.originX=s.terrainGridOriginX;grid.originZ=s.terrainGridOriginZ;
+    grid.stepX=s.terrainGridStepX;grid.stepZ=s.terrainGridStepZ;
+    return SnapToTerrainGrid(s.cursor,grid);
+}
+
 void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,uint64_t liveSiteId)
 {
     ResetGroups();
@@ -183,10 +193,11 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
             if(i+1<p.pointCount)AddLine(s,p.points[i],p.points[i+1],0,width,height);
         }
         if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
+            const Point cursor=DrawingCursor(s);
             if(s.shapeMode!=SiteShapeMode::FreeDraw&&p.pointCount==1) {
-                Point corners[4]{};BuildTwoCornerShape(p.points[0],s.cursor,s.shapeMode,corners);
+                Point corners[4]{};BuildTwoCornerShape(p.points[0],cursor,s.shapeMode,corners);
                 for(unsigned i=0;i<4;++i)AddLine(s,corners[i],corners[(i+1)%4],0,width,height);
-            } else AddLine(s,p.points[p.pointCount-1],s.cursor,0,width,height);
+            } else AddLine(s,p.points[p.pointCount-1],cursor,0,width,height);
         }
         return;
     }

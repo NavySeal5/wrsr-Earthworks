@@ -508,7 +508,7 @@ void Process(const Command& command)
     case Action::SetGridSnap:
         if(!creatingSite||current.plan.pointCount||current.plan.complete)break;
         siteDraftLockToGrid=command.value!=0.0f;current.lockToGrid=siteDraftLockToGrid;
-        Message(siteDraftLockToGrid?"Lock to Grid enabled. New Site points will snap to terrain vertices.":"Lock to Grid disabled.");
+        Message(siteDraftLockToGrid?"Lock to Grid enabled. Click anywhere; new Site points snap to the nearest terrain grid vertex.":"Lock to Grid disabled.");
         break;
     case Action::CloseSiteEditor:
         if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded because its editor was closed.");}

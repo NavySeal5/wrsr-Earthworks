@@ -1017,7 +1017,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(ImGui::Checkbox("Lock to Grid",&lockToGrid))Send(Action::SetGridSnap,lockToGrid?1.0f:0.0f);
         ImGui::EndDisabled();
         if(!gridSnapAvailable)ImGui::TextDisabled("Terrain grid data is unavailable.");
-        else ImGui::TextDisabled("Snaps shape points to terrain grid vertices.");
+        else ImGui::TextDisabled("Click anywhere; each point snaps to the nearest terrain grid vertex.");
         if(!plan.pointCount) {
             ImGui::Separator();
             if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Click within 5 m of the first point, or choose Finish shape, to close the polygon.");

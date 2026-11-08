@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.16.16-site-grid-snap",
+  "version": "0.16.17-site-grid-snap-preview",
   "description": "Plan Sites in named Projects, edit them on the map, and assign Earthworks facilities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

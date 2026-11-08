@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.16-site-grid-snap";
+    info->version = "0.16.17-site-grid-snap-preview";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");

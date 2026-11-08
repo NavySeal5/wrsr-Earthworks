@@ -25,8 +25,8 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 ## Optional terrain-grid snapping
 
 1. Start a new Site and confirm **Lock to Grid** is unchecked by default. With it unchecked, place Free draw points and confirm they follow the cursor without snapping.
-2. Start another new Site, check **Lock to Grid** before placing any points, and move the cursor around. In Free draw, the preview segment should end at a native terrain grid vertex; each click should place the point at that same snapped location.
-3. Repeat in Square and Rectangle modes. The live wireframe should snap as the cursor moves, and the committed corners should land on terrain grid vertices. Check both axes on terrain where X and Z grid spacing differ, if available.
+2. Start another new Site, check **Lock to Grid** before placing any points, and click anywhere on the map, including between visible grid vertices. In Free draw, the preview segment should end at the nearest native terrain grid vertex; the click should place the point there without requiring a precise click on the vertex.
+3. Repeat in Square and Rectangle modes. As the cursor moves, the live wireframe should follow the nearest grid vertex, and each click anywhere on the map should commit the corner at that snapped location. Check both axes on terrain where X and Z grid spacing differ, if available.
 4. After the first point is placed, confirm the checkbox is disabled so the footprint cannot mix snapped and unsnapped points. Create another Site to switch the option back off or on.
 5. Confirm the checkbox only changes horizontal point positions. Point target heights should still be sampled from the terrain at the snapped location, and planning must not modify terrain.
 
