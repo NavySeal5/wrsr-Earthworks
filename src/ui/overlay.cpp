@@ -71,6 +71,7 @@ unsigned draggingSitePoint=MaxSitePoints;
 Point dragSitePoint{};
 Point dragSitePointStart{};
 bool draggingSitePointMoved=false;
+bool draggingSitePointButtonHeld=false;
 ULONGLONG dragSitePointArmedAt=0;
 bool dragSitePointCommitPending=false;
 ULONGLONG dragSitePointReleasedAt=0;
@@ -269,26 +270,29 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             &&snapshot.shapeMode==SiteShapeMode::FreeDraw&&snapshot.plan.pointCount>=3) {
             draggingSitePoint=static_cast<unsigned>(MaxSitePoints);
             draggingSitePointMoved=false;
+            draggingSitePointButtonHeld=false;
             Send(Action::Pick);
         } else {
         const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
         const uint32_t pointBit=1u<<handleIndex;
         const bool wasSoleSelected=!shiftDown&&snapshot.selectedSitePoint==handleIndex&&snapshot.selectedSitePointsMask==pointBit;
         draggingSitePoint=!shiftDown?handleIndex:static_cast<unsigned>(MaxSitePoints);
+        draggingSitePointButtonHeld=draggingSitePoint<MaxSitePoints;
         dragSitePointCommitPending=false;
         dragSitePointArmedAt=draggingSitePoint<MaxSitePoints?GetTickCount64()+(wasSoleSelected?0:SitePointSelectDebounceMs):0;
         draggingSitePointMoved=false;dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
         }
     }
-    if(message==WM_MOUSEMOVE&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
+    if(message==WM_MOUSEMOVE&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
             dragSitePoint=snapshot.cursor;
             const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
             if(GetTickCount64()>=dragSitePointArmedAt&&dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
         }
     }
-    if(message==WM_LBUTTONUP&&draggingSitePoint<MaxSitePoints) {
+    if(message==WM_LBUTTONUP&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints) {
+        draggingSitePointButtonHeld=false;
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
         if(GetTickCount64()>=dragSitePointArmedAt&&draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite)) {
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
@@ -473,7 +477,7 @@ void DrawPreview(const Snapshot& s)
     siteHandleRectCount=0;
     if (!s.ready || !s.cameraValid) {SetInteractiveSitePreview(0,nullptr);return;}
     Plan liveSitePlan{};const Plan* livePlan=nullptr;uint64_t liveSiteId=0;
-    if(s.siteEditorOpen&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
+    if(s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
         &&draggingSitePoint<s.editorPlan.pointCount) {
         liveSiteId=s.creatingSite?0:s.editingSiteId;
         if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
