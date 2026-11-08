@@ -544,6 +544,10 @@ void Process(const Command& command)
         FinishCurrentSiteShape();break;
     }
     case Action::Pick: {
+        if(current.mode==PickMode::DrawSite&&host&&host->log)
+            host->log("earthworks draw-click processed points=%u creating=%d cursorValid=%d cursorX=%.2f cursorZ=%.2f snap=%d grid=%d",
+                current.plan.pointCount,static_cast<int>(creatingSite),static_cast<int>(current.cursorValid),current.cursor.x,current.cursor.z,
+                static_cast<int>(siteDraftLockToGrid),static_cast<int>(current.terrainGridValid));
         if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
             FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;RefreshProjectStatus();
