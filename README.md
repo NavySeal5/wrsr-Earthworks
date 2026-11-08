@@ -26,7 +26,7 @@ Run `scripts/Stage-Diagnostics.ps1` after building to copy the diagnostic DLL, a
 
 Close the project-local RML window before restaging a new build. The launch script reuses an already-open development launcher instead of replacing its live configuration or opening another copy.
 
-With Steam open and both the game and project-local RML closed, run `launch-prototype.cmd` (`launch-diagnostics.cmd` is an equivalent legacy wrapper). It refreshes the preset, stages the local Workshop building, and opens RML visibly. Confirm `Earthworks Development` and **Earthworks Planning**, with the version matching `assets/rml/EarthworksPlanning.rml.json` (currently **0.16.28-road-safe-grade-16**), then launch the game from RML. The expected classification is Tesmio API 4, hosted by RML's built-in compatibility layer.
+With Steam open and both the game and project-local RML closed, run `launch-prototype.cmd` (`launch-diagnostics.cmd` is an equivalent legacy wrapper). It refreshes the preset, stages the local Workshop building, and opens RML visibly. Confirm `Earthworks Development` and **Earthworks Planning**, with the version matching `assets/rml/EarthworksPlanning.rml.json`, then launch the game from RML. The expected classification is Tesmio API 4, hosted by RML's built-in compatibility layer.
 
 After a game launch, `tools/runtime/rml/rml/logs/rml-runtime.log` and `tools/runtime/rml/rml/state/last_runtime_report.json` identify the plugin version, lifecycle results and native hooks. Inspector snapshots requested with **Log inspector snapshot** use this log prefix:
 

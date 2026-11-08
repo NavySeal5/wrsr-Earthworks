@@ -206,6 +206,13 @@ bool Hit(const RECT& rect, LPARAM point)
     const POINT p = {GET_X_LPARAM(point),GET_Y_LPARAM(point)};
     return PtInRect(&rect,p) != FALSE;
 }
+bool CursorOverEarthworksUi(LPARAM point)
+{
+    return Hit(buttonRect,point)
+        ||(panelOpen&&panelRectValid&&Hit(panelRect,point))
+        ||(panelOpen&&popupRectValid&&Hit(popupRect,point))
+        ||(editorRectValid&&Hit(editorRect,point));
+}
 bool CursorOnEditingSite(const Snapshot& s);
 Point SiteDrawingCursor(const Snapshot& s)
 {
@@ -366,7 +373,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
-        const bool overPanel=panelOpen&&((panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam)));
+        const bool overPanel=CursorOverEarthworksUi(lParam);
         if(overPanel) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;
@@ -379,8 +386,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if(message==WM_SETCURSOR) {
         const LRESULT result=CallWindowProcW(originalWndProc,window,message,wParam,lParam);
         POINT point{};
-        if(GetCursorPos(&point)&&ScreenToClient(window,&point)&&panelOpen
-            &&((panelRectValid&&Hit(panelRect,MAKELPARAM(point.x,point.y)))||(popupRectValid&&Hit(popupRect,MAKELPARAM(point.x,point.y)))||(editorRectValid&&Hit(editorRect,MAKELPARAM(point.x,point.y))))) {
+        if(GetCursorPos(&point)&&ScreenToClient(window,&point)
+            &&CursorOverEarthworksUi(MAKELPARAM(point.x,point.y))) {
             if(HCURSOR cursor=GetCursor())cursorToRestore=cursor;
             SetCursor(nullptr);systemCursorHiddenForPanel=true;return TRUE;
         }
@@ -600,7 +607,7 @@ void DrawInterface(const Snapshot& s)
     const auto display=ImGui::GetIO().DisplaySize;
     buttonRect={};
     if(s.ready) {
-        ImGui::SetNextWindowPos({display.x-170,86},ImGuiCond_Always);
+        ImGui::SetNextWindowPos({70.0f,std::max(8.0f,display.y-132.0f)},ImGuiCond_Always);
         ImGui::SetNextWindowSize({150,42});
         ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
@@ -1401,8 +1408,7 @@ void DrawGameCursorArt()
     const auto pos=ImGui::GetIO().MousePos;
     const bool finite=std::isfinite(pos.x)&&std::isfinite(pos.y);
     const auto point=finite?MAKELPARAM(static_cast<int>(pos.x),static_cast<int>(pos.y)):LPARAM{};
-    const bool overPanel=finite
-        &&((panelOpen&&panelRectValid&&Hit(panelRect,point))||(panelOpen&&popupRectValid&&Hit(popupRect,point))||(editorRectValid&&Hit(editorRect,point)));
+    const bool overPanel=finite&&CursorOverEarthworksUi(point);
     if(!overPanel||GetForegroundWindow()!=gameWindow) {
         if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);
         systemCursorHiddenForPanel=false;cursorToRestore=nullptr;return;
