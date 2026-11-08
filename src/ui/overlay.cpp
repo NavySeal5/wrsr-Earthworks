@@ -926,7 +926,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     draftNameWasActive=s.creatingSite;
     if(!s.creatingSite&&renameEditingSite!=s.editingSiteId) {renameEditingSite=s.editingSiteId;renameEditing=false;}
     const Plan& plan=s.editorPlan;
-    const float width=420.0f,fullHeight=(s.creatingSite?650.0f:680.0f)+(s.siteDraftError[0]?48.0f:0.0f);
+    const float width=420.0f,fullHeight=(s.creatingSite?686.0f:716.0f)+(s.siteDraftError[0]?48.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -1099,6 +1099,28 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const auto volume=(!s.creatingSite&&s.editorVolumesValid)?s.editorVolumes:Estimate(plan,s.terrainCellSize);
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.1f m3",volume.cut);
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.1f m3",volume.fill);
+    const bool assignedCapacityKnown=s.assignedMachineReadingsValid;
+    const double ratePerMachinePerDay=MachineRate(ReferenceGroundworksRating)
+        *VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay;
+    const bool useCurrentAllocation=!s.creatingSite&&s.projectStatus==ProjectStatus::Running&&s.editorAllocatedMachines>0;
+    const unsigned siteRateMachines=useCurrentAllocation
+        ?s.editorAllocatedMachines:s.assignedEligibleMachines;
+    const double siteRateM3PerDay=siteRateMachines*ratePerMachinePerDay;
+    if(!assignedCapacityKnown)ImGui::Text("Assigned capacity: reading unavailable");
+    else if(!s.assignedEligibleMachines)ImGui::Text("Assigned capacity: 0 m3/day (no eligible machines)");
+    else ImGui::Text("Assigned capacity: ~%.0f m3/day (%u machines)",
+        s.assignedEligibleMachines*ratePerMachinePerDay,s.assignedEligibleMachines);
+    if(!s.creatingSite&&s.projectStatus==ProjectStatus::Completed) {
+        ImGui::Text("Estimated time: complete");
+    } else if(!assignedCapacityKnown||siteRateM3PerDay<=0.0) {
+        ImGui::Text("Estimated time: unavailable");
+    } else {
+        const double remainingM3=std::max(0.0,static_cast<double>(volume.cut)+volume.fill);
+        const double days=remainingM3/siteRateM3PerDay;
+        if(useCurrentAllocation)ImGui::Text("Estimated time: ~%.1f in-game days (~%.0f m3/day current rate)",days,siteRateM3PerDay);
+        else ImGui::Text("Estimated time: ~%.1f in-game days at full assigned capacity",days);
+    }
+    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each eligible machine contributes one rate unit (10 m3 per simulation hour). Running Sites use their current allocated machines; other states assume all assigned capacity is available. Shared work or changes in machine availability can change the estimate.");
     ImGui::Separator();
     const bool editable=(s.creatingSite)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     const unsigned selectedPoint=std::min<unsigned>(s.selectedSitePoint,plan.pointCount-1);

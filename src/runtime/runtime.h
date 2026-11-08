@@ -60,6 +60,8 @@ struct Snapshot {
     Plan editorPlan{};
     Volumes editorVolumes{};
     bool editorVolumesValid=false;
+    unsigned assignedEligibleMachines=0, editorAllocatedMachines=0;
+    bool assignedMachineReadingsValid=false;
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
     bool facilityListTruncated=false;

@@ -408,6 +408,8 @@ void RefreshProjectStatus()
     current.assignedFacilityIds.fill(0);
     current.assignedFacilities.fill(ProjectFacilityBrief{});
     current.assignedFacilityCount=selectedContainer?static_cast<unsigned>(std::min(selectedContainer->facilityIds.size(),MaxProjectFacilities)):0;
+    current.assignedEligibleMachines=0;
+    current.assignedMachineReadingsValid=selectedContainer!=nullptr;
     for(unsigned i=0;i<current.assignedFacilityCount;++i) {
         const auto id=selectedContainer->facilityIds[i];
         current.assignedFacilityIds[i]=id;
@@ -427,6 +429,9 @@ void RefreshProjectStatus()
                 target.machineCountValid=true;
             }
         }
+        if(target.machineCountValid)current.assignedEligibleMachines=std::min<unsigned>(
+            MaxSavedEarthworks,current.assignedEligibleMachines+target.eligibleMachines);
+        else current.assignedMachineReadingsValid=false;
     }
     if(refreshFacilityReadings||current.assignedFacilityCount!=previousFacilityCount)lastProjectFacilityReadings=now;
     if(!current.ready||now-lastWorldFacilityScan>=1000) {
@@ -467,6 +472,7 @@ void RefreshProjectStatus()
     current.projectStatus=ProjectStatus::Draft;
     current.projectNeedsReview=false;
     current.projectProgress=0;
+    current.editorAllocatedMachines=0;
     current.selectedSiteName[0]=0;
     current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;current.shapeMode=shapeMode;
     current.selectedSitePoint=selectedSitePointIndex;
@@ -485,6 +491,7 @@ void RefreshProjectStatus()
         selectedProjectId=selected->id;current.projectQueued=true;current.projectId=selected->id;current.queuedPlan=selected->plan;
         strncpy_s(current.selectedSiteName,selected->name.c_str(),_TRUNCATE);
         current.projectStatus=selected->status;current.projectNeedsReview=selected->needsReview;current.projectProgress=selected->progress;
+        current.editorAllocatedMachines=selected->status==ProjectStatus::Running?selected->allocatedMachines:0;
         current.projectFacilityId=AssignedFacility(*selected);
         if(current.projectFacilityId) {
             BuildingReading facility{};
@@ -1196,7 +1203,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
     // Provisional Stage 8 conversion: one relative manual-rate unit completes
     // 10 m3 per simulation hour. Balancing remains open under D10/D14.
     project->workRemainderM3=static_cast<float>(std::min(1.0e9,
-        static_cast<double>(project->workRemainderM3)+relativeRate*10.0*std::min(elapsed,1.0)));
+        static_cast<double>(project->workRemainderM3)+relativeRate*VolumePerRateUnitPerSimulationHour*std::min(elapsed,1.0)));
     const int count=rect.Count();
     const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
     const double precision=static_cast<double>(grid.heightScale)/60000.0;
