@@ -68,6 +68,29 @@ if (Test-Path -LiteralPath $largeModel) {
 } else {
     Write-Host 'Large Earthworks item is not staged because its ModelViewer NMF conversion is not ready yet.'
 }
+
+# Earthworks facilities are intended to be buildable without research unlocks.
+# Check the generated Workshop metadata and building definitions after every
+# restage, so a future donor/config change cannot silently add a gate.
+foreach ($facilityId in @('9100000012', '9100000013', '9100000014')) {
+    $facilityRoot = Join-Path (Split-Path $root -Parent) (Join-Path 'media_soviet\workshop_wip' $facilityId)
+    if (-not (Test-Path -LiteralPath $facilityRoot)) { continue }
+    $facilityConfigs = @(
+        (Join-Path $facilityRoot 'workshopconfig.ini'),
+        (Join-Path $facilityRoot (Join-Path (Get-ChildItem -LiteralPath $facilityRoot -Directory | Select-Object -First 1 -ExpandProperty Name) 'building.ini'))
+    ) | Where-Object { Test-Path -LiteralPath $_ }
+    foreach ($facilityConfig in $facilityConfigs) {
+        $gates = Select-String -LiteralPath $facilityConfig -Pattern '^\s*\$(?:RESEARCH|UNLOCK|TECH_REQUIRED|REQUIRES_RESEARCH|RESEARCH_REQUIRED)\b' -CaseSensitive:$false
+        if ($gates) {
+            throw "Research unlock directives are not allowed in Earthworks facility configs: $facilityConfig"
+        }
+    }
+}
+$stagedFacilityCount = @('9100000012', '9100000013', '9100000014' | Where-Object {
+    Test-Path -LiteralPath (Join-Path (Split-Path $root -Parent) (Join-Path 'media_soviet\workshop_wip' $_))
+}).Count
+Write-Host "Verified no research unlock directives in $stagedFacilityCount staged Earthworks facilities."
+
 $config = Get-Content -LiteralPath (Join-Path $root 'assets\rml\diagnostic-config.json') -Raw | ConvertFrom-Json
 $config.gamePath = Join-Path $game 'SOVIET64.exe'
 $config.plugins.PSObject.Properties.Remove('earthworks.planning')
