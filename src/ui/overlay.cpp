@@ -1017,14 +1017,15 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     auto drawSafetyChecks=[&]() {
         int safeAngles=static_cast<int>(plan.safeAngles);
         const char* modes[]={"None","Roads","Vanilla"};
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
+        const float controlHeight=ImGui::GetFrameHeight();
         ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Safe angles");ImGui::SameLine();
         const float labelWidth=ImGui::CalcTextSize("Safe angles").x+ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x-labelWidth-34.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
         if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
         ImGui::PopStyleVar();
         ImGui::SameLine();
-        GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{26.0f,26.0f});
+        GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{controlHeight,controlHeight});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
@@ -1142,25 +1143,26 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::PopStyleVar();
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
+    const float heightControlHeight=ImGui::GetFrameHeight();
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const float heightStep=input.KeyCtrl?10.0f:1.0f;
     auto applyHeight=[&](float height){SendSitePointValue(s.editingSiteId,selectedPoint,height);};
     auto adjustHeight=[&](float delta){SendSitePointValue(s.editingSiteId,selectedPoint,delta,true,input.KeyShift);};
     ImGui::BeginDisabled(!editable||!selectedCount);
-    if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;adjustHeight(-heightStep);}
+    if(ImGui::Button("-##DecreasePointHeight",{24.0f,heightControlHeight})){editHeight-=heightStep;adjustHeight(-heightStep);}
     ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
     const bool changed=ImGui::InputFloat("##SitePointHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
-    ImGui::PopStyleVar();
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
-    ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;adjustHeight(heightStep);}
+    ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,heightControlHeight})){editHeight+=heightStep;adjustHeight(heightStep);}
     ImGui::SameLine();
-    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nHold Shift while clicking −/+ to adjust every point in the shape.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling affect selected points; −/+ preserve their height differences.",{26.0f,26.0f});
+    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nHold Shift while clicking −/+ to adjust every point in the shape.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling affect selected points; −/+ preserve their height differences.",{heightControlHeight,heightControlHeight});
     ImGui::SameLine();
-    if(ImGui::Button("Sample selected",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
+    if(ImGui::Button("Sample selected",{104.0f,heightControlHeight}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
+    ImGui::PopStyleVar();
     const bool finishedShape=plan.complete;
     if(s.creatingSite) {
         if(s.shapeMode==SiteShapeMode::FreeDraw) {
