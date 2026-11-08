@@ -250,6 +250,13 @@ void UpdateSiteDraftValidation()
     for(unsigned i=0;i<current.plan.pointCount;++i)if(!std::isfinite(current.plan.points[i].y)||std::abs(current.plan.points[i].y)>=100000.0f) {
         fail("Enter a finite target height within the supported range.");return;
     }
+    const double maxGrade=MaximumSurfaceGrade(current.plan);
+    if(current.plan.safeRoadAngle&&maxGrade>MaxRoadGrade+1e-6) {
+        fail("Safe Road angle is enabled: this Site exceeds the 12% road grade limit.");return;
+    }
+    if(current.plan.safeAngle&&maxGrade>VanillaTerrainReferenceGrade+1e-6) {
+        fail("Safe Angle is enabled: this Site exceeds the vanilla terrain reference grade (~61%).");return;
+    }
     const auto areaError=CheckProjectArea(current.plan,nullptr,nullptr);
     if(areaError!=ProjectAreaError::None) {
         fail(ProjectAreaMessage(areaError));return;
@@ -510,6 +517,16 @@ void Process(const Command& command)
         siteDraftLockToGrid=command.value!=0.0f;current.lockToGrid=siteDraftLockToGrid;
         Message(siteDraftLockToGrid?"Lock to Grid enabled. Click anywhere; new Site points snap to the nearest terrain grid vertex.":"Lock to Grid disabled.");
         break;
+    case Action::SetSiteSafetyChecks: {
+        Plan* plan=creatingSite?&current.plan:nullptr;
+        SavedEarthwork* site=creatingSite?nullptr:FindProject(editingSiteId);
+        if(!plan&&site&&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled)plan=&site->plan;
+        if(!plan)break;
+        plan->safeRoadAngle=(static_cast<unsigned>(command.value)&1u)!=0;
+        plan->safeAngle=(static_cast<unsigned>(command.value)&2u)!=0;
+        if(creatingSite)Changed();else ++current.revision;
+        break;
+    }
     case Action::CloseSiteEditor:
         if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded because its editor was closed.");}
         else {siteEditorOpen=false;RefreshProjectStatus();}

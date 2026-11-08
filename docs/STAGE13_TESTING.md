@@ -71,3 +71,7 @@ Report edge dents/berms, an unexpectedly wide blend, a visible flat lip, or any 
 5. Check the RML runtime log after startup for `native UI click occlusion installed`. If it reports `unavailable`, repeat the checks around the standard HUD margins; report the log line and any UI regions that still accept a Site click.
 
 Report any crash, unexpected terrain change during planning/editing, boundary/height mismatch, incorrect save/reload, invalid edit acceptance, or failure to pause/review. Stage 13 remains pending until the in-game result is reviewed.
+
+## Safe grade options — build 0.16.25-site-safe-angle
+
+Both options are unchecked by default in the Site editor. Enable **Safe Road angle** to prevent saving a draft whose planned surface exceeds a 12% grade. Enable **Safe Angle** to prevent saving when a planar facet exceeds the observed vanilla terrain-tool reference of about 20 m vertical change over 33 m horizontal distance (~60.6% grade). These checks inspect the slope of each triangulated planar facet, including diagonal/cross slopes, not only the polygon edges. The thresholds are estimates based on the player's observed road and terrain-tool examples; they are not claimed as engine constants. The (i) buttons explain each threshold in game.

@@ -10,6 +10,8 @@ constexpr int GridCells = 24;
 constexpr int GridSide = GridCells + 1;
 constexpr size_t MaxSitePoints = 32;
 constexpr float MinSitePointSpacing = 5.0f;
+constexpr double MaxRoadGrade = 0.12;
+constexpr double VanillaTerrainReferenceGrade = 20.0 / 33.0;
 enum class SiteShapeMode : uint8_t { FreeDraw, Square, Rectangle };
 void BuildTwoCornerShape(Point anchor,Point cursor,SiteShapeMode mode,Point (&corners)[4]);
 struct SiteOutline {
@@ -24,6 +26,8 @@ struct Plan {
     float target = 0;
     std::array<Point, MaxSitePoints> points{};
     uint8_t pointCount = 0;
+    bool safeRoadAngle = false;
+    bool safeAngle = false;
     std::array<std::array<unsigned,3>, MaxSitePoints-2> triangles{};
     uint8_t triangleCount = 0;
     std::array<float, GridSide * GridSide> ground{};
@@ -42,6 +46,7 @@ struct Plan {
     Point Vertex(int x, int z, bool proposed,float blendWidth=0.0f) const;
 };
 bool ValidFootprint(const Plan& plan);
+double MaximumSurfaceGrade(const Plan& plan);
 bool FootprintsOverlap(const Plan& a,const Plan& b);
 bool ContainsPolygon(const Point* points,unsigned pointCount,float x,float z);
 struct Volumes { double cut = 0, fill = 0; };

@@ -949,7 +949,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     draftNameWasActive=s.creatingSite;
     if(!s.creatingSite&&renameEditingSite!=s.editingSiteId) {renameEditingSite=s.editingSiteId;renameEditing=false;}
     const Plan& plan=s.editorPlan;
-    const float width=420.0f,fullHeight=(s.creatingSite?590.0f:620.0f)+(s.siteDraftError[0]?48.0f:0.0f);
+    const float width=420.0f,fullHeight=(s.creatingSite?650.0f:680.0f)+(s.siteDraftError[0]?48.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -1015,6 +1015,15 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         return;
     }
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
+    auto drawSafetyChecks=[&]() {
+        bool safeRoad=plan.safeRoadAngle,safe=plan.safeAngle;
+        bool changed=false;
+        if(ImGui::Checkbox("Safe Road angle",&safeRoad))changed=true;
+        ImGui::SameLine();GameIconButton("##SafeRoadAngleHelp",targetHeightInfoIcon,"i","Prevents saving when any part of the planned Site surface is steeper than the 12% maximum road grade.",{22.0f,22.0f});
+        if(ImGui::Checkbox("Safe Angle",&safe))changed=true;
+        ImGui::SameLine();GameIconButton("##SafeAngleHelp",targetHeightInfoIcon,"i","Prevents saving when any planar part of the Site exceeds the vanilla terrain-tool slope reference: about 20 m of height change over 33 m horizontally (about 61% grade). This is based on the observed game limit.",{22.0f,22.0f});
+        if(changed)Send(Action::SetSiteSafetyChecks,(safeRoad?1.0f:0.0f)+(safe?2.0f:0.0f));
+    };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*(2.0f/3.0f));
@@ -1044,6 +1053,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::EndDisabled();
         if(!gridSnapAvailable)ImGui::TextDisabled("Terrain grid data is unavailable.");
         else ImGui::TextDisabled("Click anywhere; each point snaps to the nearest terrain grid vertex.");
+        drawSafetyChecks();
         if(!plan.pointCount) {
             ImGui::Separator();
             if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Click within 5 m of the first point, or choose Finish shape, to close the polygon.");
@@ -1094,6 +1104,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         ImGui::SetWindowFontScale(1.0f);
     }
+    if(!s.creatingSite)drawSafetyChecks();
     ImGui::Separator();
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),plan.FootprintArea());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);

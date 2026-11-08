@@ -10,7 +10,7 @@ namespace ew {
 namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
-constexpr size_t PlanSize = 2 + 7 * sizeof(float) + 1 + MaxSitePoints * 3 * sizeof(float) + GridSide * GridSide * sizeof(float);
+constexpr size_t PlanSize = 2 + 7 * sizeof(float) + 3 + MaxSitePoints * 3 * sizeof(float) + GridSide * GridSide * sizeof(float);
 constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
     + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
 
@@ -76,6 +76,7 @@ void PutPlan(std::vector<uint8_t>& out, const Plan& p)
     PutFloat(out,p.a.x); PutFloat(out,p.a.y); PutFloat(out,p.a.z);
     PutFloat(out,p.b.x); PutFloat(out,p.b.y); PutFloat(out,p.b.z); PutFloat(out,p.target);
     out.push_back(p.pointCount);
+    out.push_back(p.safeRoadAngle?1:0);out.push_back(p.safeAngle?1:0);
     for(unsigned i=0;i<p.pointCount;++i){PutFloat(out,p.points[i].x);PutFloat(out,p.points[i].y);PutFloat(out,p.points[i].z);}
     for (float h : p.ground) PutFloat(out,h);
 }
@@ -98,13 +99,18 @@ bool GetLegacyPlan(Reader& r, Plan* p)
     p->RefreshBounds();
     return true;
 }
-bool GetPlan(Reader& r, Plan* p)
+bool GetPlan(Reader& r, Plan* p,uint32_t version)
 {
     uint8_t first=0,complete=0,count=0;
     if(!p||!r.U8(&first)||!r.U8(&complete)||first>1||complete>1)return false;
     p->first=first!=0;p->complete=complete!=0;
     if(!r.Float(&p->a.x)||!r.Float(&p->a.y)||!r.Float(&p->a.z)||!r.Float(&p->b.x)||!r.Float(&p->b.y)
         ||!r.Float(&p->b.z)||!r.Float(&p->target)||!r.U8(&count)||count>MaxSitePoints)return false;
+    if(version>=9) {
+        uint8_t safeRoad=0,safe=0;
+        if(!r.U8(&safeRoad)||!r.U8(&safe)||safeRoad>1||safe>1)return false;
+        p->safeRoadAngle=safeRoad!=0;p->safeAngle=safe!=0;
+    }
     p->pointCount=count;
     for(unsigned i=0;i<count;++i)if(!r.Float(&p->points[i].x)||!r.Float(&p->points[i].y)||!r.Float(&p->points[i].z))return false;
     for(float& h:p->ground)if(!r.Float(&h))return false;
@@ -180,11 +186,11 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
-    auto readPlan=[&](Plan* plan){return version>=7?GetPlan(r,plan):GetLegacyPlan(r,plan);};
+    auto readPlan=[&](Plan* plan){return version>=7?GetPlan(r,plan,version):GetLegacyPlan(r,plan);};
     if (!r.Take(parsed.terrainFingerprint.data(),parsed.terrainFingerprint.size()) || !readPlan(&parsed.draft)) return false;
     if(version>=7&&!r.String(&parsed.draftName))return false;
     if(!r.U64(&parsed.selectedProjectId)||!r.U32(&parsed.nextSiteNumber)||!parsed.nextSiteNumber)return false;

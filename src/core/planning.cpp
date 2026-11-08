@@ -223,6 +223,24 @@ bool ValidFootprint(const Plan& p)
     }
     std::vector<Triangle> triangles;return Triangulate(p,&triangles);
 }
+double MaximumSurfaceGrade(const Plan& p)
+{
+    if(p.pointCount<3||!ValidFootprint(p))return 0.0;
+    double maximum=0.0;
+    for(unsigned i=0;i<p.triangleCount;++i) {
+        const auto& tri=p.triangles[i];
+        const auto& a=p.points[tri[0]];const auto& b=p.points[tri[1]];const auto& c=p.points[tri[2]];
+        const double ux=static_cast<double>(b.x)-a.x,uz=static_cast<double>(b.z)-a.z;
+        const double vx=static_cast<double>(c.x)-a.x,vz=static_cast<double>(c.z)-a.z;
+        const double uy=static_cast<double>(b.y)-a.y,vy=static_cast<double>(c.y)-a.y;
+        const double determinant=ux*vz-uz*vx;
+        if(std::abs(determinant)<1e-10)return std::numeric_limits<double>::infinity();
+        const double gx=(uy*vz-vy*uz)/determinant;
+        const double gz=(ux*vy-vx*uy)/determinant;
+        maximum=std::max(maximum,std::sqrt(gx*gx+gz*gz));
+    }
+    return maximum;
+}
 bool FootprintsOverlap(const Plan& a,const Plan& b)
 {
     if(!a.complete||!b.complete||!ValidFootprint(a)||!ValidFootprint(b))return false;
