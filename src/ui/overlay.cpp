@@ -344,9 +344,9 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     const bool leftClickMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK;
     if(leftClickMessage&&drawingNewSite&&host&&host->log) {
-        host->log("earthworks draw-click route x=%d y=%d mapCapture=%d nativeUi=%d uiRects=%u uiHit=%d uiBounds=%.1f,%.1f,%.1f,%.1f over=%d world=%d mapPick=%d owned=%d foreground=%d cursorValid=%d points=%u",
+        host->log("earthworks draw-click route x=%d y=%d mapCapture=%d nativeUi=%d uiRects=%u cursorRectIgnored=%d uiHit=%d uiBounds=%.1f,%.1f,%.1f,%.1f over=%d world=%d mapPick=%d owned=%d foreground=%d cursorValid=%d points=%u",
             GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),static_cast<int>(mapPickCapture.load()),static_cast<int>(nativeUiOccluded),
-            nativeUiInfo.rectCount,nativeUiInfo.hitIndex,nativeUiInfo.left,nativeUiInfo.top,nativeUiInfo.right,nativeUiInfo.bottom,
+            nativeUiInfo.rectCount,static_cast<int>(nativeUiInfo.cursorRectIgnored),nativeUiInfo.hitIndex,nativeUiInfo.left,nativeUiInfo.top,nativeUiInfo.right,nativeUiInfo.bottom,
             static_cast<int>(over),static_cast<int>(WorldHit(lParam)),static_cast<int>(mapPick),static_cast<int>(leftOwned),
             static_cast<int>(GetForegroundWindow()==gameWindow),static_cast<int>(inputSnapshot.cursorValid),inputSnapshot.plan.pointCount);
     }

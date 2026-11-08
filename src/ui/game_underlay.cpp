@@ -412,6 +412,18 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
     if(info)info->rectCount=static_cast<unsigned>(nativeUiRectCount);
     for(size_t i=0;i<nativeUiRectCount;++i) {
         const auto& rect=nativeUiRects[i];
+        // The game's in-game cursor is drawn through the same panel routine
+        // as ordinary UI sprites. Its 32x32 rectangle follows the pointer
+        // (top-left within ~2 px), so treating it as UI makes nearly every
+        // world click appear occluded. Ignore only that cursor-sized hit;
+        // other native rectangles still block map input.
+        const float rectWidth=rect.right-rect.left,rectHeight=rect.bottom-rect.top;
+        const bool cursorSprite=std::abs(rectWidth-32.0f)<=1.0f&&std::abs(rectHeight-32.0f)<=1.0f
+            &&std::abs(rect.left-x)<=2.0f&&std::abs(rect.top-y)<=2.0f;
+        if(cursorSprite) {
+            if(info)info->cursorRectIgnored=true;
+            continue;
+        }
         if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom) {
             if(info) {
                 info->hitIndex=static_cast<int>(i);info->left=rect.left;info->top=rect.top;
