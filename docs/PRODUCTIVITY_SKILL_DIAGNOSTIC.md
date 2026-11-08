@@ -13,6 +13,17 @@ The Developer tab's **Log inspector snapshot** action now reports the matching v
 
 Workshop/modded vehicles whose definitions are not in the vanilla vehicle directory will report unavailable. Their active mod source and parsed native type value have not yet been resolved. Do not silently use a different skill token or substitute the fallback for a missing value until this is decided and validated.
 
+## Open the developer inspector
+
+The normal player build omits technical diagnostics. Build and stage the developer-only UI into the isolated Earthworks Development profile with:
+
+```powershell
+.\scripts\Build.ps1 -DeveloperUI
+.\scripts\Stage-Diagnostics.ps1 -DeveloperUI
+```
+
+Close the game and project-local RML before staging. Then start `launch-prototype.cmd`, choose **Earthworks Development**, and launch the game from RML. Open the Earthworks panel and select its **Developer** tab.
+
 ## User verification
 
-In-game, open Earthworks → Developer → Workforce inspector, select a facility containing machines with different known skills, then click **Log inspector snapshot**. Send the Earthworks lines from the current game's log. Compare the reported configured skill with each vehicle's native information panel. In particular, check several different excavator and bulldozer models. Do not change productivity until the mapping and behavior are confirmed.
+In-game, open Earthworks → Developer → Workforce inspector, select a facility containing machines with different known skills, then click **Log inspector snapshot**. Send the `earthworks skill-source` lines from the current game's `log.html`. Compare the reported configured skill with each vehicle's native information panel. In particular, check several different excavator and bulldozer models. Do not change productivity until the mapping and behavior are confirmed.

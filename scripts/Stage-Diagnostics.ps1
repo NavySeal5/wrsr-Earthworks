@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$DeveloperUI)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -26,7 +26,8 @@ foreach ($file in $lock.runtime_files.PSObject.Properties) {
         throw "Runtime dependency mismatch: $path"
     }
 }
-$dll = Join-Path $root 'build\windows-x64\bin\EarthworksPlanning.dll'
+$buildPreset = if ($DeveloperUI) { 'windows-x64-developer-ui' } else { 'windows-x64' }
+$dll = Join-Path $root ("build\{0}\bin\EarthworksPlanning.dll" -f $buildPreset)
 if (-not (Test-Path -LiteralPath $dll)) { throw 'Build the plugin before staging it.' }
 $manifestPath = Join-Path $root 'assets\rml\EarthworksPlanning.rml.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -109,4 +110,5 @@ $config.playlists[0].plugins = @([pscustomobject]@{
 [IO.File]::WriteAllText((Join-Path $runtime 'rml\config.json'), ($config | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
 Write-Host "RML development runtime ready: $runtime"
 Write-Host "Earthworks Development selects $pluginId and enables the Small, Medium, and Large Earthworks facilities (9100000012-9100000014)."
+if ($DeveloperUI) { Write-Host 'The developer-only Workforce inspector is included in this staged build.' }
 Write-Host 'The diagnostic preset is refreshed by staging. Your subscribed RML configuration is untouched. The game has not been launched.'

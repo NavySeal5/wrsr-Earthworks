@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$DeveloperUI)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -8,11 +8,12 @@ $root = Split-Path $PSScriptRoot -Parent
 $tools = Initialize-EarthworksBuildEnvironment
 Push-Location $root
 try {
-    & $tools.CMake --preset windows-x64
+    $preset = if ($DeveloperUI) { 'windows-x64-developer-ui' } else { 'windows-x64' }
+    & $tools.CMake --preset $preset
     if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
-    & $tools.CMake --build --preset windows-x64
+    & $tools.CMake --build --preset $preset
     if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed.' }
-    $dll = Join-Path $root 'build\windows-x64\bin\EarthworksPlanning.dll'
+    $dll = Join-Path $root ("build\{0}\bin\EarthworksPlanning.dll" -f $preset)
     $details = (& dumpbin.exe /nologo /headers /exports $dll | Out-String)
     if ($LASTEXITCODE -ne 0) { throw 'DLL inspection failed.' }
     if ($details -notmatch '(?im)^\s*8664 machine') { throw 'Plugin is not an x64 DLL.' }
