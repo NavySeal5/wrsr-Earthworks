@@ -1120,7 +1120,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(useCurrentAllocation)ImGui::Text("Estimated time: ~%.1f in-game days (~%.0f m3/day current rate)",days,siteRateM3PerDay);
         else ImGui::Text("Estimated time: ~%.1f in-game days at full assigned capacity",days);
     }
-    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each eligible machine contributes one rate unit (10 m3 per simulation hour). Running Sites use their current allocated machines; other states assume all assigned capacity is available. Shared work or changes in machine availability can change the estimate.");
+    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each eligible machine contributes one rate unit (10 m3 per simulation hour; 60 simulation hours per calendar day). Running Sites use their current allocated machines; other states assume all assigned capacity is available. Shared work or changes in machine availability can change the estimate.");
     ImGui::Separator();
     const bool editable=(s.creatingSite)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     const unsigned selectedPoint=std::min<unsigned>(s.selectedSitePoint,plan.pointCount-1);

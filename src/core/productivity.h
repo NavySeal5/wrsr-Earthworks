@@ -8,7 +8,8 @@ constexpr double ReferenceGroundworksRating = 22.0;
 // Current provisional execution scale: one relative manual-rate unit processes
 // this much terrain per simulated hour. UI forecasts use the same value.
 constexpr double VolumePerRateUnitPerSimulationHour = 10.0;
-constexpr double SimulationHoursPerInGameDay = 24.0;
+// The game's calendar clock advances through 60 simulation hours per date.
+constexpr double SimulationHoursPerInGameDay = 60.0;
 
 // Rate is relative to one unit of player-performed manual terraforming. The
 // machine rating is provisional; this does not estimate volume/time.

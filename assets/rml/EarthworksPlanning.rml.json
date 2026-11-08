@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.16.36-site-capacity-duration-estimate",
+  "version": "0.16.37-calendar-time-estimate-fix",
   "description": "Plan Sites in named Projects, edit them on the map, and assign Earthworks facilities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

@@ -70,6 +70,10 @@ RaiseFn raiseLower = nullptr;
 TextureFn openHeightmap = nullptr, closeHeightmap = nullptr;
 double lastSimulationHour = -1;
 ULONGLONG lastCompletionCheck = 0;
+double SimulationHourClock(const Snapshot& snapshot)
+{
+    return (static_cast<double>(snapshot.year)*366.0+snapshot.day)*SimulationHoursPerInGameDay+snapshot.time;
+}
 using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
 using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
@@ -1081,7 +1085,7 @@ pick_done:
             project.progress=totalWork<=1e-6?0.0f:std::clamp(project.progress,0.0f,0.999999f);
             project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
             host->log("earthworks  site=%llu started terrain work=%.3f m3",static_cast<unsigned long long>(project.id),totalWork);
-            lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            lastSimulationHour=SimulationHourClock(current);
             RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
         }
         break;
@@ -1096,7 +1100,7 @@ pick_done:
             if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility first.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
-            project.status=ProjectStatus::Running;lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            project.status=ProjectStatus::Running;lastSimulationHour=SimulationHourClock(current);
             RefreshProjectStatus();Message("Site resumed.");break;
         }
         break;
@@ -1133,7 +1137,7 @@ pick_done:
                 static_cast<unsigned long long>(project.id),oldProgress,completedWork,remainingWork,recalculatedTotal,
                 static_cast<double>(project.progress));
             project.needsReview=false;project.status=ProjectStatus::Running;
-            lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+            lastSimulationHour=SimulationHourClock(current);
             RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
         }
         break;
@@ -1270,7 +1274,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
 void TickProjectRunner()
 {
     if(!current.ready)return;
-    const double clockHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
+    const double clockHour=SimulationHourClock(current);
     if(lastSimulationHour<0){lastSimulationHour=clockHour;return;}
     const double elapsed=clockHour-lastSimulationHour;lastSimulationHour=clockHour;
     if(!std::isfinite(elapsed)||elapsed<=0)return;

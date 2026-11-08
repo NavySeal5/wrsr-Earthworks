@@ -122,11 +122,11 @@ The denominator is an estimate derived from terrain height differences on the na
 2. When the Site reaches Completed, both cut and fill estimates should be zero within the executor's completion tolerance.
 3. Repeat with a fill-dominant Site if convenient. Compare the displayed residual with the Completed status and report any nonzero estimate after completion, including the Site status and runtime log.
 
-## Assigned capacity and duration estimate — build 0.16.36-site-capacity-duration-estimate
+## Assigned capacity and duration estimate — build 0.16.37-calendar-time-estimate-fix
 
 1. Assign one Earthworks facility to the selected Project and open a Site editor. Confirm **Assigned capacity** reports an approximate m3/day value based on its eligible machines. With no assigned facility, it should report zero; if a reading fails, it should report unavailable rather than treating the failure as zero.
 2. Add/remove a facility or buy/move an eligible machine. After the facility reading refresh, confirm the capacity changes accordingly.
 3. For a queued, paused, or draft Site, confirm the remaining-time estimate assumes full assigned capacity. With a clear footprint, compare the estimate directionally against its live Cut + Fill values.
 4. Start a Site and confirm its estimate uses its currently allocated machine count/rate. If several Sites share facilities, their current allocations can make the running Site's forecast differ from total Project capacity.
 5. Pause simulation time and confirm the capacity estimate is stable; progress/time remaining should not count wall-clock time. Resume and observe the forecast as terrain and machine allocation change.
-6. Treat all values as provisional. The displayed conversion is the current 10 m3 per simulation hour per relative machine-rate unit, not calibrated balance. Report missing counts, a zero rate despite eligible machines, or a duration that does not update when capacity or remaining volume changes.
+6. A calendar day is 60 simulation hours in this game. At the current provisional rate, one reference-rate machine therefore provides about 600 m3 per calendar day (10 m3/hour × 60 hours). Treat this as provisional, not calibrated balance. Report missing counts, a zero rate despite eligible machines, or a duration that does not update when capacity or remaining volume changes.
