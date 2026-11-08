@@ -48,6 +48,13 @@ The first planning prototype, Stage 3 controlled terrain experiment, Stage 4a co
 - The user selected click-to-add vertices plus Finish shape, select/drag vertices, add on edges, numeric or sampled point heights, and planar-triangle interpolation. Editing active work auto-pauses and any edit requires terrain review before resuming. Limit: 32 points, 5 m minimum spacing (D106).
 - Implementation is in progress. The user performs the in-game checks; no game interaction or gameplay test has been performed by the agent.
 
+**Earthworks facility Early Start availability — 8 November 2026**
+
+- The user asked to remove research requirements and pointed out that Early Start would still make the facilities wait until 1958.
+- Read-only comparison found the indirect date gate: all three generated facility definitions declared `$STYLE_FLAG modern_industry`, and `media_soviet/research/research.ini` unlocks that style under `modern_industry` research with `$YEAR 1958`.
+- Removed the style flag from the Small, Medium, and Large generation scripts. `$TYPE_ROADDEPO`, construction recipes/material quantities, and the vehicle filter are unchanged. Updated staging validation to reject both explicit research/unlock directives and this 1958 style gate.
+- Restaged all three Workshop items and confirmed their generated `building.ini` and `workshopconfig.ini` files contain neither explicit research/unlock directives nor the `modern_industry` flag. `git diff --check` passed. The game was not launched; the user should confirm the three facilities appear in an Early Start building menu before Stage 12 availability is accepted.
+
 On 6 November the user expanded facility capacity to four vehicle slots, two parallel positions per garage bay (D93). The building staging script now generates four parking entries and four matching routes. The config is staged, but in-game slot display and vehicle clearance/pathing still need user confirmation.
 
 On 6 November the user authorized a separate Medium variant: four canopy bays/eight vehicle slots, one loading/unloading station in front of the office, and the road connection at the far-right end pointing outward to the right. The user selected proposal A and approved scaling construction resource quantities with added bays. The Blender source, OBJ/MTL, baked materials, preview, separate Workshop item and descriptor recognition are prepared. The user completed the ModelViewer conversion; the resulting 1,094,780-byte NMF was copied to the project and staged. Its source/staged SHA-256 hashes match. User-run in-game review remains pending; no game was launched.
