@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "earthworks.planning",
   "name": "Earthworks Planning",
-  "version": "0.16.21-draw-click-route-diagnostics",
+  "version": "0.16.22-draw-click-rect-diagnostics",
   "description": "Plan Sites in named Projects, edit them on the map, and assign Earthworks facilities.",
   "dll": "EarthworksPlanning.dll",
   "loaderApi": { "min": 1, "max": 1 },

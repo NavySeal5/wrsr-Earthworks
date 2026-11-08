@@ -398,8 +398,9 @@ bool InstallGameUnderlay(const TsmHost* hookHost)
     return true;
 }
 
-bool NativeUiOccludes(float x,float y)
+bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
 {
+    if(info)*info={};
     if(!std::isfinite(x)||!std::isfinite(y))return false;
     if(!nativeUiCaptureInstalled.load(std::memory_order_acquire)) {
         if(!boundHost||!boundHost->exeBase)return false;
@@ -408,9 +409,16 @@ bool NativeUiOccludes(float x,float y)
         return x<=65.0f||y<=85.0f||x>=width-300.0f||y>=height-150.0f;
     }
     std::shared_lock lock(nativeUiMutex);
+    if(info)info->rectCount=static_cast<unsigned>(nativeUiRectCount);
     for(size_t i=0;i<nativeUiRectCount;++i) {
         const auto& rect=nativeUiRects[i];
-        if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom)return true;
+        if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom) {
+            if(info) {
+                info->hitIndex=static_cast<int>(i);info->left=rect.left;info->top=rect.top;
+                info->right=rect.right;info->bottom=rect.bottom;
+            }
+            return true;
+        }
     }
     return false;
 }

@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.21-draw-click-route-diagnostics";
+    info->version = "0.16.22-draw-click-rect-diagnostics";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");
