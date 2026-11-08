@@ -78,6 +78,7 @@ bool dragSitePointCommitPending=false;
 ULONGLONG dragSitePointReleasedAt=0;
 constexpr ULONGLONG SitePointSelectDebounceMs=250;
 constexpr ULONGLONG SitePointPreviewCommitGraceMs=1000;
+constexpr float SitePointHitRadiusPixels=20.0f;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
@@ -245,7 +246,18 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool nativeUiOccluded=mousePositionMessage
         &&NativeUiOccludes(static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)));
     unsigned handleIndex=MaxSitePoints;
-    if(!nativeUiOccluded)for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)){handleIndex=siteHandlePointIndices[i];break;}
+    if(!nativeUiOccluded) {
+        const float mouseX=static_cast<float>(GET_X_LPARAM(lParam)),mouseY=static_cast<float>(GET_Y_LPARAM(lParam));
+        float nearestDistanceSquared=SitePointHitRadiusPixels*SitePointHitRadiusPixels;
+        for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)) {
+            const float centerX=(siteHandleRects[i].left+siteHandleRects[i].right)*0.5f;
+            const float centerY=(siteHandleRects[i].top+siteHandleRects[i].bottom)*0.5f;
+            const float dx=mouseX-centerX,dy=mouseY-centerY,distanceSquared=dx*dx+dy*dy;
+            if(distanceSquared<=nearestDistanceSquared) {
+                nearestDistanceSquared=distanceSquared;handleIndex=siteHandlePointIndices[i];
+            }
+        }
+    }
     bool edgeInsertHandled=false;
     if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();SiteEdgePreview edge{};
@@ -442,8 +454,8 @@ void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint
     auto* draw=ImGui::GetForegroundDrawList();
     for(unsigned i=0;i<p.pointCount&&siteHandleRectCount<MaxSitePoints;++i) {
         ImVec2 screen{};if(!Project(s,p.points[i],&screen))continue;
-        const RECT candidate{static_cast<LONG>(screen.x-10.0f),static_cast<LONG>(screen.y-10.0f),
-            static_cast<LONG>(screen.x+10.0f),static_cast<LONG>(screen.y+10.0f)};
+        const RECT candidate{static_cast<LONG>(screen.x-SitePointHitRadiusPixels),static_cast<LONG>(screen.y-SitePointHitRadiusPixels),
+            static_cast<LONG>(screen.x+SitePointHitRadiusPixels),static_cast<LONG>(screen.y+SitePointHitRadiusPixels)};
         const auto overlaps=[](const RECT& a,const RECT& b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;};
         if((panelRectValid&&overlaps(candidate,panelRect))||(editorRectValid&&overlaps(candidate,editorRect)))continue;
         const bool isSelected=(selectedMask&(1u<<i))!=0;
