@@ -959,22 +959,19 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(!Project(s,anchor,&screen))screen={display.x*0.5f,display.y*0.5f};
     static uint64_t trackedSite=0;
     static ImVec2 editorPosition{};
+    static bool editorPositionInitialized=false;
     const uint64_t siteKey=s.creatingSite?~uint64_t{0}:s.editingSiteId;
     if(siteKey!=trackedSite) {
         trackedSite=siteKey;
         editorMinimized=false;
-        float x=screen.x+26.0f,y=screen.y-95.0f;
-        if(x+width>display.x-12.0f)x=screen.x-width-26.0f;
-        x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
-        y=std::clamp(y,70.0f,std::max(70.0f,display.y-fullHeight-90.0f));
-        RECT proposed{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+fullHeight)};
-        RECT overlap{};
-        if(panelRectValid&&IntersectRect(&overlap,&proposed,&panelRect)) {
-            x=screen.x-width-26.0f;
-            if(x<12.0f)x=screen.x+26.0f;
-            x=std::clamp(x,12.0f,std::max(12.0f,display.x-width-12.0f));
+        if(!editorPositionInitialized) {
+            const float x=std::clamp(72.0f,12.0f,std::max(12.0f,display.x-width-12.0f));
+            const float y=std::clamp(155.0f,70.0f,std::max(70.0f,display.y-fullHeight-12.0f));
+            editorPosition={x,y};
+            editorPositionInitialized=true;
         }
-        editorPosition={x,y};
+        editorPosition.x=std::clamp(editorPosition.x,12.0f,std::max(12.0f,display.x-width-12.0f));
+        editorPosition.y=std::clamp(editorPosition.y,70.0f,std::max(70.0f,display.y-fullHeight-12.0f));
     }
     const float height=editorMinimized?52.0f:fullHeight;
     ImGui::SetNextWindowPos(editorPosition,ImGuiCond_Always);
