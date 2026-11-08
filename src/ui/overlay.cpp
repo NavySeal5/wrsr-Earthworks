@@ -1168,8 +1168,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             ImGui::BeginDisabled(plan.pointCount<3||finishedShape);
             if(ImGui::Button("Finish shape",{ImGui::GetContentRegionAvail().x,30.0f}))Send(Action::FinishSite);
             ImGui::EndDisabled();
-            if(!finishedShape)ImGui::TextDisabled("Click within 5 m of the first point, or choose Finish shape, to close the boundary.");
-        } else if(!finishedShape)ImGui::TextDisabled(plan.pointCount==1?"Move the cursor to preview the shape; click again to set it.":"Click the first corner to begin the shape.");
+        }
     }
     const bool geometryEditable=editable&&finishedShape;
     ImGui::BeginDisabled(!geometryEditable);
