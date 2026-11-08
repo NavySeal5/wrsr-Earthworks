@@ -15,14 +15,14 @@ Workshop/modded vehicles whose definitions are not in the vanilla vehicle direct
 
 ## Open the developer inspector
 
-The normal player build omits technical diagnostics. Build and stage the developer-only UI into the isolated Earthworks Development profile with:
+The normal player build omits technical diagnostics. Build the developer-only UI into the isolated Earthworks Development profile with:
 
 ```powershell
 .\scripts\Build.ps1 -DeveloperUI
 .\scripts\Stage-Diagnostics.ps1 -DeveloperUI
 ```
 
-Close the game and project-local RML before staging. Then start `launch-prototype.cmd`, choose **Earthworks Development**, and launch the game from RML. Open the Earthworks panel and select its **Developer** tab.
+Close the game and project-local RML before staging or launching. You can build and stage explicitly with the commands above, then start RML. Or run `launch-prototype.cmd -DeveloperUI`; that option both stages the developer build and opens the project-local RML. Choose **Earthworks Development** and launch the game from RML. Open the Earthworks panel and select its **Developer** tab. Running `launch-prototype.cmd` without `-DeveloperUI` stages the normal player build, which does not have that tab.
 
 ## User verification
 
