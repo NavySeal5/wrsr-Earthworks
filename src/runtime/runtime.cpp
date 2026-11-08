@@ -252,10 +252,10 @@ void UpdateSiteDraftValidation()
     }
     const double maxGrade=MaximumSurfaceGrade(current.plan);
     if(current.plan.safeRoadAngle&&maxGrade>MaxRoadGrade+1e-6) {
-        fail("Safe Road angle is enabled: this Site exceeds the 12% road grade limit.");return;
+        fail("Safe Road angle is enabled: this Site exceeds 12% grade (about 6.8 degrees).");return;
     }
     if(current.plan.safeAngle&&maxGrade>VanillaTerrainReferenceGrade+1e-6) {
-        fail("Safe Angle is enabled: this Site exceeds the vanilla terrain reference grade (~61%).");return;
+        fail("Safe Angle is enabled: this Site exceeds 37 degrees (about 75.4% grade).");return;
     }
     const auto areaError=CheckProjectArea(current.plan,nullptr,nullptr);
     if(areaError!=ProjectAreaError::None) {

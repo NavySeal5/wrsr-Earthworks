@@ -1019,9 +1019,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         bool safeRoad=plan.safeRoadAngle,safe=plan.safeAngle;
         bool changed=false;
         if(ImGui::Checkbox("Safe Road angle",&safeRoad))changed=true;
-        ImGui::SameLine();GameIconButton("##SafeRoadAngleHelp",targetHeightInfoIcon,"i","Prevents saving when any part of the planned Site surface is steeper than the 12% maximum road grade.",{22.0f,22.0f});
+        ImGui::SameLine();GameIconButton("##SafeRoadAngleHelp",targetHeightInfoIcon,"i","Prevents saving if any part of the planned Site surface exceeds 12% grade (about 6.8 degrees). Percent grade is rise divided by horizontal run.",{22.0f,22.0f});
         if(ImGui::Checkbox("Safe Angle",&safe))changed=true;
-        ImGui::SameLine();GameIconButton("##SafeAngleHelp",targetHeightInfoIcon,"i","Prevents saving when any planar part of the Site exceeds the vanilla terrain-tool slope reference: about 20 m of height change over 33 m horizontally (about 61% grade). This is based on the observed game limit.",{22.0f,22.0f});
+        ImGui::SameLine();GameIconButton("##SafeAngleHelp",targetHeightInfoIcon,"i","Prevents saving if any planar part of the Site exceeds 37 degrees (about 75.4% grade), the selected vanilla terrain safe limit. Percent grade is 100 × tan(angle).",{22.0f,22.0f});
         if(changed)Send(Action::SetSiteSafetyChecks,(safeRoad?1.0f:0.0f)+(safe?2.0f:0.0f));
     };
     if(s.creatingSite) {
