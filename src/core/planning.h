@@ -15,6 +15,7 @@ constexpr double MaxRoadGrade = 0.12;
 constexpr double VanillaTerrainReferenceAngleDegrees = 37.0;
 constexpr double VanillaTerrainReferenceGrade = 0.7535540501; // tan(37 degrees)
 enum class SiteShapeMode : uint8_t { FreeDraw, Square, Rectangle };
+enum class SafeAnglesMode : uint8_t { None, Roads, Vanilla };
 void BuildTwoCornerShape(Point anchor,Point cursor,SiteShapeMode mode,Point (&corners)[4]);
 struct SiteOutline {
     std::array<Point, MaxSitePoints> points{};
@@ -28,8 +29,7 @@ struct Plan {
     float target = 0;
     std::array<Point, MaxSitePoints> points{};
     uint8_t pointCount = 0;
-    bool safeRoadAngle = false;
-    bool safeAngle = false;
+    SafeAnglesMode safeAngles = SafeAnglesMode::None;
     std::array<std::array<unsigned,3>, MaxSitePoints-2> triangles{};
     uint8_t triangleCount = 0;
     std::array<float, GridSide * GridSide> ground{};

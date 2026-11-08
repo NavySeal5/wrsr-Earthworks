@@ -251,11 +251,11 @@ void UpdateSiteDraftValidation()
         fail("Enter a finite target height within the supported range.");return;
     }
     const double maxGrade=MaximumSurfaceGrade(current.plan);
-    if(current.plan.safeRoadAngle&&maxGrade>MaxRoadGrade+1e-6) {
-        fail("Safe Road angle is enabled: this Site exceeds 12% grade (about 6.8 degrees).");return;
+    if(current.plan.safeAngles==SafeAnglesMode::Roads&&maxGrade>MaxRoadGrade+1e-6) {
+        fail("Safe angles is set to Roads: this Site exceeds 12% grade (about 6.8 degrees).");return;
     }
-    if(current.plan.safeAngle&&maxGrade>VanillaTerrainReferenceGrade+1e-6) {
-        fail("Safe Angle is enabled: this Site exceeds 37 degrees (about 75.4% grade).");return;
+    if(current.plan.safeAngles==SafeAnglesMode::Vanilla&&maxGrade>VanillaTerrainReferenceGrade+1e-6) {
+        fail("Safe angles is set to Vanilla: this Site exceeds 37 degrees (about 75.4% grade).");return;
     }
     const auto areaError=CheckProjectArea(current.plan,nullptr,nullptr);
     if(areaError!=ProjectAreaError::None) {
@@ -517,13 +517,14 @@ void Process(const Command& command)
         siteDraftLockToGrid=command.value!=0.0f;current.lockToGrid=siteDraftLockToGrid;
         Message(siteDraftLockToGrid?"Lock to Grid enabled. Click anywhere; new Site points snap to the nearest terrain grid vertex.":"Lock to Grid disabled.");
         break;
-    case Action::SetSiteSafetyChecks: {
+    case Action::SetSiteSafeAngles: {
         Plan* plan=creatingSite?&current.plan:nullptr;
         SavedEarthwork* site=creatingSite?nullptr:FindProject(editingSiteId);
         if(!plan&&site&&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled)plan=&site->plan;
         if(!plan)break;
-        plan->safeRoadAngle=(static_cast<unsigned>(command.value)&1u)!=0;
-        plan->safeAngle=(static_cast<unsigned>(command.value)&2u)!=0;
+        const auto mode=static_cast<unsigned>(command.value);
+        if(mode>static_cast<unsigned>(SafeAnglesMode::Vanilla))break;
+        plan->safeAngles=static_cast<SafeAnglesMode>(mode);
         if(creatingSite)Changed();else ++current.revision;
         break;
     }

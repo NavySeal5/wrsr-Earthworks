@@ -76,7 +76,7 @@ void PutPlan(std::vector<uint8_t>& out, const Plan& p)
     PutFloat(out,p.a.x); PutFloat(out,p.a.y); PutFloat(out,p.a.z);
     PutFloat(out,p.b.x); PutFloat(out,p.b.y); PutFloat(out,p.b.z); PutFloat(out,p.target);
     out.push_back(p.pointCount);
-    out.push_back(p.safeRoadAngle?1:0);out.push_back(p.safeAngle?1:0);
+    out.push_back(static_cast<uint8_t>(p.safeAngles));out.push_back(0); // reserved for future safety modes
     for(unsigned i=0;i<p.pointCount;++i){PutFloat(out,p.points[i].x);PutFloat(out,p.points[i].y);PutFloat(out,p.points[i].z);}
     for (float h : p.ground) PutFloat(out,h);
 }
@@ -106,10 +106,15 @@ bool GetPlan(Reader& r, Plan* p,uint32_t version)
     p->first=first!=0;p->complete=complete!=0;
     if(!r.Float(&p->a.x)||!r.Float(&p->a.y)||!r.Float(&p->a.z)||!r.Float(&p->b.x)||!r.Float(&p->b.y)
         ||!r.Float(&p->b.z)||!r.Float(&p->target)||!r.U8(&count)||count>MaxSitePoints)return false;
-    if(version>=9) {
+    if(version==9) {
         uint8_t safeRoad=0,safe=0;
         if(!r.U8(&safeRoad)||!r.U8(&safe)||safeRoad>1||safe>1)return false;
-        p->safeRoadAngle=safeRoad!=0;p->safeAngle=safe!=0;
+        // Preserve the stricter legacy behavior if both checks had been enabled.
+        p->safeAngles=safeRoad?SafeAnglesMode::Roads:(safe?SafeAnglesMode::Vanilla:SafeAnglesMode::None);
+    } else if(version>=10) {
+        uint8_t mode=0,reserved=0;
+        if(!r.U8(&mode)||!r.U8(&reserved)||mode>static_cast<uint8_t>(SafeAnglesMode::Vanilla)||reserved!=0)return false;
+        p->safeAngles=static_cast<SafeAnglesMode>(mode);
     }
     p->pointCount=count;
     for(unsigned i=0;i<count;++i)if(!r.Float(&p->points[i].x)||!r.Float(&p->points[i].y)||!r.Float(&p->points[i].z))return false;
@@ -119,6 +124,7 @@ bool GetPlan(Reader& r, Plan* p,uint32_t version)
 }
 bool ValidPlan(const Plan& p)
 {
+    if(static_cast<uint8_t>(p.safeAngles)>static_cast<uint8_t>(SafeAnglesMode::Vanilla))return false;
     const float values[] = {p.a.x,p.a.y,p.a.z,p.b.x,p.b.y,p.b.z,p.target};
     for (float v : values) if (!std::isfinite(v)) return false;
     if(p.pointCount>MaxSitePoints)return false;
@@ -186,7 +192,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;

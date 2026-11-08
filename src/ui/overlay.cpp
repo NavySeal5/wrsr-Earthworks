@@ -1016,13 +1016,13 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     auto drawSafetyChecks=[&]() {
-        bool safeRoad=plan.safeRoadAngle,safe=plan.safeAngle;
-        bool changed=false;
-        if(ImGui::Checkbox("Safe Road angle",&safeRoad))changed=true;
-        ImGui::SameLine();GameIconButton("##SafeRoadAngleHelp",targetHeightInfoIcon,"i","Prevents saving if any part of the planned Site surface exceeds 12% grade (about 6.8 degrees). Percent grade is rise divided by horizontal run.",{22.0f,22.0f});
-        if(ImGui::Checkbox("Safe Angle",&safe))changed=true;
-        ImGui::SameLine();GameIconButton("##SafeAngleHelp",targetHeightInfoIcon,"i","Prevents saving if any planar part of the Site exceeds 37 degrees (about 75.4% grade), the selected vanilla terrain safe limit. Percent grade is 100 × tan(angle).",{22.0f,22.0f});
-        if(changed)Send(Action::SetSiteSafetyChecks,(safeRoad?1.0f:0.0f)+(safe?2.0f:0.0f));
+        int safeAngles=static_cast<int>(plan.safeAngles);
+        const char* modes[]={"None","Roads","Vanilla"};
+        ImGui::TextUnformatted("Safe angles");ImGui::SameLine();
+        const float labelWidth=ImGui::CalcTextSize("Safe angles").x+ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x-labelWidth-34.0f);
+        if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
+        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None: no additional slope check. Roads: prevent saving if any planned surface facet exceeds 12% grade (about 6.84 degrees). Vanilla: prevent saving if any facet exceeds 37 degrees (about 75.36% grade), the selected terrain-safe limit. Percent grade = 100 × tan(angle); angle = atan(percent grade / 100).",{22.0f,22.0f});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
