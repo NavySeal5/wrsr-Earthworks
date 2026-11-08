@@ -165,6 +165,35 @@ bool Vehicle(Address address,Address building,const Address* parked,unsigned par
     if(out->positionValid)out->distance=Distance(position,origin);
     return true;
 }
+bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool* hasBulldozer,
+    float* groundworks,bool* hasGroundworks,char* source,size_t sourceSize)
+{
+    if(!typeName||!typeName[0]||!bulldozer||!hasBulldozer||!groundworks||!hasGroundworks||!source||sourceSize<2)return false;
+    *hasBulldozer=false;*hasGroundworks=false;*bulldozer=0;*groundworks=0;source[0]=0;
+    // Vanilla vehicle type names correspond to their asset folder. Only allow
+    // plain folder names here; never interpret a type name as an arbitrary path.
+    for(const char* c=typeName;*c;++c)
+        if(!((*c>='a'&&*c<='z')||(*c>='A'&&*c<='Z')||(*c>='0'&&*c<='9')||*c=='_'||*c=='-'))return false;
+    char module[MAX_PATH]{};
+    const DWORD length=GetModuleFileNameA(nullptr,module,static_cast<DWORD>(sizeof(module)));
+    if(!length||length>=sizeof(module))return false;
+    char* slash=std::strrchr(module,'\\');if(!slash)return false;slash[1]=0;
+    char path[MAX_PATH]{};
+    if(strcpy_s(path,module)!=0||strcat_s(path,"media_soviet\\vehicles\\")!=0||
+        strcat_s(path,typeName)!=0||strcat_s(path,"\\script.ini")!=0)return false;
+    FILE* file=nullptr;if(fopen_s(&file,path,"rb")!=0||!file)return false;
+    strncpy_s(source,sourceSize,path,_TRUNCATE);
+    char line[512]{};
+    while(std::fgets(line,static_cast<int>(sizeof(line)),file)) {
+        const char* first=line;while(*first==' '||*first=='\t')++first;
+        if(first[0]=='-'&&first[1]=='-')continue;
+        char key[80]{};float value=0;
+        if(sscanf_s(first,"%79s %f",key,static_cast<unsigned>(_countof(key)),&value)!=2||!std::isfinite(value))continue;
+        if(std::strcmp(key,"$SKILL_CONSTRUCTION_BULLDOZER")==0){*bulldozer=value;*hasBulldozer=true;}
+        else if(std::strcmp(key,"$SKILL_CONSTRUCTION_GROUNDWORKS")==0){*groundworks=value;*hasGroundworks=true;}
+    }
+    std::fclose(file);return true;
+}
 bool SampleIdentity(const Identity& identity,WorkforceView* output)
 {
     if(!output)return false;
@@ -321,6 +350,17 @@ void LogWorkforce()
         const auto& r=view.vehicles[i];
         host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d jobStateValid=%d jobState=%d routeValid=%d routeStops=%u firstRouteIsFacility=%d positionValid=%d distance=%.1f",
             r.id,r.type,r.category,r.home,r.assigned,r.parked,r.nativeJobStateValid,r.nativeJobState,r.routeValid,r.routeStopCount,r.firstRouteStopIsFacility,r.positionValid,r.distance);
+        if(r.groundworksMachine) {
+            float bulldozer=0,groundworks=0;bool hasBulldozer=false,hasGroundworks=false;char source[MAX_PATH]{};
+            if(ReadConfiguredConstructionSkills(r.type,&bulldozer,&hasBulldozer,&groundworks,&hasGroundworks,source,sizeof(source))) {
+                char bulldozerText[32]{},groundworksText[32]{};
+                if(hasBulldozer)sprintf_s(bulldozerText,"%.3f",bulldozer);else strcpy_s(bulldozerText,"n/a");
+                if(hasGroundworks)sprintf_s(groundworksText,"%.3f",groundworks);else strcpy_s(groundworksText,"n/a");
+                host->log("earthworks  skill-source vehicle=%u type=%s bulldozerSkill=%s groundworksSkill=%s source=%s",
+                    r.id,r.type,bulldozerText,groundworksText,source);
+            }
+            else host->log("earthworks  skill-source vehicle=%u type=%s unavailable (no matching vanilla media_soviet/vehicles/<type>/script.ini)",r.id,r.type);
+        }
     }
 }
 }
