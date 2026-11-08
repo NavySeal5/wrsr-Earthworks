@@ -444,39 +444,15 @@ void DrawQueuedOutline(const Snapshot& s,const Shape& p,ImU32 color)
     if(p.pointCount<2)return;
     for(unsigned i=0;i<p.pointCount;++i)Line(s,p.points[i],p.points[(i+1)%p.pointCount],color,2.5f);
 }
-void DrawSelectedPointGroundLinks(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
-{
-    if(!s.siteEditorOpen||!p.complete)return;
-    auto* draw=ImGui::GetForegroundDrawList();
-    for(unsigned i=0;i<p.pointCount;++i) {
-        if(i!=selected&&!(selectedMask&(1u<<i)))continue;
-        const auto& targetPoint=p.points[i];
-        float ground=0;
-        if(!p.GroundAt(targetPoint.x,targetPoint.z,&ground)||std::abs(targetPoint.y-ground)<0.01f)continue;
-        const Point terrain{targetPoint.x,ground,targetPoint.z};
-        ImVec2 top,bottom;
-        if(!Project(s,targetPoint,&top)||!Project(s,terrain,&bottom))continue;
-        const ImU32 color=targetPoint.y>ground?IM_COL32(62,221,166,255):IM_COL32(255,159,67,255);
-        draw->AddLine(top,bottom,IM_COL32(20,25,30,240),5.0f);
-        draw->AddLine(top,bottom,color,2.5f);
-        draw->AddCircleFilled(bottom,3.5f,color,12);
-    }
-}
-void DrawSitePointHandles(const Snapshot& s,const Plan& p,unsigned selected,uint32_t selectedMask)
+void DrawSitePointHandles(const Snapshot& s,const Plan& p)
 {
     if(!s.siteEditorOpen)return;
-    auto* draw=ImGui::GetForegroundDrawList();
     for(unsigned i=0;i<p.pointCount&&siteHandleRectCount<MaxSitePoints;++i) {
         ImVec2 screen{};if(!Project(s,p.points[i],&screen))continue;
         const RECT candidate{static_cast<LONG>(screen.x-SitePointHitRadiusPixels),static_cast<LONG>(screen.y-SitePointHitRadiusPixels),
             static_cast<LONG>(screen.x+SitePointHitRadiusPixels),static_cast<LONG>(screen.y+SitePointHitRadiusPixels)};
         const auto overlaps=[](const RECT& a,const RECT& b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;};
         if((panelRectValid&&overlaps(candidate,panelRect))||(editorRectValid&&overlaps(candidate,editorRect)))continue;
-        const bool isSelected=(selectedMask&(1u<<i))!=0;
-        const float radius=i==selected?8.0f:(isSelected?7.0f:6.0f);
-        const ImU32 color=i==selected?IM_COL32(255,245,130,255):(isSelected?IM_COL32(120,220,255,255):IM_COL32(245,250,255,245));
-        draw->AddCircleFilled(screen,radius,color,16);
-        draw->AddCircle(screen,radius,IM_COL32(55,65,75,255),16,1.5f);
         siteHandleRects[siteHandleRectCount]=candidate;
         siteHandlePointIndices[siteHandleRectCount++]=i;
     }
@@ -544,9 +520,8 @@ void DrawPreview(const Snapshot& s)
     }
     if(s.siteEditorOpen) {
         const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
-        DrawSitePointHandles(s,editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
+        DrawSitePointHandles(s,editorPlan);
         DrawSiteEdgeInsertionPreview(s);
-        DrawSelectedPointGroundLinks(s,editorPlan,s.selectedSitePoint,s.selectedSitePointsMask);
     }
     const auto& p=livePlan&&liveSiteId==0?*livePlan:s.plan;
     if (!p.first) return;

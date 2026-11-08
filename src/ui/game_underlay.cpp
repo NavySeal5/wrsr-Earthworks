@@ -39,7 +39,7 @@ constexpr size_t PanelZoomCentre = 0x6730;
 constexpr size_t PanelZoom = 0x673C;
 constexpr size_t TextureSetSlot = 14;
 constexpr size_t MaxSegments = 4096;
-constexpr size_t GroupCount = 7;
+constexpr size_t GroupCount = 14;
 constexpr float ShadeRowPixels = 5.0f;
 constexpr size_t MaxNativeUiRects = 8192;
 
@@ -75,6 +75,13 @@ void ResetGroups()
     groups[4].color = IM_COL32(245,250,255,255); groups[4].width = 2.5f;
     groups[5].color = IM_COL32(62,221,166,55); groups[5].width = ShadeRowPixels;
     groups[6].color = IM_COL32(255,159,67,55); groups[6].width = ShadeRowPixels;
+    groups[7].color = IM_COL32(20,25,30,240); groups[7].width = 5.0f;
+    groups[8].color = IM_COL32(62,221,166,255); groups[8].width = 2.5f;
+    groups[9].color = IM_COL32(255,159,67,255); groups[9].width = 2.5f;
+    groups[10].color = IM_COL32(35,45,55,255); groups[10].width = 1.5f;
+    groups[11].color = IM_COL32(255,245,130,255); groups[11].width = 1.0f;
+    groups[12].color = IM_COL32(120,220,255,255); groups[12].width = 1.0f;
+    groups[13].color = IM_COL32(245,250,255,245); groups[13].width = 1.0f;
     for (auto& group : groups) group.count = 0;
 }
 
@@ -112,6 +119,28 @@ void AddScreenSpan(float x1,float y,float x2,int group)
     if(groups[group].count>=static_cast<int>(MaxSegments)||x2-x1<0.5f)return;
     auto* out=groups[group].values+groups[group].count++*4;
     out[0]=x1;out[1]=y;out[2]=x2;out[3]=y;
+}
+
+void AddScreenLine(float x1,float y1,float x2,float y2,int group)
+{
+    if(groups[group].count>=static_cast<int>(MaxSegments))return;
+    auto* out=groups[group].values+groups[group].count++*4;
+    out[0]=x1;out[1]=y1;out[2]=x2;out[3]=y2;
+}
+
+void AddScreenCircle(float x,float y,float radius,int outlineGroup,int fillGroup)
+{
+    constexpr int sides=16;
+    for(int i=0;i<sides;++i) {
+        const float a0=6.28318530718f*static_cast<float>(i)/sides;
+        const float a1=6.28318530718f*static_cast<float>(i+1)/sides;
+        AddScreenLine(x+std::cos(a0)*radius,y+std::sin(a0)*radius,
+            x+std::cos(a1)*radius,y+std::sin(a1)*radius,outlineGroup);
+    }
+    for(float dy=-radius;dy<=radius;dy+=1.5f) {
+        const float halfWidth=std::sqrt(std::max(0.0f,radius*radius-dy*dy));
+        AddScreenSpan(x-halfWidth,y+dy,x+halfWidth,fillGroup);
+    }
 }
 
 void AddShadeTriangle(const Snapshot& s,const Point* triangle,const float* depth,float sign,int group,float width,float height)
@@ -185,6 +214,30 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
             } else DrawOutline(s,project.outline,2,width,height);
         } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.outline,0,width,height);
         else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.outline,1,width,height);
+    }
+    if(s.siteEditorOpen) {
+        const auto& editor=livePlan?*livePlan:s.editorPlan;
+        const uint32_t selectedMask=s.selectedSitePointsMask;
+        for(unsigned i=0;i<editor.pointCount;++i) {
+            float x=0,y=0;
+            if(!Project(s,editor.points[i],width,height,&x,&y))continue;
+            const bool primary=i==s.selectedSitePoint;
+            const bool selected=primary||(selectedMask&(1u<<i));
+            const float radius=primary?8.0f:(selected?7.0f:6.0f);
+            const int fillGroup=primary?11:(selected?12:13);
+            AddScreenCircle(x,y,radius,10,fillGroup);
+            if(!selected||!editor.complete)continue;
+            float ground=0;
+            if(!editor.GroundAt(editor.points[i].x,editor.points[i].z,&ground)
+                ||std::abs(editor.points[i].y-ground)<0.01f)continue;
+            const Point terrain{editor.points[i].x,ground,editor.points[i].z};
+            float gx=0,gy=0;
+            if(!Project(s,terrain,width,height,&gx,&gy))continue;
+            const int linkGroup=editor.points[i].y>ground?8:9;
+            AddScreenLine(x,y,gx,gy,7);
+            AddScreenLine(x,y,gx,gy,linkGroup);
+            AddScreenCircle(gx,gy,3.5f,7,linkGroup);
+        }
     }
     const auto& p=livePlan&&liveSiteId==0?*livePlan:s.plan;
     if (!p.first) return;
@@ -355,6 +408,9 @@ void DrawUnderUi()
             drawingEarthworksUnderlay=true;
             DrawGroup(base,groups[5]);DrawGroup(base,groups[6]);
             for(int i=0;i<5;++i)DrawGroup(base,groups[i]);
+            for(int i=7;i<=9;++i)DrawGroup(base,groups[i]);
+            for(int i=11;i<GroupCount;++i)DrawGroup(base,groups[i]);
+            DrawGroup(base,groups[10]);
             drawingEarthworksUnderlay=false;
         } __finally {
             drawingEarthworksUnderlay=false;
