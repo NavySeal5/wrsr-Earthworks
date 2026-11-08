@@ -1043,6 +1043,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         nameTextEditing|=ImGui::IsItemActive();
         ImGui::TextUnformatted("Shape");
         const char* shapeNames[]={"Free draw","Square","Rectangle"};
+        const char* selectedShapeNames[]={"[x] Free draw","[x] Square","[x] Rectangle"};
         const bool canChangeShape=!plan.complete&&plan.pointCount<=1;
         const float shapeWidth=(ImGui::GetContentRegionAvail().x-2.0f*ImGui::GetStyle().ItemSpacing.x)/3.0f;
         for(unsigned i=0;i<3;++i) {
@@ -1050,7 +1051,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             const bool active=s.shapeMode==static_cast<SiteShapeMode>(i);
             if(active)ImGui::PushStyleColor(ImGuiCol_Button,{0.84f,0.70f,0.52f,1.0f});
             ImGui::BeginDisabled(!canChangeShape);
-            if(ImGui::Button(shapeNames[i],{shapeWidth,28.0f}))Send(Action::SetShapeMode,static_cast<float>(i));
+            if(ImGui::Button(active?selectedShapeNames[i]:shapeNames[i],{shapeWidth,28.0f}))Send(Action::SetShapeMode,static_cast<float>(i));
             ImGui::EndDisabled();
             if(active)ImGui::PopStyleColor();
         }
