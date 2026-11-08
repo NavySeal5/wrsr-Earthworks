@@ -1122,7 +1122,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::Text("Points: %u / %zu (minimum spacing 5 m)",static_cast<unsigned>(plan.pointCount),MaxSitePoints);
-    ImGui::SetNextItemWidth(114.0f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     const auto& input=ImGui::GetIO();
     const uint32_t selectedMask=s.selectedSitePointsMask;
     unsigned selectedCount=0;for(unsigned i=0;i<plan.pointCount;++i)if(selectedMask&(1u<<i))++selectedCount;
@@ -1141,7 +1141,6 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::EndCombo();
     }
     ImGui::PopStyleVar();
-    ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const float heightStep=input.KeyCtrl?10.0f:1.0f;
