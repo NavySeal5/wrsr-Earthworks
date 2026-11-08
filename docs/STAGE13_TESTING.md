@@ -115,3 +115,9 @@ The denominator is an estimate derived from terrain height differences on the na
 2. Create a draft and add several points. Confirm guides appear for its points before the shape is finished as well as after completion.
 3. Select and deselect points, including Shift multi-selection. Guides should stay visible through selection changes.
 4. Place native game panels over the guide lines. The guides should remain visible in uncovered map space and remain behind native UI elements.
+
+## Live cut/fill and completion alignment — build 0.16.35-live-volume-completion-alignment
+
+1. Start a Site with a clear cut-dominant target and keep its editor open. Watch cut and fill while work advances. They represent remaining actionable work sampled on native terrain vertices; either direction can change if the terrain crosses its target locally.
+2. When the Site reaches Completed, both cut and fill estimates should be zero within the executor's completion tolerance.
+3. Repeat with a fill-dominant Site if convenient. Compare the displayed residual with the Completed status and report any nonzero estimate after completion, including the Site status and runtime log.

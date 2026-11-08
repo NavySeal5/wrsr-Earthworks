@@ -113,30 +113,28 @@ bool ReadHeight(float x, float z, float* out)
         return std::isfinite(*out) && std::abs(*out) < 100000;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
+void* TerrainObject();
+bool ReadTerrainGrid(void* terrain,TerrainGrid* out);
 bool EstimateCurrentTerrain(const Plan& plan,float blendWidth,Volumes* out)
 {
     if(!out||!plan.complete||!ValidFootprint(plan))return false;
-    const double cellWidth=static_cast<double>(plan.Width())/GridCells;
-    const double cellDepth=static_cast<double>(plan.Depth())/GridCells;
-    if(!std::isfinite(cellWidth)||!std::isfinite(cellDepth)||cellWidth<=0||cellDepth<=0)return false;
-    constexpr int samplesPerAxis=2;
-    constexpr double sampleAreaFraction=1.0/(samplesPerAxis*samplesPerAxis);
-    const double sampleArea=cellWidth*cellDepth*sampleAreaFraction;
+    TerrainGrid grid{};GridRect rect{};
+    if(!ReadTerrainGrid(TerrainObject(),&grid)||!SnapInside(plan,grid,&rect)||rect.Count()>40000)return false;
+    const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
+    const double completionTolerance=static_cast<double>(grid.heightScale)/60000.0*1.1;
+    if(!std::isfinite(cellArea)||cellArea<=0||!std::isfinite(completionTolerance))return false;
     Volumes currentVolumes{};
-    for(int z=0;z<GridCells;++z)for(int x=0;x<GridCells;++x) {
-        const double x0=static_cast<double>(plan.MinX())+cellWidth*x;
-        const double z0=static_cast<double>(plan.MinZ())+cellDepth*z;
-        for(int sz=0;sz<samplesPerAxis;++sz)for(int sx=0;sx<samplesPerAxis;++sx) {
-            const float px=static_cast<float>(x0+cellWidth*(sx+0.5)/samplesPerAxis);
-            const float pz=static_cast<float>(z0+cellDepth*(sz+0.5)/samplesPerAxis);
-            if(!plan.Contains(px,pz))continue;
-            float target=0,ground=0;
-            if(!plan.BlendedTargetAt(px,pz,blendWidth,&target))continue;
-            if(!ReadHeight(px,pz,&ground))return false;
-            const double delta=static_cast<double>(target)-ground;
-            if(delta>0)currentVolumes.fill+=delta*sampleArea;
-            else currentVolumes.cut-=delta*sampleArea;
-        }
+    for(int z=rect.z0;z<=rect.z1;++z)for(int x=rect.x0;x<=rect.x1;++x) {
+        const Point point=grid.At(x,z);
+        if(!plan.Contains(point.x,point.z))continue;
+        float target=0,ground=0;
+        if(!plan.BlendedTargetAt(point.x,point.z,blendWidth,&target)||!ReadHeight(point.x,point.z,&ground))return false;
+        const double delta=static_cast<double>(target)-ground;
+        // Report actionable remaining work on the same native terrain vertices
+        // and within the same completion tolerance used by the executor.
+        if(std::abs(delta)<=completionTolerance)continue;
+        if(delta>0)currentVolumes.fill+=delta*cellArea;
+        else currentVolumes.cut-=delta*cellArea;
     }
     if(!std::isfinite(currentVolumes.cut)||!std::isfinite(currentVolumes.fill))return false;
     *out=currentVolumes;
