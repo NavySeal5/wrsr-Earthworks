@@ -1021,8 +1021,18 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::TextUnformatted("Safe angles");ImGui::SameLine();
         const float labelWidth=ImGui::CalcTextSize("Safe angles").x+ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x-labelWidth-34.0f);
-        if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
-        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — Adds no slope limit.\nRoads — Rejects Sites above 12% / 6.84°.\nVanilla — Rejects Sites above 75.36% / 37°.",{22.0f,22.0f});
+        if(ImGui::BeginCombo("##SafeAngles",modes[safeAngles])) {
+            for(int i=0;i<3;++i) {
+                const bool selected=i==safeAngles;
+                if(ImGui::Selectable(modes[i],selected)) {
+                    safeAngles=i;
+                    Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
+                }
+                if(selected)ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{22.0f,22.0f});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
