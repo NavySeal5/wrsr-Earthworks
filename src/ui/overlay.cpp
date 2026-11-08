@@ -1018,15 +1018,20 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::SetCursorScreenPos({movedPos.x+12.0f,movedPos.y+56.0f});
     auto drawSafetyChecks=[&]() {
+        auto centerNextItem=[](float itemHeight) {
+            const float rowHeight=ImGui::GetFrameHeight();
+            if(rowHeight>itemHeight)ImGui::SetCursorPosY(ImGui::GetCursorPosY()+(rowHeight-itemHeight)*0.5f);
+        };
         int safeAngles=static_cast<int>(plan.safeAngles);
         const char* modes[]={"None","Roads","Vanilla"};
-        ImGui::TextUnformatted("Safe angles");ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Safe angles");ImGui::SameLine();
         const float labelWidth=ImGui::CalcTextSize("Safe angles").x+ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x-labelWidth-34.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
         if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
         ImGui::PopStyleVar();
-        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{22.0f,22.0f});
+        ImGui::SameLine();centerNextItem(22.0f);
+        GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{22.0f,22.0f});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
@@ -1161,7 +1166,8 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
     ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;adjustHeight(heightStep);}
-    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nHold Shift while clicking −/+ to adjust every point in the shape.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling affect selected points; −/+ preserve their height differences.",{22.0f,22.0f});
+    ImGui::SameLine();ImGui::SetCursorPosY(ImGui::GetCursorPosY()+(ImGui::GetFrameHeight()-22.0f)*0.5f);
+    GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nHold Shift while clicking −/+ to adjust every point in the shape.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling affect selected points; −/+ preserve their height differences.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Sample selected",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();
