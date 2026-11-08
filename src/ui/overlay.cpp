@@ -1022,7 +1022,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         const float labelWidth=ImGui::CalcTextSize("Safe angles").x+ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x-labelWidth-34.0f);
         if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
-        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no extra check\nRoads — max 12% / 6.84°\nVanilla — max 75.36% / 37°",{22.0f,22.0f});
+        ImGui::SameLine();GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — Adds no slope limit.\nRoads — Rejects Sites above 12% / 6.84°.\nVanilla — Rejects Sites above 75.36% / 37°.",{22.0f,22.0f});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");
