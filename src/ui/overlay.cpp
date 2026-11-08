@@ -1152,7 +1152,9 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::BeginDisabled(!editable||!selectedCount);
     if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;adjustHeight(-heightStep);}
     ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
     const bool changed=ImGui::InputFloat("##SitePointHeight",&editHeight,0,0,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::PopStyleVar();
     targetHeightEditing=ImGui::IsItemActive();nameTextEditing|=targetHeightEditing;
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
