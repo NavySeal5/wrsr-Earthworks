@@ -1102,9 +1102,34 @@ pick_done:
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
             if(!SamplePlan(&project.plan)) {Message("Could not read the project footprint. It remains paused for review.");break;}
+            double remainingWork=0;
+            if(!MeasureTerrainWork(project.plan,grid,rect,&remainingWork)||!std::isfinite(remainingWork)||remainingWork<0) {
+                Message("Could not recalculate this Site's remaining work. It remains paused for review.");break;
+            }
+            const double oldProgress=std::clamp(static_cast<double>(project.progress),0.0,1.0);
+            const double completedWork=project.totalWorkM3>1e-6
+                ?std::clamp(static_cast<double>(project.totalWorkM3)*oldProgress,0.0,1.0e12)
+                :std::clamp(remainingWork*oldProgress/std::max(1e-6,1.0-oldProgress),0.0,1.0e12);
+            if(remainingWork<=1e-6) {
+                project.totalWorkM3=static_cast<float>(completedWork);
+                project.progress=1.0f;
+                project.workRemainderM3=0;
+                project.needsReview=false;project.status=ProjectStatus::Completed;
+                host->log("earthworks  site=%llu reviewed progress rebase old=%.5f completed=%.3f remaining=%.3f total=%.3f new=1.00000",
+                    static_cast<unsigned long long>(project.id),oldProgress,completedWork,remainingWork,completedWork);
+                RefreshProjectStatus();Message("Footprint reviewed. The revised target is already satisfied; the Site is complete.");break;
+            }
+            const double recalculatedTotal=std::min(1.0e12,completedWork+remainingWork);
+            project.totalWorkM3=static_cast<float>(recalculatedTotal);
+            project.progress=recalculatedTotal>1e-6
+                ?static_cast<float>(std::clamp(completedWork/recalculatedTotal,0.0,0.999999)):0.0f;
+            project.workRemainderM3=static_cast<float>(std::min(static_cast<double>(project.workRemainderM3),remainingWork));
+            host->log("earthworks  site=%llu reviewed progress rebase old=%.5f completed=%.3f remaining=%.3f total=%.3f new=%.5f",
+                static_cast<unsigned long long>(project.id),oldProgress,completedWork,remainingWork,recalculatedTotal,
+                static_cast<double>(project.progress));
             project.needsReview=false;project.status=ProjectStatus::Running;
             lastSimulationHour=static_cast<double>(current.year*366+current.day+current.time)*24.0;
-            RefreshProjectStatus();Message("Footprint reviewed. Project resumed toward its saved target.");break;
+            RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
         }
         break;
     case Action::CancelProject:

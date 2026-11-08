@@ -98,3 +98,13 @@ Grade is rise divided by horizontal run. Convert angle in degrees to percent gra
 4. For comparison, open an unstarted Site or create a new draft. Its estimate should still describe the planned difference from the sampled starting terrain.
 
 The live estimate is sampled from current terrain every 500 ms while a saved Site is open in the editor. If it remains unchanged during visible terrain work, note the Site status and share the RML runtime log around the run.
+
+## Progress recalculation after editing a running Site — build 0.16.33-review-progress-rebase
+
+1. Start a Site and let it reach a visible partial progress value, then pause it and open its editor.
+2. Change its target or shape so that more terrain work is required. Review and resume it. Progress should rebase downward to reflect the previously completed work plus the revised remaining work, then continue increasing.
+3. Pause it again, edit the target in a way that reduces the remaining work, and review/resume. Progress should rebase upward while preserving the completed-work credit.
+4. If the edited target already matches current terrain when reviewed, the Site should immediately show Completed rather than remain Running with no work to do.
+5. Confirm progress keeps advancing and reaches completion against the revised target. Saving and reloading after review should preserve the recalculated percentage and continue normally.
+
+The denominator is an estimate derived from terrain height differences on the native terrain grid. Edits can change estimated work nonlinearly, so percentages are expected to rebase rather than remain fixed when scope changes.
