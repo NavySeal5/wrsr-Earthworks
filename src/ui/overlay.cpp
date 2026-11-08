@@ -245,8 +245,13 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool mousePositionMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK||message==WM_MOUSEMOVE;
     const bool nativeUiOccluded=mousePositionMessage
         &&NativeUiOccludes(static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)));
+    const auto& inputSnapshot=ReadSnapshot();
+    const bool drawingNewSite=inputSnapshot.creatingSite&&inputSnapshot.mode==PickMode::DrawSite;
     unsigned handleIndex=MaxSitePoints;
-    if(!nativeUiOccluded) {
+    // While Free draw is armed, nearby draft vertices are not selection
+    // targets: every map click must reach Action::Pick so it can append the
+    // cursor's (possibly grid-snapped) point or close at the first vertex.
+    if(!nativeUiOccluded&&!drawingNewSite) {
         const float mouseX=static_cast<float>(GET_X_LPARAM(lParam)),mouseY=static_cast<float>(GET_Y_LPARAM(lParam));
         float nearestDistanceSquared=SitePointHitRadiusPixels*SitePointHitRadiusPixels;
         for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)) {
@@ -259,8 +264,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         }
     }
     bool edgeInsertHandled=false;
-    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
-        const auto& snapshot=ReadSnapshot();SiteEdgePreview edge{};
+    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&!drawingNewSite&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
+        const auto& snapshot=inputSnapshot;SiteEdgePreview edge{};
         if(FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&edge)) {
             SendSitePointCommand(Action::AddSitePoint,snapshot.editingSiteId,edge.edge,edge.point,true);
             edgeInsertHandled=true;
