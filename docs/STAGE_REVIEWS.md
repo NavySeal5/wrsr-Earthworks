@@ -748,3 +748,7 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - The user's 0.16.22 log showed that native UI rectangle 75 was a 32×32 rectangle tracking the pointer within 2 px. This is the in-game cursor sprite, falsely classified as an occluding panel; most map clicks consequently had `nativeUi=1`, with `mapPick=0`.
 - Build 0.16.23 ignores only a matching cursor-sized rectangle during occlusion checks. Other native UI rectangles remain click blockers. The route diagnostic now records `cursorRectIgnored`.
 - Build and staging are pending. No in-game test was performed. Ask the user to test ordinary Free draw points and verify clicks on native UI are still blocked.
+
+**Stage 13 all-point height adjustment — 8 November 2026**
+- Height adjustment buttons now detect Shift and apply their relative delta to all Site vertices. The current selection remains unchanged; height entry and sampling continue to affect selected vertices only. Ctrl remains the 10 m step and combines with Shift.
+- The height info button explains the new modifier behavior. Build and staging are pending; no in-game test was performed. User verification is in `STAGE13_TESTING.md`.

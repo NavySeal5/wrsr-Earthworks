@@ -21,6 +21,7 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 5. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
 6. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
 7. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.
+8. Select one vertex, then hold Shift while clicking either height adjustment button. Confirm all vertices change by the same relative amount and retain their height differences. Hold Ctrl at the same time to confirm the step is 10 m. Without Shift, confirm only the selected vertices change. Check the height info button for the updated modifier explanation.
 8. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
 9. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
 

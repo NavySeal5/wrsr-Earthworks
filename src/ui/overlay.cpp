@@ -94,10 +94,10 @@ void SendProjectValue(Action action,uint64_t projectId,float value)
 {
     Command command{};command.action=action;command.value=value;command.projectId=projectId;command.generation=frameGeneration;Enqueue(command);
 }
-void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value,bool adjust=false)
+void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value,bool adjust=false,bool allSitePoints=false)
 {
     Command command{};command.action=adjust?Action::AdjustSitePointTarget:Action::SetSitePointTarget;command.value=value;command.projectId=projectId;
-    command.pointIndex=pointIndex;command.generation=frameGeneration;Enqueue(command);
+    command.pointIndex=pointIndex;command.allSitePoints=allSitePoints;command.generation=frameGeneration;Enqueue(command);
 }
 void SendSitePointCommand(Action action,uint64_t projectId,unsigned pointIndex,Point point={},bool additive=false)
 {
@@ -1133,7 +1133,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const float heightStep=input.KeyCtrl?10.0f:1.0f;
     auto applyHeight=[&](float height){SendSitePointValue(s.editingSiteId,selectedPoint,height);};
-    auto adjustHeight=[&](float delta){SendSitePointValue(s.editingSiteId,selectedPoint,delta,true);};
+    auto adjustHeight=[&](float delta){SendSitePointValue(s.editingSiteId,selectedPoint,delta,true,input.KeyShift);};
     ImGui::BeginDisabled(!editable||!selectedCount);
     if(ImGui::Button("-##DecreasePointHeight",{24.0f,0.0f})){editHeight-=heightStep;adjustHeight(-heightStep);}
     ImGui::SameLine();ImGui::SetNextItemWidth(92.0f);
@@ -1142,7 +1142,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(changed)applyHeight(editHeight);
     if(ImGui::IsItemDeactivatedAfterEdit())applyHeight(editHeight);
     ImGui::SameLine();if(ImGui::Button("+##IncreasePointHeight",{24.0f,0.0f})){editHeight+=heightStep;adjustHeight(heightStep);}
-    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling set all selected points to the same height; −/+ preserve their height differences.",{22.0f,22.0f});
+    ImGui::SameLine();GameIconButton("##TargetHeightHelp",targetHeightInfoIcon,"i","Click −/+ to adjust by 1 m. Hold Ctrl for 10 m.\nHold Shift while clicking −/+ to adjust every point in the shape.\nShift-click points to toggle them in the selection.\nHeight entry and map sampling affect selected points; −/+ preserve their height differences.",{22.0f,22.0f});
     ImGui::SameLine();
     if(ImGui::Button("Sample selected",{104.0f,0.0f}))Send(Action::SampleSiteTarget);
     ImGui::EndDisabled();

@@ -672,9 +672,11 @@ pick_done:
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {Message("Select a valid Site point and height.");break;}
         if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){Message("Finished Sites cannot be edited.");break;}
-        const uint32_t mask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
-        if(!mask){Message("Select at least one Site point before changing height.");break;}
         const bool relative=command.action==Action::AdjustSitePointTarget;
+        const uint32_t selectedMask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
+        const uint32_t mask=command.allSitePoints&&relative
+            ?(plan->pointCount==MaxSitePoints?UINT32_MAX:((1u<<plan->pointCount)-1u)):selectedMask;
+        if(!mask){Message("Select at least one Site point before changing height.");break;}
         bool valid=true;
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i)) {
             const float height=relative?plan->points[i].y+command.value:command.value;
@@ -688,7 +690,7 @@ pick_done:
         }
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i))
             plan->points[i].y=relative?plan->points[i].y+command.value:command.value;
-        plan->RefreshBounds();selectedSitePointIndex=command.pointIndex;selectedSitePointsMask=mask;
+        plan->RefreshBounds();selectedSitePointIndex=command.pointIndex;selectedSitePointsMask=selectedMask;
         if(site){editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;RefreshProjectStatus();Message(site->needsReview?"Point height changed. Review this Site before resuming.":"Point height changed; terrain remains unchanged.");}
         else {Changed();Message("Point height changed; terrain is unchanged.");}
         break;
