@@ -34,6 +34,7 @@ unsigned selectedSitePointIndex=0;
 uint32_t selectedSitePointsMask=1;
 bool siteEditorOpen=false,creatingSite=false;
 SiteShapeMode shapeMode=SiteShapeMode::FreeDraw;
+bool siteDraftLockToGrid=false;
 bool savePending = false;
 bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
@@ -129,6 +130,19 @@ bool ReadTerrainGrid(void* terrain,TerrainGrid* out)
             && std::isfinite(out->stepX) && std::isfinite(out->stepZ)
             && std::isfinite(out->heightScale) && out->heightScale>10 && out->heightScale<100000;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+void UpdateTerrainGridSnapshot()
+{
+    TerrainGrid grid{};
+    current.terrainGridValid=current.ready&&ReadTerrainGrid(TerrainObject(),&grid);
+    if(current.terrainGridValid) {
+        current.terrainGridOriginX=grid.originX;current.terrainGridOriginZ=grid.originZ;
+        current.terrainGridStepX=grid.stepX;current.terrainGridStepZ=grid.stepZ;
+        current.terrainCellSize=std::min(grid.stepX,grid.stepZ);
+    } else {
+        current.terrainGridOriginX=current.terrainGridOriginZ=0;
+        current.terrainGridStepX=current.terrainGridStepZ=current.terrainCellSize=0;
+    }
 }
 bool ApplyProjectVertex(void* terrain,const TerrainGrid& grid,int x,int z,float delta)
 {
@@ -288,6 +302,7 @@ void DiscardSiteDraft()
     history.Reset();
     current.mode=PickMode::None;
     creatingSite=false;
+    siteDraftLockToGrid=false;current.lockToGrid=false;
     editingSiteId=0;
     siteEditorOpen=false;
     SetDefaultDraftSiteName();
@@ -298,7 +313,7 @@ void ResetWorld()
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
     SelectSingleSitePoint(0);
-    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     lastWorldFacilityScan=0;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
@@ -312,7 +327,8 @@ void ResetWorld()
 void RefreshProjectStatus()
 {
     TerrainGrid terrainGrid{};
-    current.terrainCellSize=ReadTerrainGrid(TerrainObject(),&terrainGrid)?std::min(terrainGrid.stepX,terrainGrid.stepZ):0.0f;
+    UpdateTerrainGridSnapshot();
+    current.lockToGrid=siteDraftLockToGrid;
     current.volumes=Estimate(current.plan,current.terrainCellSize);
     const auto now=GetTickCount64();
     const bool refreshFacilityReadings=now-lastProjectFacilityReadings>=500;
@@ -471,7 +487,7 @@ void Process(const Command& command)
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Click vertices to draw the Site boundary, then finish the shape.");break;}
         if(current.plan.first) {creatingSite=true;siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"Saved Site draft reopened.":"Continue adding Site boundary points.");break;}
-        history.Reset(); current.plan = Plan{};shapeMode=SiteShapeMode::FreeDraw; Changed();
+        history.Reset(); current.plan = Plan{};shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false;current.lockToGrid=false; Changed();
         SetDefaultDraftSiteName();
         editingSiteId=0;creatingSite=true;siteEditorOpen=true;
         SelectSingleSitePoint(0);current.mode = PickMode::DrawSite;
@@ -480,7 +496,7 @@ void Process(const Command& command)
         break;
     case Action::Select:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
-        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;SelectSingleSitePoint(0);current.mode=PickMode::DrawSite;RefreshProjectStatus();
+        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;SelectSingleSitePoint(0);current.mode=PickMode::DrawSite;RefreshProjectStatus();
         Message("Click at least three points around the Site boundary, then finish the shape.");break;
     case Action::SetShapeMode:
         if(!creatingSite||current.plan.complete||current.plan.pointCount>1||command.value<0.0f||command.value>2.0f)break;
@@ -488,6 +504,11 @@ void Process(const Command& command)
         current.shapeMode=shapeMode;
         current.mode=PickMode::DrawSite;
         Message(shapeMode==SiteShapeMode::FreeDraw?"Free draw: click boundary points, then finish the shape.":shapeMode==SiteShapeMode::Square?"Square: click one corner, move to size it, then click to set it.":"Rectangle: click one corner, move to size it, then click the opposite corner.");
+        break;
+    case Action::SetGridSnap:
+        if(!creatingSite||current.plan.pointCount||current.plan.complete)break;
+        siteDraftLockToGrid=command.value!=0.0f;current.lockToGrid=siteDraftLockToGrid;
+        Message(siteDraftLockToGrid?"Lock to Grid enabled. New Site points will snap to terrain vertices.":"Lock to Grid disabled.");
         break;
     case Action::CloseSiteEditor:
         if(creatingSite) {DiscardSiteDraft();Message("New Site draft discarded because its editor was closed.");}
@@ -529,6 +550,11 @@ void Process(const Command& command)
             Message("Select your Earthworks facility in the Projects tab, then assign it to the selected project.");break;
         }
         Point p = current.cursor;
+        if(current.mode==PickMode::DrawSite&&creatingSite&&siteDraftLockToGrid&&current.terrainGridValid) {
+            TerrainGrid grid{};grid.originX=current.terrainGridOriginX;grid.originZ=current.terrainGridOriginZ;
+            grid.stepX=current.terrainGridStepX;grid.stepZ=current.terrainGridStepZ;
+            p=SnapToTerrainGrid(p,grid);
+        }
         if (!ReadHeight(p.x,p.z,&p.y)) { Message("Cannot sample terrain here. Try another point."); break; }
         if(current.mode==PickMode::None&&!siteEditorOpen) {
             auto site=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
@@ -1215,6 +1241,7 @@ void Tick()
     const bool wasReady = current.ready;
     if (!ReadNative(&current)) { current.ready = false; current.cursorValid = false; current.cameraValid = false; }
     if (wasReady && !current.ready) ResetWorld();
+    UpdateTerrainGridSnapshot();
     if (!wasReady && current.ready) {
         if(loadMessagePending) loadMessagePending=false;
         else current.message[0]=0;

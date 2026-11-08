@@ -12,6 +12,7 @@
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "../core/productivity.h"
+#include "../core/terrain_grid.h"
 #include "imgui_impl_dx11.h"
 #include <algorithm>
 #include <cmath>
@@ -205,6 +206,14 @@ bool Hit(const RECT& rect, LPARAM point)
     return PtInRect(&rect,p) != FALSE;
 }
 bool CursorOnEditingSite(const Snapshot& s);
+Point SiteDrawingCursor(const Snapshot& s)
+{
+    if(!s.creatingSite||!s.lockToGrid||!s.terrainGridValid)return s.cursor;
+    TerrainGrid grid{};
+    grid.originX=s.terrainGridOriginX;grid.originZ=s.terrainGridOriginZ;
+    grid.stepX=s.terrainGridStepX;grid.stepZ=s.terrainGridStepZ;
+    return SnapToTerrainGrid(s.cursor,grid);
+}
 bool KeyboardShortcutPassesThrough(UINT message,WPARAM key)
 {
     if(message==WM_SYSKEYDOWN||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_SYSDEADCHAR)return true;
@@ -522,10 +531,11 @@ void DrawPreview(const Snapshot& s)
             if(i+1<p.pointCount)Line(s,p.points[i],p.points[i+1],fillColor,2.0f);
         }
         if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
+            const Point drawingCursor=SiteDrawingCursor(s);
             if(s.shapeMode!=SiteShapeMode::FreeDraw&&p.pointCount==1) {
-                Point corners[4]{};BuildTwoCornerShape(p.points[0],s.cursor,s.shapeMode,corners);
+                Point corners[4]{};BuildTwoCornerShape(p.points[0],drawingCursor,s.shapeMode,corners);
                 for(unsigned i=0;i<4;++i)Line(s,corners[i],corners[(i+1)%4],fillColor,2.0f);
-            } else Line(s,p.points[p.pointCount-1],s.cursor,fillColor,2.0f);
+            } else Line(s,p.points[p.pointCount-1],drawingCursor,fillColor,2.0f);
         }
         return;
     }
@@ -1000,6 +1010,14 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             ImGui::EndDisabled();
             if(active)ImGui::PopStyleColor();
         }
+        const bool gridSnapAvailable=s.terrainGridValid;
+        const bool canSetGridSnap=gridSnapAvailable&&!plan.complete&&plan.pointCount==0;
+        bool lockToGrid=s.lockToGrid;
+        ImGui::BeginDisabled(!canSetGridSnap);
+        if(ImGui::Checkbox("Lock to Grid",&lockToGrid))Send(Action::SetGridSnap,lockToGrid?1.0f:0.0f);
+        ImGui::EndDisabled();
+        if(!gridSnapAvailable)ImGui::TextDisabled("Terrain grid data is unavailable.");
+        else ImGui::TextDisabled("Snaps shape points to terrain grid vertices.");
         if(!plan.pointCount) {
             ImGui::Separator();
             if(s.shapeMode==SiteShapeMode::FreeDraw)ImGui::TextWrapped("Click boundary points in sequence. Click within 5 m of the first point, or choose Finish shape, to close the polygon.");

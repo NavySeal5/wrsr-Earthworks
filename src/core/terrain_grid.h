@@ -1,6 +1,7 @@
 #pragma once
 #include "planning.h"
 #include <algorithm>
+#include <cmath>
 
 namespace ew {
 struct TerrainGrid {
@@ -8,6 +9,14 @@ struct TerrainGrid {
     int width=0, depth=0;
     Point At(int x,int z) const { return {originX+stepX*static_cast<float>(x),0,originZ+stepZ*static_cast<float>(z)}; }
 };
+inline Point SnapToTerrainGrid(Point point,const TerrainGrid& grid)
+{
+    if(std::isfinite(grid.originX)&&std::isfinite(grid.stepX)&&grid.stepX>0)
+        point.x=grid.originX+std::round((point.x-grid.originX)/grid.stepX)*grid.stepX;
+    if(std::isfinite(grid.originZ)&&std::isfinite(grid.stepZ)&&grid.stepZ>0)
+        point.z=grid.originZ+std::round((point.z-grid.originZ)/grid.stepZ)*grid.stepZ;
+    return point;
+}
 struct GridRect {
     int x0=0,z0=0,x1=-1,z1=-1;
     int Count() const { return (x1-x0+1)*(z1-z0+1); }

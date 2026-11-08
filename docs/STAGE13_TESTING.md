@@ -22,6 +22,14 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 6. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
 7. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
 
+## Optional terrain-grid snapping
+
+1. Start a new Site and confirm **Lock to Grid** is unchecked by default. With it unchecked, place Free draw points and confirm they follow the cursor without snapping.
+2. Start another new Site, check **Lock to Grid** before placing any points, and move the cursor around. In Free draw, the preview segment should end at a native terrain grid vertex; each click should place the point at that same snapped location.
+3. Repeat in Square and Rectangle modes. The live wireframe should snap as the cursor moves, and the committed corners should land on terrain grid vertices. Check both axes on terrain where X and Z grid spacing differ, if available.
+4. After the first point is placed, confirm the checkbox is disabled so the footprint cannot mix snapped and unsnapped points. Create another Site to switch the option back off or on.
+5. Confirm the checkbox only changes horizontal point positions. Point target heights should still be sampled from the terrain at the snapped location, and planning must not modify terrain.
+
 ## Edit a saved Site
 
 1. Reopen the saved Site. Click an unselected vertex and release within 250 ms; it should only select the point and must not move it. Then press and hold an unselected vertex for at least 250 ms before dragging; it should move during that same press. Already-selected points should retain immediate drag behavior. The boundary should update, while the Site should not change the terrain.
