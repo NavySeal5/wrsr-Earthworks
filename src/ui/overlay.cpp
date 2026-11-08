@@ -1131,6 +1131,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     if(!selectedCount)strcpy_s(pointLabel,"No points selected");
     else if(selectedCount>1)sprintf_s(pointLabel,"%u points selected",selectedCount);
     else sprintf_s(pointLabel,"Point %u",selectedPoint+1);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{10.0f,5.0f});
     if(ImGui::BeginCombo("##SelectedSitePoint",pointLabel)) {
         for(unsigned i=0;i<plan.pointCount;++i) {
             char label[64]{};sprintf_s(label,"%s Point %u  (%.1f, %.1f)",(selectedMask&(1u<<i))?"[x]":"[ ]",i+1,plan.points[i].x,plan.points[i].z);
@@ -1140,6 +1141,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         }
         ImGui::EndCombo();
     }
+    ImGui::PopStyleVar();
     ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
     ImGui::TextDisabled("Shift-click toggles points; click without Shift selects one.");
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
