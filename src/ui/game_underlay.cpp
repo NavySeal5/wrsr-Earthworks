@@ -219,7 +219,6 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
             const float radius=primary?8.0f:(selected?7.0f:6.0f);
             const int fillGroup=primary?11:(selected?12:13);
             AddScreenCross(x,y,radius,10,fillGroup);
-            if(!selected||!editor.complete)continue;
             float ground=0;
             if(!editor.GroundAt(editor.points[i].x,editor.points[i].z,&ground)
                 ||std::abs(editor.points[i].y-ground)<0.01f)continue;

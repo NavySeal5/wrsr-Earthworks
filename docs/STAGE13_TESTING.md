@@ -108,3 +108,10 @@ The live estimate is sampled from current terrain every 500 ms while a saved Sit
 5. Confirm progress keeps advancing and reaches completion against the revised target. Saving and reloading after review should preserve the recalculated percentage and continue normally.
 
 The denominator is an estimate derived from terrain height differences on the native terrain grid. Edits can change estimated work nonlinearly, so percentages are expected to rebase rather than remain fixed when scope changes.
+
+## Point-to-ground guides — build 0.16.34-site-point-ground-guides
+
+1. Open a saved Site in the editor with multiple points at different target heights. Confirm each point that differs from its sampled terrain height has a visible line to the ground, including unselected points.
+2. Create a draft and add several points. Confirm guides appear for its points before the shape is finished as well as after completion.
+3. Select and deselect points, including Shift multi-selection. Guides should stay visible through selection changes.
+4. Place native game panels over the guide lines. The guides should remain visible in uncovered map space and remain behind native UI elements.
