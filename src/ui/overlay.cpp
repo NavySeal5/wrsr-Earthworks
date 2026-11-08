@@ -56,7 +56,7 @@ bool popupRectValid = false;
 bool editorRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
-float expandedPanelHeight = 640.0f;
+float expandedPanelHeight = 517.5f;
 std::atomic<bool> editorWasDragged{false};
 bool escapeKeyDown = false;
 bool escapeOwned = false;
@@ -641,13 +641,15 @@ void DrawInterface(const Snapshot& s)
     }
     if (!s.ready || !panelOpen) { panelRectValid=false;popupRectValid=false;editorRectValid=false; return; }
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
-    const float panelHeight=std::min(850.0f,std::max(360.0f,display.y-180.0f));
+    constexpr float listHeightReduction=122.5f;
+    const float availablePanelHeight=std::max(360.0f,display.y-180.0f-listHeightReduction);
+    const float panelHeight=std::min(727.5f,availablePanelHeight);
     constexpr float headerHeight=56.0f;
     ImGui::SetNextWindowPos({std::max(10.0f,display.x-panelWidth-20.0f),155},ImGuiCond_FirstUseEver);
     if(panelMinimized) ImGui::SetNextWindowSize({panelWidth,headerHeight+2.0f},ImGuiCond_Always);
     else if(restorePanelSize) { ImGui::SetNextWindowSize({panelWidth,expandedPanelHeight},ImGuiCond_Always); restorePanelSize=false; }
     else ImGui::SetNextWindowSize({panelWidth,panelHeight},ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints({std::min(560.0f,std::max(480.0f,display.x-20.0f)),44},{std::min(800.0f,std::max(480.0f,display.x-20.0f)),std::max(300.0f,display.y-180.0f)});
+    ImGui::SetNextWindowSizeConstraints({std::min(560.0f,std::max(480.0f,display.x-20.0f)),44},{std::min(800.0f,std::max(480.0f,display.x-20.0f)),availablePanelHeight});
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
@@ -735,7 +737,7 @@ void DrawInterface(const Snapshot& s)
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 bool openSiteRenamePopup=false;
-                ImGui::BeginChild("Sites list",{0,300},ImGuiChildFlags_Borders);
+                ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.5f);
@@ -831,7 +833,7 @@ void DrawInterface(const Snapshot& s)
                 if(ImGui::SmallButton(showAllFacilities?"Hide other Projects":"Show all facilities"))showAllFacilities=!showAllFacilities;
                 ImGui::SameLine();if(ImGui::SmallButton("Refresh"))Send(Action::RefreshFacilities);
                 ImGui::SameLine();ImGui::TextDisabled("%u found",s.facilityCandidateCount);
-                if(ImGui::BeginTable("facilityTable",4,ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,{0,190})) {
+                if(ImGui::BeginTable("facilityTable",4,ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,{0,142.5f})) {
                     ImGui::TableSetupColumn("Facility",ImGuiTableColumnFlags_WidthStretch,2.2f);
                     ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,1.6f);
                     ImGui::TableSetupColumn("Machines",ImGuiTableColumnFlags_WidthFixed,84.0f);
