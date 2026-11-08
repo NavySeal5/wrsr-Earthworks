@@ -21,7 +21,6 @@ void BuildTwoCornerShape(Point anchor,Point cursor,SiteShapeMode mode,Point (&co
 }
 
 namespace {
-struct Vertex { double x, z, d; };
 using Triangle = std::array<unsigned,3>;
 double Cross(const Point& a,const Point& b,const Point& c)
 {
@@ -84,32 +83,6 @@ bool TriangleHeight(const Point& p,const Point& a,const Point& b,const Point& c,
     constexpr double eps=1e-5;
     if(wa<-eps||wb<-eps||wc<-eps)return false;
     *height=static_cast<float>(wa*a.y+wb*b.y+wc*c.y);return std::isfinite(*height);
-}
-// Clip a triangle's linearly interpolated depth at zero, then integrate the
-// resulting polygon. Mixed cut/fill cells therefore do not cancel each other.
-double PositiveVolume(const std::array<Vertex, 3>& triangle, double sign)
-{
-    std::array<Vertex, 6> polygon{};
-    int count = 0;
-    for (int i = 0; i < 3; ++i) {
-        Vertex a = triangle[static_cast<size_t>(i)];
-        Vertex b = triangle[static_cast<size_t>((i + 1) % 3)];
-        a.d *= sign; b.d *= sign;
-        if (a.d >= 0) polygon[static_cast<size_t>(count++)] = a;
-        if ((a.d > 0 && b.d < 0) || (a.d < 0 && b.d > 0)) {
-            const double t = a.d / (a.d - b.d);
-            polygon[static_cast<size_t>(count++)] = {a.x + t * (b.x - a.x), a.z + t * (b.z - a.z), 0};
-        }
-    }
-    double result = 0;
-    for (int i = 1; i + 1 < count; ++i) {
-        const auto& a = polygon[0];
-        const auto& b = polygon[static_cast<size_t>(i)];
-        const auto& c = polygon[static_cast<size_t>(i + 1)];
-        const double area = std::abs((b.x-a.x)*(c.z-a.z)-(c.x-a.x)*(b.z-a.z)) * 0.5;
-        result += area * (a.d + b.d + c.d) / 3;
-    }
-    return result;
 }
 }
 float Plan::MinX() const { if(pointCount){float v=points[0].x;for(unsigned i=1;i<pointCount;++i)v=std::min(v,points[i].x);return v;}return std::min(a.x,b.x); }
@@ -253,19 +226,28 @@ Volumes Estimate(const Plan& plan,float blendWidth)
 {
     Volumes out;
     if (!plan.complete || !ValidFootprint(plan)) return out;
-    for (int z = 0; z < GridCells; ++z) for (int x = 0; x < GridCells; ++x) {
-        const Point p[] = {plan.Vertex(x,z,false), plan.Vertex(x+1,z,false),
-            plan.Vertex(x+1,z+1,false), plan.Vertex(x,z+1,false)};
-        if(!plan.Contains((p[0].x+p[2].x)*0.5f,(p[0].z+p[2].z)*0.5f))continue;
-        Point proposed[4];bool targetValid=true;
-        for(unsigned i=0;i<4;++i)targetValid=plan.BlendedTargetAt(p[i].x,p[i].z,blendWidth,&proposed[i].y)&&targetValid;
-        if(!targetValid)continue;
-        for (int t = 0; t < 2; ++t) {
-            const Point q[] = {proposed[0], proposed[t+1], proposed[t+2]};
-            std::array<Vertex,3> triangle{};
-            for (size_t i=0; i<3; ++i) triangle[i] = {q[i].x,q[i].z,static_cast<double>(q[i].y)-p[i==0?0:static_cast<size_t>(t+i)].y};
-            out.fill += PositiveVolume(triangle,1);
-            out.cut += PositiveVolume(triangle,-1);
+    const double cellWidth=static_cast<double>(plan.Width())/GridCells;
+    const double cellDepth=static_cast<double>(plan.Depth())/GridCells;
+    if(!std::isfinite(cellWidth)||!std::isfinite(cellDepth)||cellWidth<=0||cellDepth<=0)return out;
+
+    // Sample sub-cell centers instead of requiring all four corners of a coarse
+    // cell to fall inside the polygon. That corner requirement omitted boundary
+    // cells wholesale and could erase estimates for narrow or irregular Sites.
+    constexpr int samplesPerAxis=2;
+    constexpr double sampleAreaFraction=1.0/(samplesPerAxis*samplesPerAxis);
+    const double sampleArea=cellWidth*cellDepth*sampleAreaFraction;
+    for(int z=0;z<GridCells;++z)for(int x=0;x<GridCells;++x) {
+        const double x0=static_cast<double>(plan.MinX())+cellWidth*x;
+        const double z0=static_cast<double>(plan.MinZ())+cellDepth*z;
+        for(int sz=0;sz<samplesPerAxis;++sz)for(int sx=0;sx<samplesPerAxis;++sx) {
+            const float px=static_cast<float>(x0+cellWidth*(sx+0.5)/samplesPerAxis);
+            const float pz=static_cast<float>(z0+cellDepth*(sz+0.5)/samplesPerAxis);
+            if(!plan.Contains(px,pz))continue;
+            float proposed=0,ground=0;
+            if(!plan.BlendedTargetAt(px,pz,blendWidth,&proposed)||!plan.GroundAt(px,pz,&ground))continue;
+            const double delta=static_cast<double>(proposed)-ground;
+            if(delta>0)out.fill+=delta*sampleArea;
+            else out.cut-=delta*sampleArea;
         }
     }
     return out;

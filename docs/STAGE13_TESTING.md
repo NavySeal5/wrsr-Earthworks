@@ -25,6 +25,14 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 8. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
 9. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
 
+## Cut/fill estimate — build 0.16.29
+
+The estimate now uses four interior samples per planning-grid cell and counts only samples inside the Site footprint. This is intended to keep boundary and irregular polygons from losing entire cells when a corner falls outside the shape. Values display to one decimal place. Estimates remain coarse previews; actual execution uses terrain-grid measurements.
+
+1. Draw and finish a rectangle on a clear area. Raise all points by several metres; Fill estimate should become positive. Lower them below the sampled ground; Cut estimate should become positive.
+2. Draw a concave or L-shaped Site and set different point heights so part of the surface is above ground and part below. Confirm both estimates can be positive and respond when a point height changes.
+3. Set all points to the sampled current ground height. Estimates should return close to zero. A displayed `0.0 m3` is expected only when the measured value is effectively zero at the preview's sampling resolution.
+
 ## Optional terrain-grid snapping
 
 1. Start a new Site and confirm **Lock to Grid** is unchecked by default. With it unchecked, place Free draw points and confirm they follow the cursor without snapping.
