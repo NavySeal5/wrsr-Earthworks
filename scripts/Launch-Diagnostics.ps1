@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$DeveloperUI)
+param()
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -12,10 +12,6 @@ if ($running.Count -gt 0) {
 if (-not (Get-Process steam -ErrorAction SilentlyContinue)) { throw 'Start Steam before launching the diagnostic game session.' }
 if (Get-Process SOVIET64,SOVIET -ErrorAction SilentlyContinue) { throw 'Close the running game before launching a diagnostic session.' }
 Write-Host 'Staging the plugin and dedicated Earthworks facility for the Earthworks Development profile...'
-if ($DeveloperUI) {
-    & (Join-Path $PSScriptRoot 'Stage-Diagnostics.ps1') -DeveloperUI
-} else {
-    & (Join-Path $PSScriptRoot 'Stage-Diagnostics.ps1')
-}
+& (Join-Path $PSScriptRoot 'Stage-Diagnostics.ps1') -DeveloperUI
 if (-not $?) { throw 'Prototype staging failed; RML was not launched.' }
 Start-Process -FilePath $launcher -WorkingDirectory (Split-Path $launcher -Parent) -WindowStyle Normal

@@ -22,7 +22,7 @@ The normal player build omits technical diagnostics. Build the developer-only UI
 .\scripts\Stage-Diagnostics.ps1 -DeveloperUI
 ```
 
-Close the game and project-local RML before staging or launching. You can build and stage explicitly with the commands above, then start RML. Or run `launch-prototype.cmd -DeveloperUI`; that option both stages the developer build and opens the project-local RML. Choose **Earthworks Development** and launch the game from RML. Open the Earthworks panel and select its **Developer** tab. Running `launch-prototype.cmd` without `-DeveloperUI` stages the normal player build, which does not have that tab.
+Close the game and project-local RML before staging or launching. Run `launch-prototype.cmd`; it stages the developer build and opens the project-local RML. Choose **Earthworks Development** and launch the game from RML. Open the Earthworks panel and select **Developer**, beside **Projects and Sites**. Confirm the RML plugin version is `0.16.39-construction-skill-diagnostic` with DLL hash prefix `5f912b7f`. The subscribed/player build does not include this tab.
 
 ## User verification
 
