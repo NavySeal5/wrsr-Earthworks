@@ -51,4 +51,12 @@ This build blends the target back to the Site's sampled starting terrain at its 
 
 Report edge dents/berms, an unexpectedly wide blend, a visible flat lip, or any mismatch between the preview and the finished terrain. The blend is provisional pending this in-game check.
 
+## Native UI click protection in draw modes
+
+1. Open a fresh test save and arm each creation mode in turn: Free draw, Square, and Rectangle. Move the cursor over native UI areas such as the top date/speed bar, left tool strip, bottom build toolbar, and an open vanilla building panel.
+2. Click native buttons and controls while each draw mode is armed. Confirm vanilla UI controls respond normally and no Site point is added, no shape is committed, and no existing vertex is selected, inserted, or moved behind the UI.
+3. Return to unobstructed terrain and confirm each draw mode still accepts its intended map clicks and shows its preview.
+4. Open the editor for a saved Site. Place a native panel over some of its wireframe/point handles if convenient. Click and drag over that vanilla panel; confirm the Site editor does not select, insert, or move points through it, while the vanilla panel still works.
+5. Check the RML runtime log after startup for `native UI click occlusion installed`. If it reports `unavailable`, repeat the checks around the standard HUD margins; report the log line and any UI regions that still accept a Site click.
+
 Report any crash, unexpected terrain change during planning/editing, boundary/height mismatch, incorrect save/reload, invalid edit acceptance, or failure to pause/review. Stage 13 remains pending until the in-game result is reviewed.

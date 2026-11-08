@@ -3,9 +3,12 @@
 #include "imgui.h"
 #include <windows.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <mutex>
+#include <shared_mutex>
+#include <string>
 
 namespace ew {
 namespace {
@@ -37,6 +40,7 @@ constexpr size_t TextureSetSlot = 14;
 constexpr size_t MaxSegments = 4096;
 constexpr size_t GroupCount = 7;
 constexpr float ShadeRowPixels = 5.0f;
+constexpr size_t MaxNativeUiRects = 8192;
 
 using BeginFn = void (*)(void*, const char*, bool);
 using EndFn = void (*)(void*);
@@ -45,11 +49,18 @@ using RotationFn = void (*)(float*, const float*);
 using SetTextureFn = void (*)(void*, unsigned, void*);
 using UiFn = __int64 (*)(void*);
 UiFn originalUi = nullptr;
+DrawFn originalPanelDraw = nullptr;
 const TsmHost* boundHost = nullptr;
 std::mutex interactivePreviewMutex;
 Plan interactivePreviewPlan{};
 uint64_t interactivePreviewSiteId=0;
 bool interactivePreviewActive=false;
+struct UiRect { float left=0,top=0,right=0,bottom=0; };
+std::array<UiRect,MaxNativeUiRects> nativeUiRects{};
+size_t nativeUiRectCount=0;
+std::shared_mutex nativeUiMutex;
+std::atomic<bool> nativeUiCaptureActive{false},nativeUiCaptureInstalled{false};
+thread_local bool drawingEarthworksUnderlay=false;
 
 struct SegmentGroup { float values[MaxSegments * 4]{}; int count = 0; ImU32 color = 0; float width = 1.5f; };
 SegmentGroup groups[GroupCount];
@@ -237,6 +248,83 @@ void DrawGroup(unsigned char* base, const SegmentGroup& group)
     } __finally { std::memcpy(panel+PanelSize,saved,sizeof(saved)); }
 }
 
+bool FindExportNameForAddress(HMODULE module,const void* address,std::string* name)
+{
+    if(!module||!address||!name)return false;
+    const auto* base=reinterpret_cast<const unsigned char*>(module);
+    const auto* dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    if(dos->e_magic!=IMAGE_DOS_SIGNATURE)return false;
+    const auto* nt=reinterpret_cast<const IMAGE_NT_HEADERS64*>(base+dos->e_lfanew);
+    if(nt->Signature!=IMAGE_NT_SIGNATURE||nt->OptionalHeader.Magic!=IMAGE_NT_OPTIONAL_HDR64_MAGIC)return false;
+    const auto directory=nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+    if(!directory.VirtualAddress||directory.Size<sizeof(IMAGE_EXPORT_DIRECTORY))return false;
+    const auto* exports=reinterpret_cast<const IMAGE_EXPORT_DIRECTORY*>(base+directory.VirtualAddress);
+    const auto* functions=reinterpret_cast<const DWORD*>(base+exports->AddressOfFunctions);
+    const auto* names=reinterpret_cast<const DWORD*>(base+exports->AddressOfNames);
+    const auto* ordinals=reinterpret_cast<const WORD*>(base+exports->AddressOfNameOrdinals);
+    for(DWORD i=0;i<exports->NumberOfNames;++i) {
+        const WORD ordinal=ordinals[i];
+        if(ordinal>=exports->NumberOfFunctions)continue;
+        if(base+functions[ordinal]==address) {
+            *name=reinterpret_cast<const char*>(base+names[i]);
+            return !name->empty();
+        }
+    }
+    return false;
+}
+
+bool ReadNativeUiRect(void* panel,UiRect* output)
+{
+    float x=0,y=0,width=0,height=0,angle=0,screenWidth=0,screenHeight=0;
+    __try {
+        auto* bytes=static_cast<unsigned char*>(panel);
+        const auto* position=reinterpret_cast<const float*>(bytes+PanelPos);
+        const auto* size=reinterpret_cast<const float*>(bytes+PanelSize);
+        x=position[0];y=position[1];width=std::abs(size[0]);height=std::abs(size[1]);
+        angle=*reinterpret_cast<const float*>(bytes+PanelRotation);
+        if(boundHost&&boundHost->exeBase) {
+            screenWidth=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenWidthRva));
+            screenHeight=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenHeightRva));
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+    if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(width)||!std::isfinite(height)
+        ||!std::isfinite(angle)||width<2.0f||height<2.0f||screenWidth<=0||screenHeight<=0
+        ||width>screenWidth*1.25f||height>screenHeight*1.25f)return false;
+    const float cosine=std::abs(std::cos(angle)),sine=std::abs(std::sin(angle));
+    const float halfWidth=(width*cosine+height*sine)*0.5f;
+    const float halfHeight=(width*sine+height*cosine)*0.5f;
+    *output={std::max(0.0f,x-halfWidth),std::max(0.0f,y-halfHeight),
+        std::min(screenWidth,x+halfWidth),std::min(screenHeight,y+halfHeight)};
+    return output->right>output->left&&output->bottom>output->top;
+}
+
+void RecordNativeUiRect(void* panel)
+{
+    UiRect rect{};
+    if(!ReadNativeUiRect(panel,&rect))return;
+    std::unique_lock lock(nativeUiMutex);
+    if(nativeUiRectCount<MaxNativeUiRects)nativeUiRects[nativeUiRectCount++]=rect;
+}
+
+void HookedPanelDraw(void* panel,float u0,float v0,float u1,float v1,float rotation,bool flag)
+{
+    if(nativeUiCaptureActive.load(std::memory_order_relaxed)&&!drawingEarthworksUnderlay)
+        RecordNativeUiRect(panel);
+    if(originalPanelDraw)originalPanelDraw(panel,u0,v0,u1,v1,rotation,flag);
+}
+
+void BeginNativeUiCapture()
+{
+    std::unique_lock lock(nativeUiMutex);
+    nativeUiRectCount=0;
+    nativeUiCaptureActive.store(nativeUiCaptureInstalled.load(std::memory_order_acquire),std::memory_order_release);
+}
+
+void EndNativeUiCapture()
+{
+    nativeUiCaptureActive.store(false,std::memory_order_release);
+}
+
 void DrawUnderUi()
 {
     if(!boundHost||!boundHost->exeBase) return;
@@ -253,9 +341,12 @@ void DrawUnderUi()
         auto* panel=base+PanelRva;
         reinterpret_cast<BeginFn>(*reinterpret_cast<void**>(base+PanelBeginIat))(panel,nullptr,false);
         __try {
+            drawingEarthworksUnderlay=true;
             DrawGroup(base,groups[5]);DrawGroup(base,groups[6]);
             for(int i=0;i<5;++i)DrawGroup(base,groups[i]);
+            drawingEarthworksUnderlay=false;
         } __finally {
+            drawingEarthworksUnderlay=false;
             reinterpret_cast<EndFn>(*reinterpret_cast<void**>(base+PanelEndIat))(panel);
         }
     } __except(EXCEPTION_EXECUTE_HANDLER) {
@@ -266,7 +357,9 @@ void DrawUnderUi()
 __int64 HookedUiRoutine(void* world)
 {
     DrawUnderUi();
-    return originalUi ? originalUi(world) : 0;
+    BeginNativeUiCapture();
+    __try { return originalUi ? originalUi(world) : 0; }
+    __finally { EndNativeUiCapture(); }
 }
 }
 
@@ -274,12 +367,41 @@ bool InstallGameUnderlay(const TsmHost* hookHost)
 {
     if(!hookHost||!hookHost->exeBase||hookHost->exeSize<UiRoutineRva+UiRoutineStolen||!hookHost->installInlineHook) return false;
     boundHost=hookHost;
+    auto* drawSlot=reinterpret_cast<void**>(hookHost->exeBase+PanelDrawIat);
+    HMODULE graphics=GetModuleHandleW(L"C3DDLL64.dll");
+    std::string drawSymbol;
+    if(drawSlot&&*drawSlot&&FindExportNameForAddress(graphics,*drawSlot,&drawSymbol)
+        &&hookHost->findIatSlot&&hookHost->patchIat
+        &&hookHost->findIatSlot(hookHost->exeModule,"C3DDLL64.dll",drawSymbol.c_str())==drawSlot
+        &&hookHost->patchIat(hookHost->exeModule,"C3DDLL64.dll",drawSymbol.c_str(),reinterpret_cast<void*>(HookedPanelDraw),
+            reinterpret_cast<void**>(&originalPanelDraw),"Earthworks native UI click occlusion")) {
+        nativeUiCaptureInstalled.store(originalPanelDraw!=nullptr,std::memory_order_release);
+    }
     if(!hookHost->installInlineHook(hookHost->exeBase+UiRoutineRva,reinterpret_cast<void*>(HookedUiRoutine),
         reinterpret_cast<void**>(&originalUi),UiRoutineBytes,UiRoutineStolen,"Earthworks terrain wireframe under native UI")) {
         boundHost=nullptr;
         return false;
     }
+    hookHost->log("earthworks  native UI click occlusion %s%s",nativeUiCaptureInstalled.load()?"installed":"unavailable",
+        drawSymbol.empty()?"":" via C3D_PANEL draw capture");
     return true;
+}
+
+bool NativeUiOccludes(float x,float y)
+{
+    if(!std::isfinite(x)||!std::isfinite(y))return false;
+    if(!nativeUiCaptureInstalled.load(std::memory_order_acquire)) {
+        if(!boundHost||!boundHost->exeBase)return false;
+        const float width=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenWidthRva));
+        const float height=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenHeightRva));
+        return x<=65.0f||y<=85.0f||x>=width-300.0f||y>=height-150.0f;
+    }
+    std::shared_lock lock(nativeUiMutex);
+    for(size_t i=0;i<nativeUiRectCount;++i) {
+        const auto& rect=nativeUiRects[i];
+        if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom)return true;
+    }
+    return false;
 }
 
 void SetInteractiveSitePreview(uint64_t siteId,const Plan* plan)

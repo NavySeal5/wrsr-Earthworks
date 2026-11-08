@@ -1447,7 +1447,10 @@ void NotifyNativeTerrainEdit(float x,float z,float brushRadius) noexcept
 {
     NotifyNativeTerrainEditImpl(x,z,brushRadius);
 }
-bool LeftTaken() { return mapPickCapture || mouseCapture || leftRelease; }
+// Map-pick mode itself must not blanket-block all native left clicks. The
+// window procedure sets leftRelease only after it has classified a click as
+// belonging to Earthworks; clicks over native UI must still reach the game.
+bool LeftTaken() { return mouseCapture || leftRelease; }
 void ClearInputLatches()
 {
     __try {

@@ -232,10 +232,13 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     // widgets. Set it here too, before the game can poll C3D_INPUT for this
     // key, to cover the first key typed immediately after focusing a field.
     if(panelOpen && ImGui::GetIO().WantTextInput) keyboardCapture=true;
+    const bool mousePositionMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK||message==WM_MOUSEMOVE;
+    const bool nativeUiOccluded=mousePositionMessage
+        &&NativeUiOccludes(static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)));
     unsigned handleIndex=MaxSitePoints;
-    for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)){handleIndex=siteHandlePointIndices[i];break;}
+    if(!nativeUiOccluded)for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)){handleIndex=siteHandlePointIndices[i];break;}
     bool edgeInsertHandled=false;
-    if(message==WM_LBUTTONDOWN&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
+    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();SiteEdgePreview edge{};
         if(FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&edge)) {
             SendSitePointCommand(Action::AddSitePoint,snapshot.editingSiteId,edge.edge,edge.point,true);
@@ -284,7 +287,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
         }
     }
-    if(message==WM_MOUSEMOVE&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
+    if(message==WM_MOUSEMOVE&&!nativeUiOccluded&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&(wParam&MK_LBUTTON)) {
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
             dragSitePoint=snapshot.cursor;
             const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
@@ -310,7 +313,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             if(!insidePanel&&!insideEditor&&!CursorOnEditingSite(snapshot))Send(Action::CloseSiteEditor);
         }
     }
-    const bool mapPick = mapPickCapture && !over && WorldHit(lParam);
+    const bool mapPick = mapPickCapture && !nativeUiOccluded && !over && WorldHit(lParam);
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     if (message == WM_LBUTTONDOWN && leftOwned) {
         leftRelease = true;
