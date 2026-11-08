@@ -52,3 +52,14 @@ Keep the results in this test save; no project records or native terrain data ar
 - This is a useful native-tool observation, but it does not establish autonomous facility productivity, area/volume per time, or the agreed 10-worker comparison. Worker-only productivity remains unmeasured.
 
 For a cleaner worker-only comparison, use a separate low-population disposable republic with roughly 10 total workers near a single Labour Hall and no other workers or earthmoving vehicles within 2 km of the patch. Compare the native worker-only run with one excavator plus the same worker group. If the native tool still draws a wider workforce, record that as the behavior and leave the worker-only rate uncalibrated.
+
+## Developer snapshot — vehicle construction skill lookup
+
+The Developer tab can log the parked vehicles linked to a selected Earthworks facility and read their configured construction-skill values from the installed vehicle `script.ini`. This is configuration evidence, not a measured productivity rate.
+
+The latest snapshot for building 16 found two linked/parked machines:
+
+- `DLC3_service_exvacator_MIIIP` (vehicle ID 21): `$SKILL_CONSTRUCTION_GROUNDWORKS 15`; its `$SKILL_CONSTRUCTION_BULLDOZER 12` line is commented out.
+- `DLC3_bulldozer_stalinets_s60` (vehicle ID 23): `$SKILL_CONSTRUCTION_BULLDOZER 15`.
+
+The snapshot initially reported both as unavailable because the diagnostic only searched `media_soviet/vehicles/<type>/script.ini`. DLC vehicle internal names have a `DLC<n>_` prefix, while their definitions live under `media_soviet/dlc<n>/vehicles/<asset-name>/script.ini`. The lookup now resolves that layout, including the two DLC3 vehicles above. Their configured skill values do not by themselves establish their autonomous Earthworks throughput or the game's displayed “Speed/Level” number; that still needs behavioral evidence or further game-code/asset research.

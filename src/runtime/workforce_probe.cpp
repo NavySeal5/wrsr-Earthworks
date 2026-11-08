@@ -170,8 +170,10 @@ bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool
 {
     if(!typeName||!typeName[0]||!bulldozer||!hasBulldozer||!groundworks||!hasGroundworks||!source||sourceSize<2)return false;
     *hasBulldozer=false;*hasGroundworks=false;*bulldozer=0;*groundworks=0;source[0]=0;
-    // Vanilla vehicle type names correspond to their asset folder. Only allow
-    // plain folder names here; never interpret a type name as an arbitrary path.
+    // Vehicle type names normally correspond to their asset folder. DLC vehicles
+    // are exposed by the game as DLC<n>_<asset-name>, while their files live in
+    // media_soviet\dlc<n>\vehicles\<asset-name>. Only allow plain folder names;
+    // never interpret a type name as an arbitrary path.
     for(const char* c=typeName;*c;++c)
         if(!((*c>='a'&&*c<='z')||(*c>='A'&&*c<='Z')||(*c>='0'&&*c<='9')||*c=='_'||*c=='-'))return false;
     char module[MAX_PATH]{};
@@ -181,7 +183,38 @@ bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool
     char path[MAX_PATH]{};
     if(strcpy_s(path,module)!=0||strcat_s(path,"media_soviet\\vehicles\\")!=0||
         strcat_s(path,typeName)!=0||strcat_s(path,"\\script.ini")!=0)return false;
-    FILE* file=nullptr;if(fopen_s(&file,path,"rb")!=0||!file)return false;
+    FILE* file=nullptr;
+    if(fopen_s(&file,path,"rb")!=0||!file) {
+        // Resolve the engine's DLC-prefixed internal type name to its asset path.
+        // Example: DLC3_service_exvacator_MIIIP -> dlc3/vehicles/service_exvacator_MIIIP.
+        const char* assetName=nullptr;
+        const char* dlcName=nullptr;
+        char dlcDirectory[16]{};
+        if(std::strncmp(typeName,"DLC",3)==0) {
+            const char* digit=typeName+3;
+            const char* separator=std::strchr(digit,'_');
+            if(separator&&separator>digit&&separator[1]) {
+                bool validDlc=true;
+                for(const char* c=digit;c<separator;++c)if(*c<'0'||*c>'9')validDlc=false;
+                if(validDlc) {
+                    assetName=separator+1;
+                    // Reuse the numeric DLC suffix from the trusted internal name.
+                    const size_t digits=static_cast<size_t>(separator-digit);
+                    if(digits<sizeof(dlcDirectory)-4) {
+                        std::memcpy(dlcDirectory,"dlc",3);
+                        std::memcpy(dlcDirectory+3,digit,digits);
+                        dlcDirectory[3+digits]=0;
+                        dlcName=dlcDirectory;
+                    }
+                }
+            }
+        }
+        if(!assetName||!dlcName)return false;
+        if(strcpy_s(path,module)!=0||strcat_s(path,"media_soviet\\")!=0||
+            strcat_s(path,dlcName)!=0||strcat_s(path,"\\vehicles\\")!=0||
+            strcat_s(path,assetName)!=0||strcat_s(path,"\\script.ini")!=0)return false;
+        if(fopen_s(&file,path,"rb")!=0||!file)return false;
+    }
     strncpy_s(source,sourceSize,path,_TRUNCATE);
     char line[512]{};
     while(std::fgets(line,static_cast<int>(sizeof(line)),file)) {
@@ -359,7 +392,7 @@ void LogWorkforce()
                 host->log("earthworks  skill-source vehicle=%u type=%s bulldozerSkill=%s groundworksSkill=%s source=%s",
                     r.id,r.type,bulldozerText,groundworksText,source);
             }
-            else host->log("earthworks  skill-source vehicle=%u type=%s unavailable (no matching vanilla media_soviet/vehicles/<type>/script.ini)",r.id,r.type);
+            else host->log("earthworks  skill-source vehicle=%u type=%s unavailable (no matching supported media_soviet vehicle script.ini)",r.id,r.type);
         }
     }
 }
