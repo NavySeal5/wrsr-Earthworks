@@ -72,12 +72,12 @@ Report edge dents/berms, an unexpectedly wide blend, a visible flat lip, or any 
 
 Report any crash, unexpected terrain change during planning/editing, boundary/height mismatch, incorrect save/reload, invalid edit acceptance, or failure to pause/review. Stage 13 remains pending until the in-game result is reviewed.
 
-## Safe angles selector — build 0.16.27-safe-angles-selector
+## Safe angles selector — build 0.16.28-road-safe-grade-16
 
 The Site editor has one **Safe angles** selector and one adjacent (i) button. It defaults to **None**. The options are:
 
 - **None:** no additional slope check.
-- **Roads:** prevent saving when any triangulated planar facet exceeds 12% grade, about 6.84°.
+- **Roads:** prevent saving when any triangulated planar facet exceeds 16% grade, about 9.09°.
 - **Vanilla:** prevent saving when any facet exceeds 37°, about 75.36% grade; this is the selected terrain-safe reference, not a verified engine constant.
 
 Grade is rise divided by horizontal run. Convert angle in degrees to percent grade with `100 × tan(angle)`, or percent grade to angle with `atan(percent / 100)`. The checks inspect every triangulated planar facet, including diagonal/cross slopes, not only polygon edges. Confirm that selecting each mode changes the validation behavior and that the mode survives save/reload.

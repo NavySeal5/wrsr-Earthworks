@@ -1025,7 +1025,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(ImGui::Combo("##SafeAngles",&safeAngles,modes,3))Send(Action::SetSiteSafeAngles,static_cast<float>(safeAngles));
         ImGui::PopStyleVar();
         ImGui::SameLine();
-        GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 12% / 6.84°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{controlHeight,controlHeight});
+        GameIconButton("##SafeAnglesHelp",targetHeightInfoIcon,"i","None — no slope limit.\nRoads — Allows angles for roads, up to 16% / 9.09°.\nVanilla — Allows angles reachable with vanilla tools, up to 75.36% / 37°.",{controlHeight,controlHeight});
     };
     if(s.creatingSite) {
         ImGui::TextUnformatted("New Site draft");

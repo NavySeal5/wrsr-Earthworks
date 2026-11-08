@@ -252,7 +252,7 @@ void UpdateSiteDraftValidation()
     }
     const double maxGrade=MaximumSurfaceGrade(current.plan);
     if(current.plan.safeAngles==SafeAnglesMode::Roads&&maxGrade>MaxRoadGrade+1e-6) {
-        fail("Safe angles is set to Roads: this Site exceeds 12% grade (about 6.8 degrees).");return;
+        fail("Safe angles is set to Roads: this Site exceeds 16% grade (about 9.09 degrees).");return;
     }
     if(current.plan.safeAngles==SafeAnglesMode::Vanilla&&maxGrade>VanillaTerrainReferenceGrade+1e-6) {
         fail("Safe angles is set to Vanilla: this Site exceeds 37 degrees (about 75.4% grade).");return;

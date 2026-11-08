@@ -11,7 +11,7 @@ constexpr int GridSide = GridCells + 1;
 constexpr size_t MaxSitePoints = 32;
 constexpr float MinSitePointSpacing = 5.0f;
 // Grade is rise/run; percent grade = 100*tan(angle in degrees).
-constexpr double MaxRoadGrade = 0.12;
+constexpr double MaxRoadGrade = 0.16;
 constexpr double VanillaTerrainReferenceAngleDegrees = 37.0;
 constexpr double VanillaTerrainReferenceGrade = 0.7535540501; // tan(37 degrees)
 enum class SiteShapeMode : uint8_t { FreeDraw, Square, Rectangle };
