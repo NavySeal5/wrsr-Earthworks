@@ -1121,7 +1121,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         editHeight=plan.points[selectedPoint].y;seenEditorRevision=s.revision;seenEditorSite=s.editingSiteId;
     }
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
-    ImGui::Text("Vertices: %u / %zu (minimum spacing 5 m)",static_cast<unsigned>(plan.pointCount),MaxSitePoints);
+    ImGui::Text("Points: %u / %zu (minimum spacing 5 m)",static_cast<unsigned>(plan.pointCount),MaxSitePoints);
     ImGui::SetNextItemWidth(114.0f);
     const auto& input=ImGui::GetIO();
     const uint32_t selectedMask=s.selectedSitePointsMask;
