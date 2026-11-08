@@ -651,7 +651,7 @@ void DrawInterface(const Snapshot& s)
     bool open=true;
     ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
-    ImGui::Begin("##EarthworksPanel",&open,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+    ImGui::Begin("##EarthworksPanel",&open,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar);
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
     const bool collapsedThisFrame=panelMinimized;
