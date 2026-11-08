@@ -1178,7 +1178,6 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::SameLine();
     if(ImGui::Button("Remove selected point",{ImGui::GetContentRegionAvail().x,28.0f}))SendSitePointCommand(Action::RemoveSitePoint,s.editingSiteId,selectedPoint);
     ImGui::EndDisabled();
-    if(!s.creatingSite&&editable)ImGui::TextDisabled("Editing pauses active work and requires terrain review before resuming.");
     ImGui::PopStyleVar();
     if(s.creatingSite) {
         const bool draftInvalid=s.siteDraftError[0]!=0;
