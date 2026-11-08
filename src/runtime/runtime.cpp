@@ -40,6 +40,10 @@ bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
 ULONGLONG lastProjectFacilityReadings = 0;
 ULONGLONG lastWorldFacilityScan = 0;
+ULONGLONG lastEditorVolumeEstimate = 0;
+uint64_t editorVolumeSiteId = 0;
+Volumes cachedEditorVolumes{};
+bool cachedEditorVolumesValid = false;
 uint32_t PointMask(unsigned index)
 {
     return index<MaxSitePoints?static_cast<uint32_t>(1u<<index):0u;
@@ -108,6 +112,58 @@ bool ReadHeight(float x, float z, float* out)
         *out = heightQuery(terrain, p);
         return std::isfinite(*out) && std::abs(*out) < 100000;
     } __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+bool EstimateCurrentTerrain(const Plan& plan,float blendWidth,Volumes* out)
+{
+    if(!out||!plan.complete||!ValidFootprint(plan))return false;
+    const double cellWidth=static_cast<double>(plan.Width())/GridCells;
+    const double cellDepth=static_cast<double>(plan.Depth())/GridCells;
+    if(!std::isfinite(cellWidth)||!std::isfinite(cellDepth)||cellWidth<=0||cellDepth<=0)return false;
+    constexpr int samplesPerAxis=2;
+    constexpr double sampleAreaFraction=1.0/(samplesPerAxis*samplesPerAxis);
+    const double sampleArea=cellWidth*cellDepth*sampleAreaFraction;
+    Volumes currentVolumes{};
+    for(int z=0;z<GridCells;++z)for(int x=0;x<GridCells;++x) {
+        const double x0=static_cast<double>(plan.MinX())+cellWidth*x;
+        const double z0=static_cast<double>(plan.MinZ())+cellDepth*z;
+        for(int sz=0;sz<samplesPerAxis;++sz)for(int sx=0;sx<samplesPerAxis;++sx) {
+            const float px=static_cast<float>(x0+cellWidth*(sx+0.5)/samplesPerAxis);
+            const float pz=static_cast<float>(z0+cellDepth*(sz+0.5)/samplesPerAxis);
+            if(!plan.Contains(px,pz))continue;
+            float target=0,ground=0;
+            if(!plan.BlendedTargetAt(px,pz,blendWidth,&target))continue;
+            if(!ReadHeight(px,pz,&ground))return false;
+            const double delta=static_cast<double>(target)-ground;
+            if(delta>0)currentVolumes.fill+=delta*sampleArea;
+            else currentVolumes.cut-=delta*sampleArea;
+        }
+    }
+    if(!std::isfinite(currentVolumes.cut)||!std::isfinite(currentVolumes.fill))return false;
+    *out=currentVolumes;
+    return true;
+}
+void UpdateEditorLiveVolumes()
+{
+    if(!siteEditorOpen||creatingSite||!editingSiteId||!current.editorPlan.complete) {
+        current.editorVolumesValid=false;
+        return;
+    }
+    if(editorVolumeSiteId!=editingSiteId) {
+        editorVolumeSiteId=editingSiteId;
+        cachedEditorVolumesValid=false;
+        lastEditorVolumeEstimate=0;
+    }
+    const auto now=GetTickCount64();
+    if(!cachedEditorVolumesValid||now-lastEditorVolumeEstimate>=500) {
+        Volumes measured{};
+        if(EstimateCurrentTerrain(current.editorPlan,current.terrainCellSize,&measured)) {
+            cachedEditorVolumes=measured;
+            cachedEditorVolumesValid=true;
+            lastEditorVolumeEstimate=now;
+        }
+    }
+    current.editorVolumes=cachedEditorVolumes;
+    current.editorVolumesValid=cachedEditorVolumesValid;
 }
 void* TerrainObject()
 {
@@ -321,6 +377,7 @@ void ResetWorld()
     current = Snapshot{}; current.generation = generation;
     SelectSingleSitePoint(0);
     durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    lastEditorVolumeEstimate=0;editorVolumeSiteId=0;cachedEditorVolumes={};cachedEditorVolumesValid=false;
     lastWorldFacilityScan=0;
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
@@ -453,6 +510,7 @@ void RefreshProjectStatus()
         selectedSitePointsMask=ValidPointMask(selectedSitePointsMask,current.editorPlan.pointCount);
         current.selectedSitePoint=selectedSitePointIndex;current.selectedSitePointsMask=selectedSitePointsMask;
     }
+    UpdateEditorLiveVolumes();
 }
 bool SamplePlan(Plan* plan)
 {
@@ -1290,6 +1348,7 @@ void Tick()
     current.canUndo = history.CanUndo(); current.canRedo = history.CanRedo();
     if(current.ready)TickWorkforce();
     if(current.ready)TickProjectRunner();
+    UpdateEditorLiveVolumes();
     const auto facilityNow=GetTickCount64();
     if(current.projectQueued && current.projectFacilityId && facilityNow-lastFacilityRefresh>=500) {
         lastFacilityRefresh=facilityNow;RefreshProjectStatus();

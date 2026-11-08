@@ -1096,7 +1096,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",footprintPlan->Width(),footprintPlan->Depth(),footprintPlan->FootprintArea());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);
-    const auto volume=Estimate(plan,s.terrainCellSize);
+    const auto volume=(!s.creatingSite&&s.editorVolumesValid)?s.editorVolumes:Estimate(plan,s.terrainCellSize);
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.1f m3",volume.cut);
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.1f m3",volume.fill);
     ImGui::Separator();

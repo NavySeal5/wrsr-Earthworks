@@ -89,3 +89,12 @@ The Site editor has one **Safe angles** selector and one adjacent (i) button. It
 - **Vanilla:** prevent saving when any facet exceeds 37°, about 75.36% grade; this is the selected terrain-safe reference, not a verified engine constant.
 
 Grade is rise divided by horizontal run. Convert angle in degrees to percent grade with `100 × tan(angle)`, or percent grade to angle with `atan(percent / 100)`. The checks inspect every triangulated planar facet, including diagonal/cross slopes, not only polygon edges. Confirm that selecting each mode changes the validation behavior and that the mode survives save/reload.
+
+## Live cut/fill estimate — build 0.16.32-live-site-cut-fill
+
+1. Open the editor for a saved Site and note its Cut and Fill estimates.
+2. Start the Site and leave the editor open while simulation runs. Confirm the estimates update at short intervals as terrain is changed. They represent the approximate remaining cut and fill needed to reach the saved target; completed work should reduce the relevant amount.
+3. Pause the Site and confirm the values stop changing. Resume and confirm they continue updating. On completion, estimates should be near zero, subject to terrain-grid sampling tolerance.
+4. For comparison, open an unstarted Site or create a new draft. Its estimate should still describe the planned difference from the sampled starting terrain.
+
+The live estimate is sampled from current terrain every 500 ms while a saved Site is open in the editor. If it remains unchanged during visible terrain work, note the Site status and share the RML runtime log around the run.

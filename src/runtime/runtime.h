@@ -58,6 +58,8 @@ struct Snapshot {
     unsigned selectedSitePoint = 0;
     uint32_t selectedSitePointsMask = 1;
     Plan editorPlan{};
+    Volumes editorVolumes{};
+    bool editorVolumesValid=false;
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
     bool facilityListTruncated=false;
