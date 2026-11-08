@@ -1061,8 +1061,6 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::BeginDisabled(!canSetGridSnap);
         if(ImGui::Checkbox("Lock to Grid",&lockToGrid))Send(Action::SetGridSnap,lockToGrid?1.0f:0.0f);
         ImGui::EndDisabled();
-        if(!gridSnapAvailable)ImGui::TextDisabled("Terrain grid data is unavailable.");
-        else ImGui::TextDisabled("Click anywhere; each point snaps to the nearest terrain grid vertex.");
         drawSafetyChecks();
         if(!plan.pointCount) {
             ImGui::Separator();
@@ -1151,7 +1149,6 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();ImGui::Text("X %.1f  Z %.1f",plan.points[selectedPoint].x,plan.points[selectedPoint].z);
-    ImGui::TextDisabled("Shift-click toggles points; click without Shift selects one.");
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,{4.0f,4.0f});
     ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Height (m)");ImGui::SameLine();
     const float heightStep=input.KeyCtrl?10.0f:1.0f;
