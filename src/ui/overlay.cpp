@@ -1108,7 +1108,18 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     }
     if(!s.creatingSite)drawSafetyChecks();
     ImGui::Separator();
-    ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",plan.Width(),plan.Depth(),plan.FootprintArea());
+    Plan liveFootprintPlan{};
+    const Plan* footprintPlan=&plan;
+    if(s.creatingSite&&s.mode==PickMode::DrawSite&&s.cursorValid&&plan.pointCount==1
+        &&s.shapeMode!=SiteShapeMode::FreeDraw) {
+        Point corners[4]{};
+        BuildTwoCornerShape(plan.points[0],SiteDrawingCursor(s),s.shapeMode,corners);
+        liveFootprintPlan=plan;
+        liveFootprintPlan.pointCount=4;
+        for(unsigned i=0;i<4;++i)liveFootprintPlan.points[i]=corners[i];
+        footprintPlan=&liveFootprintPlan;
+    }
+    ImGui::Text("Footprint: %.1f x %.1f m  |  %.0f m2",footprintPlan->Width(),footprintPlan->Depth(),footprintPlan->FootprintArea());
     ImGui::Text("Sampled ground mean: %.2f m",groundMean);
     const auto volume=Estimate(plan,s.terrainCellSize);
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.0f m3",volume.cut);
