@@ -341,7 +341,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     }
     const bool mapPick = mapPickCapture && !nativeUiOccluded && !over && WorldHit(lParam);
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
-    if (message == WM_LBUTTONDOWN && leftOwned) {
+    const bool leftClickMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK;
+    if (leftClickMessage && leftOwned) {
         leftRelease = true;
         if (mapPick && GetForegroundWindow() == gameWindow&&handleIndex>=MaxSitePoints) Send(Action::Pick);
     }

@@ -17,11 +17,12 @@ This build replaces rectangular flat Sites with editable polygon Sites. Use a fr
 1. Choose **New Site** and confirm the editor now offers **Free draw**, **Square**, and **Rectangle** before any map point is placed.
 2. In **Free draw**, click three or more vertices and confirm the outline follows the clicks. Click within 5 m of the first vertex and confirm the shape closes without adding another point. Also click directly on the first point handle and confirm it closes the shape rather than only selecting the point. Repeat once using **Finish shape** to confirm the explicit control still works.
 3. While Free draw is active, click near (but more than 5 m from) an existing draft vertex, including where its enlarged handle would normally be clickable. Confirm the click appends a point at the live teal endpoint; with **Lock to Grid** enabled, it should land on the nearest grid vertex shown by that endpoint. Nearby draft handles must not intercept the click.
-4. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
-5. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
-6. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.
-7. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
-8. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
+4. Continue placing vertices at a normal, quick pace, including clicks fast enough that Windows may interpret a pair as a double-click. Each map click should add one vertex (except a deliberate click within 5 m of the first point, which closes the shape after three vertices).
+5. Discard the draft and create another Site. Choose **Square**, click one corner, and move the cursor. Confirm a closed square wireframe follows the cursor and stays aligned to the map axes. The longer cursor offset should define both equal side lengths. Click to commit it.
+6. Confirm the square opens the ordinary point-height editor with four selectable corners. Set different heights on two corners and confirm the wireframe shows the slope. Save the Site.
+7. Repeat with **Rectangle**. Its live wireframe should follow the first corner and cursor as two opposite, map-aligned corners. Click to commit, set different point heights, and save.
+8. Try committing a shape with either side shorter than 5 m; it should be rejected without losing the first corner. Move the cursor farther away and click again.
+9. Before setting the second corner, switch between Square and Rectangle and confirm the live preview changes while keeping the original first corner. Once a Free draw has more than one point, or a shape is committed, the mode controls should be disabled.
 
 ## Optional terrain-grid snapping
 
