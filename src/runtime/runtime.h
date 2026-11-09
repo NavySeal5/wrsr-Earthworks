@@ -8,7 +8,7 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, NewSite, SetShapeMode, SetGridSnap, SetSiteSafeAngles, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, AdjustSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities };
+enum class Action { Pick, Select, NewSite, SetShapeMode, SetGridSnap, SetSiteSafeAngles, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, AdjustSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, StartProject, PauseProject, ResumeProject, ReviewResumeProject, CancelProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RemoveCompletedProjects, RefreshFacilities, DismissFacilityWarning, RemoveUnresolvedFacilityAssignments };
 enum class PickMode { DrawSite, Sample, None, InspectBuilding, SampleSitePointTarget };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; unsigned pointIndex = 0; Point point{}; bool allSitePoints=false; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
@@ -36,6 +36,7 @@ struct ProjectBrief {
 };
 struct Snapshot {
     bool ready = false, cursorValid = false, cameraValid = false, canUndo = false, canRedo = false;
+    bool facilityAssignmentWarning = false;
     bool projectQueued = false;
     bool assignedFacilityFound = false;
     ProjectStatus projectStatus = ProjectStatus::Draft;

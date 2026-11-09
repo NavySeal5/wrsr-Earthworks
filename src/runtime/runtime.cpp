@@ -41,6 +41,10 @@ SiteShapeMode shapeMode=SiteShapeMode::FreeDraw;
 bool siteDraftLockToGrid=false;
 bool savePending = false;
 bool loadMessagePending = false;
+bool facilityAssignmentWarningPending = false;
+bool facilityIdentityCheckAfterLoad = false;
+struct UnresolvedFacilityAssignment { uint64_t projectId=0; size_t index=0; uint32_t facilityId=0; };
+std::vector<UnresolvedFacilityAssignment> unresolvedFacilityAssignments;
 ULONGLONG lastFacilityRefresh = 0;
 ULONGLONG lastProjectFacilityReadings = 0;
 ULONGLONG lastWorldFacilityScan = 0;
@@ -357,7 +361,7 @@ void ReconcileSavedFacilities()
     if(!ReadWorldEarthworksFacilities(&buildings,&count,&truncated)||truncated)return;
     std::vector<unsigned> usedIds;
     std::vector<std::pair<SavedProject*,size_t>> unresolvedLegacy;
-    size_t unresolvedAnchored=0;
+    std::vector<UnresolvedFacilityAssignment> unresolvedAnchored;
     bool changed=false;
     for(auto& project:durableState.projects) {
         if(project.facilityAnchors.size()!=project.facilityIds.size())project.facilityAnchors.resize(project.facilityIds.size());
@@ -376,7 +380,7 @@ void ReconcileSavedFacilities()
                             static_cast<unsigned long long>(project.id),oldId,project.facilityIds[i],buildings[match].assetName,
                             buildings[match].position.x,buildings[match].position.z);
                     }
-                } else ++unresolvedAnchored;
+                } else unresolvedAnchored.push_back({project.id,i,project.facilityIds[i]});
                 continue;
             }
             for(unsigned j=0;j<count;++j)if(buildings[j].id==project.facilityIds[i]
@@ -391,7 +395,7 @@ void ReconcileSavedFacilities()
     // when one saved assignment and one unclaimed Earthworks building remain.
     std::vector<unsigned> unclaimed;
     for(unsigned i=0;i<count;++i)if(std::find(usedIds.begin(),usedIds.end(),buildings[i].id)==usedIds.end())unclaimed.push_back(i);
-    if(unresolvedLegacy.size()==1&&unresolvedAnchored==0&&unclaimed.size()==1) {
+    if(unresolvedLegacy.size()==1&&unresolvedAnchored.empty()&&unclaimed.size()==1) {
         auto [project,index]=unresolvedLegacy.front();const auto& building=buildings[unclaimed.front()];
         project->facilityIds[index]=building.id;SaveFacilityAnchor(project->facilityAnchors[index],building);
         usedIds.push_back(building.id);changed=true;unresolvedLegacy.clear();
@@ -399,7 +403,16 @@ void ReconcileSavedFacilities()
             static_cast<unsigned long long>(project->id),building.id,building.assetName,building.position.x,building.position.z);
     }
     if(changed)RefreshProjectStatus();
-    const size_t unresolvedCount=unresolvedLegacy.size()+unresolvedAnchored;
+    unresolvedFacilityAssignments=std::move(unresolvedAnchored);
+    for(const auto& unresolved:unresolvedLegacy)
+        unresolvedFacilityAssignments.push_back({unresolved.first->id,unresolved.second,unresolved.first->facilityIds[unresolved.second]});
+    const size_t unresolvedCount=unresolvedFacilityAssignments.size();
+    if(facilityIdentityCheckAfterLoad) {
+        facilityIdentityCheckAfterLoad=false;
+        facilityAssignmentWarningPending=unresolvedCount>0;
+        if(facilityAssignmentWarningPending)
+            host->log("earthworks  post-load warning: %zu facility assignment(s) could not be resolved; user cleanup is available",unresolvedCount);
+    }
     if(unresolvedCount!=lastUnresolvedFacilityIdentityCount) {
         if(unresolvedCount)host->log("earthworks  facility links unresolved=%zu unclaimedBuildings=%zu; no ambiguous link was changed",unresolvedCount,unclaimed.size());
         lastUnresolvedFacilityIdentityCount=unresolvedCount;
@@ -452,7 +465,7 @@ void ResetWorld()
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
     SelectSingleSitePoint(0);
-    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
+    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;facilityAssignmentWarningPending=false;facilityIdentityCheckAfterLoad=false;unresolvedFacilityAssignments.clear();lastSimulationHour=-1;
     lastEditorVolumeEstimate=0;editorVolumeSiteId=0;cachedEditorVolumes={};cachedEditorVolumesValid=false;
     lastWorldFacilityScan=0;lastFacilityIdentityReconcile=0;lastUnresolvedFacilityIdentityCount=static_cast<size_t>(-1);
     durableState.projects.push_back({1,"Project 1",{}});
@@ -469,6 +482,7 @@ void RefreshProjectStatus()
     TerrainGrid terrainGrid{};
     UpdateTerrainGridSnapshot();
     current.lockToGrid=siteDraftLockToGrid;
+    current.facilityAssignmentWarning=facilityAssignmentWarningPending;
     current.volumes=Estimate(current.plan,current.terrainCellSize);
     const auto now=GetTickCount64();
     const bool refreshFacilityReadings=now-lastProjectFacilityReadings>=500;
@@ -1261,6 +1275,56 @@ pick_done:
         Message("Facility names refreshed from the buildings.");
         host->log("earthworks  manually refreshed facility names from native building instances");
         break;
+    case Action::DismissFacilityWarning:
+        facilityAssignmentWarningPending=false;
+        current.facilityAssignmentWarning=false;
+        break;
+    case Action::RemoveUnresolvedFacilityAssignments: {
+        if(!facilityAssignmentWarningPending||unresolvedFacilityAssignments.empty())break;
+        DurableState cleaned=durableState;
+        size_t removed=0;
+        for(auto& project:cleaned.projects) {
+            for(size_t i=project.facilityIds.size();i>0;--i) {
+                const size_t index=i-1;
+                const bool unresolved=std::any_of(unresolvedFacilityAssignments.begin(),unresolvedFacilityAssignments.end(),
+                    [&](const UnresolvedFacilityAssignment& entry){return entry.projectId==project.id&&entry.index==index&&entry.facilityId==project.facilityIds[index];});
+                if(!unresolved)continue;
+                project.facilityIds.erase(project.facilityIds.begin()+static_cast<std::ptrdiff_t>(index));
+                if(index<project.facilityAnchors.size())project.facilityAnchors.erase(project.facilityAnchors.begin()+static_cast<std::ptrdiff_t>(index));
+                ++removed;
+            }
+        }
+        if(!removed) {
+            lastFacilityIdentityReconcile=0;
+            ReconcileSavedFacilities();
+            if(unresolvedFacilityAssignments.empty()) {
+                facilityAssignmentWarningPending=false;
+                current.facilityAssignmentWarning=false;
+                Message("No unresolved facility assignments remain.");
+            } else {
+                Message("Assignments changed before cleanup. The unresolved links were checked again.");
+            }
+            RefreshProjectStatus();break;
+        }
+        if(!SaveDurableState(host,host->exeBase+0x9D4F10,cleaned)) {
+            Message("Could not update the saved Earthworks assignments. The warning remains open.");
+            host->log("earthworks  refused to remove %zu unresolved assignment(s): companion save update failed",removed);
+            break;
+        }
+        durableState=std::move(cleaned);
+        unresolvedFacilityAssignments.clear();facilityAssignmentWarningPending=false;
+        lastFacilityIdentityReconcile=0;
+        ReconcileSavedFacilities();
+        facilityAssignmentWarningPending=!unresolvedFacilityAssignments.empty();
+        current.facilityAssignmentWarning=false;
+        RefreshProjectStatus();
+        current.facilityAssignmentWarning=facilityAssignmentWarningPending;
+        Message(facilityAssignmentWarningPending
+            ? "Removed unresolved facility assignments. Some unresolved links remain."
+            : "Removed unresolved facility assignments from this save.");
+        host->log("earthworks  removed %zu unresolved facility assignment(s) from the active save",removed);
+        break;
+    }
     }
 }
 void NotifyNativeTerrainEditImpl(float x,float z,float brushRadius) noexcept
@@ -1519,6 +1583,7 @@ void Tick()
     }
     current.workforce=ReadWorkforce();
     UpdateSiteDraftValidation();
+    current.facilityAssignmentWarning=facilityAssignmentWarningPending;
     { std::lock_guard<std::mutex> lock(dataMutex); published = current; }
 }
 void HookedLate(__int64 world)
@@ -1544,6 +1609,7 @@ void HookedLoad()
     const auto loadResult=LoadDurableState(host,host->exeBase+0x9D4F10,&loaded);
     if (loadResult==StateLoadResult::Loaded) {
         durableState=std::move(loaded);
+        facilityIdentityCheckAfterLoad=true;
         lastFacilityIdentityReconcile=0;lastUnresolvedFacilityIdentityCount=static_cast<size_t>(-1);
         ReconcileSavedFacilities();
         current.plan=durableState.draft;

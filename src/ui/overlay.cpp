@@ -49,10 +49,11 @@ ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
 WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
-RECT buttonRect{}, panelRect{}, popupRect{};
+RECT buttonRect{}, panelRect{}, popupRect{}, assignmentWarningRect{};
 RECT editorRect{};
 bool panelRectValid = false;
 bool popupRectValid = false;
+bool assignmentWarningRectValid = false;
 bool editorRectValid = false;
 bool panelMinimized = false;
 bool restorePanelSize = false;
@@ -211,6 +212,7 @@ bool CursorOverEarthworksUi(LPARAM point)
     return Hit(buttonRect,point)
         ||(panelOpen&&panelRectValid&&Hit(panelRect,point))
         ||(panelOpen&&popupRectValid&&Hit(popupRect,point))
+        ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,point))
         ||(editorRectValid&&Hit(editorRect,point));
 }
 bool CursorOnEditingSite(const Snapshot& s);
@@ -279,7 +281,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             edgeInsertHandled=true;
         }
     }
-    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled;
+    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled;
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -590,13 +592,52 @@ bool CursorOnEditingSite(const Snapshot& s)
 void DrawSiteEditor(const Snapshot& s,ImVec2 display);
 void DrawPanelPaper(bool headerOnly);
 void DrawSiteEditorPaper(ImVec2 pos,ImVec2 size,bool headerOnly);
+void DrawFacilityAssignmentWarning(const Snapshot& s,ImVec2 display)
+{
+    assignmentWarningRectValid=false;
+    if(!s.ready||!s.facilityAssignmentWarning)return;
+    const ImVec2 size{560.0f,184.0f};
+    ImGui::SetNextWindowPos({std::max(8.0f,(display.x-size.x)*0.5f),std::max(8.0f,(display.y-size.y)*0.5f)},ImGuiCond_Always);
+    ImGui::SetNextWindowSize(size,ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{18.0f,54.0f});
+    ImGui::Begin("##EarthworksAssignmentWarning",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar);
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+    const auto pos=ImGui::GetWindowPos();
+    const auto windowSize=ImGui::GetWindowSize();
+    DrawPanelPaper(false);
+    auto* draw=ImGui::GetWindowDrawList();
+    draw->AddRectFilled(pos,{pos.x+windowSize.x,pos.y+46.0f},IM_COL32(150,60,55,255),12.0f,ImDrawFlags_RoundCornersTop);
+    draw->AddText({pos.x+16.0f,pos.y+15.0f},IM_COL32(255,255,255,255),"Earthworks | Warning");
+    ImGui::SetCursorScreenPos({pos.x+windowSize.x-48.0f,pos.y+8.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
+    if(ImGui::Button("X##CloseAssignmentWarning",{30.0f,30.0f}))Send(Action::DismissFacilityWarning);
+    ImGui::PopStyleColor(4);
+    ImGui::SetCursorScreenPos({pos.x+18.0f,pos.y+58.0f});
+    ImGui::PushTextWrapPos(pos.x+windowSize.x-18.0f);
+    ImGui::TextUnformatted("Warning: Error loading Earthworks assignments, please re-check your assigned facilities to projects");
+    ImGui::PopTextWrapPos();
+    ImGui::SetCursorScreenPos({pos.x+18.0f,pos.y+130.0f});
+    const float buttonWidth=(windowSize.x-48.0f)*0.72f;
+    if(ImGui::Button("Remove unassignable assignments",{buttonWidth,34.0f}))Send(Action::RemoveUnresolvedFacilityAssignments);
+    ImGui::SameLine();
+    if(ImGui::Button("Close",{windowSize.x-buttonWidth-48.0f,34.0f}))Send(Action::DismissFacilityWarning);
+    RememberRect(&assignmentWarningRect);assignmentWarningRectValid=true;
+    ImGui::End();
+}
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
     nameTextEditing = false;
     popupRectValid=false;
+    assignmentWarningRectValid=false;
     frameGeneration=s.generation;
-    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; editorRectValid=false; }
+    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; assignmentWarningRectValid=false;editorRectValid=false; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
         const auto p=s.workforce.building.position;
         const auto colour=IM_COL32(255,100,255,255);
@@ -621,7 +662,8 @@ void DrawInterface(const Snapshot& s)
         }
         RememberRect(&buttonRect); ImGui::End();
     }
-    if (!s.ready || !panelOpen) { panelRectValid=false;popupRectValid=false;editorRectValid=false; return; }
+    if (!s.ready) {panelRectValid=false;popupRectValid=false;editorRectValid=false;return;}
+    if (!panelOpen) {panelRectValid=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
     constexpr float listHeightReduction=122.5f;
     const float availablePanelHeight=std::max(360.0f,display.y-180.0f-listHeightReduction);
@@ -915,6 +957,7 @@ void DrawInterface(const Snapshot& s)
         panelOpen=false;mapPickCapture=false;areaPickCapture=false;leftRelease=true;panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
     }
     RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);
+    DrawFacilityAssignmentWarning(s,display);
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display)
 {
