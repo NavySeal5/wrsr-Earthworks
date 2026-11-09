@@ -131,11 +131,11 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Pause simulation time and confirm the capacity estimate is stable; progress/time remaining should not count wall-clock time. Resume and observe the forecast as terrain and machine allocation change.
 6. A calendar day is 60 simulation hours in this game. At the current provisional rate, one reference-rate machine therefore provides about 600 m3 per calendar day (10 m3/hour × 60 hours). Treat this as provisional, not calibrated balance. Report missing counts, a zero rate despite eligible machines, or a duration that does not update when capacity or remaining volume changes.
 
-## Unresolved facility assignments after loading — build 0.16.40-facility-assignment-load-warning
+## Unresolved facility assignments after loading — build 0.16.41-facility-assignment-warning-ok-cleanup
 
 1. Load a save with at least one facility assignment that no longer matches a facility in that republic. After the assignment scan completes, confirm a popup says: **Warning: Error loading Earthworks assignments, please re-check your assigned facilities to projects**.
-2. Close the popup. Confirm Projects, Sites, and unresolved assignment data remain unchanged. The popup should stay hidden for that session; loading the unresolved save again should show it again.
-3. Open the warning again if needed and choose **Remove unassignable assignments**. Confirm the affected facility links disappear, while their Projects and Sites remain. Valid assignments should remain.
+2. Click the X. Confirm Projects, Sites, and unresolved assignment data remain unchanged. The popup should stay hidden for that session; loading the unresolved save again should show it again.
+3. Choose **OK**. Confirm the affected facility links disappear, while their Projects and Sites remain. Valid assignments should remain.
 4. Save the republic and reload it. Confirm the warning no longer appears for the removed links, and confirm valid facility assignments remain attached to their Projects.
 5. Load a save whose facility assignments all resolve. Confirm no warning appears.
 6. If the companion-file update fails, confirm the warning stays open and no saved assignments are removed. Share the runtime log if this occurs.

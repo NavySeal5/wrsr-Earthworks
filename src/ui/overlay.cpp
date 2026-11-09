@@ -622,11 +622,9 @@ void DrawFacilityAssignmentWarning(const Snapshot& s,ImVec2 display)
     ImGui::PushTextWrapPos(pos.x+windowSize.x-18.0f);
     ImGui::TextUnformatted("Warning: Error loading Earthworks assignments, please re-check your assigned facilities to projects");
     ImGui::PopTextWrapPos();
-    ImGui::SetCursorScreenPos({pos.x+18.0f,pos.y+130.0f});
-    const float buttonWidth=(windowSize.x-48.0f)*0.72f;
-    if(ImGui::Button("Remove unassignable assignments",{buttonWidth,34.0f}))Send(Action::RemoveUnresolvedFacilityAssignments);
-    ImGui::SameLine();
-    if(ImGui::Button("Close",{windowSize.x-buttonWidth-48.0f,34.0f}))Send(Action::DismissFacilityWarning);
+    const ImVec2 okSize{110.0f,34.0f};
+    ImGui::SetCursorScreenPos({pos.x+(windowSize.x-okSize.x)*0.5f,pos.y+130.0f});
+    if(ImGui::Button("OK",okSize))Send(Action::RemoveUnresolvedFacilityAssignments);
     RememberRect(&assignmentWarningRect);assignmentWarningRectValid=true;
     ImGui::End();
 }
