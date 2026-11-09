@@ -1235,31 +1235,40 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
     const float step=static_cast<float>(std::min(requestedStep,maxStep));
     if(!std::isfinite(step) || step<=0)return;
     if(!openHeightmap || !closeHeightmap || !raiseLower || !heightQuery) {
+        host->log("earthworks  site=%llu paused for review: terrain writer unavailable open=%d close=%d edit=%d read=%d",
+            static_cast<unsigned long long>(project->id),openHeightmap!=nullptr,closeHeightmap!=nullptr,
+            raiseLower!=nullptr,heightQuery!=nullptr);
         project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
         Message("Native terrain writer became unavailable. Project paused for review.");return;
     }
     __try { openHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) {
+        host->log("earthworks  site=%llu paused for review: opening terrain writer raised exception=0x%08lX",
+            static_cast<unsigned long long>(project->id),GetExceptionCode());
         project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();Message("Terrain writer failed to open; project paused for review.");return;
     }
-    double usedVolume=0;int edited=0;bool failed=false;
+    double usedVolume=0;int edited=0;bool failed=false;const char* failureStage="";Point failurePoint{};
     for(uint32_t scan=0;scan<static_cast<uint32_t>(count)&&edited<batch;++scan) {
         const uint32_t linear=(project->executionCursor++)%static_cast<uint32_t>(count);
         const int x=rect.x0+static_cast<int>(linear%static_cast<uint32_t>(rect.x1-rect.x0+1));
         const int z=rect.z0+static_cast<int>(linear/static_cast<uint32_t>(rect.x1-rect.x0+1));
         const auto point=grid.At(x,z);float currentHeight=0,targetHeight=0;
         if(!project->plan.Contains(point.x,point.z)||!project->plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&targetHeight))continue;
-        if(!ReadHeight(point.x,point.z,&currentHeight)) {failed=true;break;}
+        if(!ReadHeight(point.x,point.z,&currentHeight)) {failed=true;failureStage="read-before-edit";failurePoint=point;break;}
         const float difference=targetHeight-currentHeight;
         if(std::abs(difference)<=precision)continue;
         const float delta=std::copysign(std::min(std::abs(difference),step),difference);
-        if(!ApplyProjectVertex(terrain,grid,x,z,delta)) {failed=true;break;}
+        if(!ApplyProjectVertex(terrain,grid,x,z,delta)) {failed=true;failureStage="apply-edit";failurePoint=point;break;}
         float afterHeight=0;
-        if(!ReadHeight(point.x,point.z,&afterHeight)) {failed=true;break;}
+        if(!ReadHeight(point.x,point.z,&afterHeight)) {failed=true;failureStage="read-after-edit";failurePoint=point;break;}
         const double applied=std::abs(static_cast<double>(afterHeight-currentHeight));
         usedVolume+=applied*cellArea;if(applied>0)++edited;
     }
-    __try { closeHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) { failed=true; }
+    __try { closeHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) {
+        failed=true;failureStage="close-writer";
+    }
     if(failed) {
+        host->log("earthworks  site=%llu paused for review: terrain operation=%s at (%.3f,%.3f)",
+            static_cast<unsigned long long>(project->id),failureStage,failurePoint.x,failurePoint.z);
         project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
         Message("Terrain edit/readback failed. Project paused for review; inspect the area before resuming.");return;
     }
@@ -1315,12 +1324,12 @@ void TickProjectRunner()
             Message("Started project has no facility assignment. Assign a facility before resuming.");continue;
         }
         std::vector<unsigned> availableMachineRateUnits;
-        bool facilityReadFailed=false;
+        bool facilityReadFailed=false;uint32_t failedFacilityId=0;WorkforceView failedFacility{};
         for(const auto facilityId:namedProject->facilityIds) {
             WorkforceView workforce{};
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
                 ||!workforce.parkedValid||!workforce.vehiclesValid) {
-                facilityReadFailed=true;break;
+                facilityReadFailed=true;failedFacilityId=facilityId;failedFacility=workforce;break;
             }
             for(unsigned i=0;i<workforce.rowCount;++i) {
                 const auto& vehicle=workforce.vehicles[i];
@@ -1330,8 +1339,16 @@ void TickProjectRunner()
             }
         }
         if(facilityReadFailed) {
-            for(auto* job:jobs){job->status=ProjectStatus::Paused;job->needsReview=true;schedulerStateChanged=true;}
-            Message("A Project facility vehicle reading failed. Its Sites are paused for review.");continue;
+            bool newlyWaiting=false;
+            for(auto* job:jobs) {
+                newlyWaiting|=job->status!=ProjectStatus::Waiting||job->needsReview;
+                job->status=ProjectStatus::Waiting;job->needsReview=false;schedulerStateChanged=true;
+            }
+            host->log("earthworks  project=%llu waiting: facility=%u reading unavailable building=%d parked=%d vehicles=%d; terrain review not required",
+                static_cast<unsigned long long>(first.projectId),failedFacilityId,failedFacility.buildingValid,
+                failedFacility.parkedValid,failedFacility.vehiclesValid);
+            if(newlyWaiting)Message("Facility readings are temporarily unavailable. Sites will wait and retry automatically; no terrain review is needed.");
+            continue;
         }
         if(jobs.empty())continue;
         std::sort(availableMachineRateUnits.begin(),availableMachineRateUnits.end(),std::greater<unsigned>());
