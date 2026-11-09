@@ -978,7 +978,14 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     draftNameWasActive=s.creatingSite;
     if(!s.creatingSite&&renameEditingSite!=s.editingSiteId) {renameEditingSite=s.editingSiteId;renameEditing=false;}
     const Plan& plan=s.editorPlan;
-    const float width=420.0f,fullHeight=(s.creatingSite?686.0f:716.0f)+(s.siteDraftError[0]?48.0f:0.0f);
+    const bool showActionError=s.siteActionError[0]
+        &&(!s.creatingSite||!s.siteDraftError[0]||strcmp(s.siteActionError,s.siteDraftError)!=0);
+    const bool finishedSite=s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled;
+    const bool activeSite=s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting;
+    const bool showFacilityBlock=!s.creatingSite&&!finishedSite&&!activeSite
+        &&s.assignedFacilityCount==0&&!showActionError;
+    const float width=420.0f,fullHeight=(s.creatingSite?686.0f:716.0f)
+        +(s.siteDraftError[0]?64.0f:0.0f)+(showActionError?96.0f:0.0f)+(showFacilityBlock?48.0f:0.0f);
     double groundTotal=0;for(float value:plan.ground)groundTotal+=value;
     const float groundMean=plan.ground.empty()?plan.target:static_cast<float>(groundTotal/static_cast<double>(plan.ground.size()));
     Point anchor{(plan.a.x+plan.b.x)*0.5f,groundMean,(plan.a.z+plan.b.z)*0.5f};
@@ -1239,7 +1246,16 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::PopStyleVar();
     if(s.creatingSite) {
         const bool draftInvalid=s.siteDraftError[0]!=0;
-        if(draftInvalid)ImGui::TextColored({0.67f,0.15f,0.12f,1.0f},"%s",s.siteDraftError);
+        if(draftInvalid) {
+            ImGui::PushStyleColor(ImGuiCol_Text,{0.67f,0.15f,0.12f,1.0f});
+            ImGui::TextWrapped("%s",s.siteDraftError);
+            ImGui::PopStyleColor();
+        }
+        if(showActionError) {
+            ImGui::PushStyleColor(ImGuiCol_Text,{0.67f,0.15f,0.12f,1.0f});
+            ImGui::TextWrapped("%s",s.siteActionError);
+            ImGui::PopStyleColor();
+        }
         ImGui::BeginDisabled(draftInvalid);
         if(ImGui::Button("Save Site",{ImGui::GetContentRegionAvail().x,32}))SendProjectText(Action::ConfirmProject,0,draftNameBuffer);
         ImGui::EndDisabled();
@@ -1249,6 +1265,11 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(finished)ImGui::TextDisabled("Finished Sites cannot be edited.");
         else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Editing the target will pause this Site; review terrain before resuming.");
         else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextWrapped("This Site needs terrain review before work can resume.");
+        if(s.siteActionError[0]) {
+            ImGui::PushStyleColor(ImGuiCol_Text,{0.67f,0.15f,0.12f,1.0f});
+            ImGui::TextWrapped("%s",s.siteActionError);
+            ImGui::PopStyleColor();
+        }
         if(!finished) {
             Action workAction=Action::StartProject;
             const char* workLabel="Start";
@@ -1258,6 +1279,13 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
             } else if(s.projectStatus==ProjectStatus::Paused) {
                 workAction=s.projectNeedsReview?Action::ReviewResumeProject:Action::ResumeProject;
                 workLabel=s.projectNeedsReview?"Review and resume":"Resume";workEnabled=s.assignedFacilityCount!=0;
+            }
+            if(!workEnabled) {
+                ImGui::PushStyleColor(ImGuiCol_Text,{0.67f,0.15f,0.12f,1.0f});
+                ImGui::TextWrapped("%s",s.assignedFacilityCount
+                    ?"Assigned facility readings are unavailable. Try again when the building can be read."
+                    :"Assign an Earthworks facility to this Project before starting or resuming this Site.");
+                ImGui::PopStyleColor();
             }
             const float workWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.68f;
             ImGui::BeginDisabled(!workEnabled);

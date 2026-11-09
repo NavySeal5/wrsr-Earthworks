@@ -17,6 +17,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,6 +38,7 @@ uint64_t editingSiteId=0;
 unsigned selectedSitePointIndex=0;
 uint32_t selectedSitePointsMask=1;
 bool siteEditorOpen=false,creatingSite=false;
+std::unordered_map<uint64_t,std::string> siteActionErrors;
 SiteShapeMode shapeMode=SiteShapeMode::FreeDraw;
 bool siteDraftLockToGrid=false;
 bool savePending = false;
@@ -278,6 +280,21 @@ bool AvailabilitySignal()
     __except(EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 void Message(const char* text) { strcpy_s(current.message, text); }
+bool SiteEditorMatches(uint64_t siteId)
+{
+    return siteEditorOpen&&((creatingSite&&siteId==0)||(!creatingSite&&editingSiteId==siteId));
+}
+void ClearSiteActionError(uint64_t siteId)
+{
+    siteActionErrors.erase(siteId);
+    if(SiteEditorMatches(siteId))current.siteActionError[0]=0;
+}
+void SiteActionError(uint64_t siteId,const char* text)
+{
+    Message(text);
+    siteActionErrors[siteId]=text;
+    if(SiteEditorMatches(siteId))strncpy_s(current.siteActionError,text,_TRUNCATE);
+}
 void SetDefaultDraftSiteName()
 {
     char name[MaxSavedNameBytes+1]{};
@@ -450,6 +467,7 @@ void Changed()
 }
 void DiscardSiteDraft()
 {
+    ClearSiteActionError(0);
     current.plan=Plan{};
     history.Reset();
     current.mode=PickMode::None;
@@ -464,6 +482,7 @@ void ResetWorld()
 {
     const auto generation = current.generation+1;
     current = Snapshot{}; current.generation = generation;
+    siteActionErrors.clear();
     SelectSingleSitePoint(0);
     durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;facilityAssignmentWarningPending=false;facilityIdentityCheckAfterLoad=false;unresolvedFacilityAssignments.clear();lastSimulationHour=-1;
     lastEditorVolumeEstimate=0;editorVolumeSiteId=0;cachedEditorVolumes={};cachedEditorVolumesValid=false;
@@ -579,6 +598,10 @@ void RefreshProjectStatus()
     current.editorAllocatedRateUnits=0;
     current.selectedSiteName[0]=0;
     current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;current.shapeMode=shapeMode;
+    current.siteActionError[0]=0;
+    const auto actionError=siteActionErrors.find(creatingSite?0:editingSiteId);
+    if(siteEditorOpen&&actionError!=siteActionErrors.end())
+        strncpy_s(current.siteActionError,actionError->second.c_str(),_TRUNCATE);
     current.selectedSitePoint=selectedSitePointIndex;
     current.selectedSitePointsMask=selectedSitePointsMask;
     strncpy_s(current.siteDraftName,durableState.draftName.c_str(),_TRUNCATE);
@@ -632,11 +655,11 @@ bool SamplePlan(Plan* plan)
 }
 bool FinishCurrentSiteShape()
 {
-    if(!creatingSite||current.plan.complete){Message("There is no unfinished Site shape to finish.");return false;}
+    if(!creatingSite||current.plan.complete){SiteActionError(0,"There is no unfinished Site shape to finish.");return false;}
     current.plan.RefreshBounds();
-    if(!ValidFootprint(current.plan)){Message("Site needs three or more spaced, non-crossing points with a valid area.");return false;}
-    if(!SamplePlan(&current.plan)){Message("Could not sample the Site area. Adjust the shape or keep it inside the terrain.");return false;}
-    current.plan.complete=true;current.mode=PickMode::None;history.Commit(current.plan);Changed();Message("Site shape ready. Set the heights of its points, then save the Site.");return true;
+    if(!ValidFootprint(current.plan)){SiteActionError(0,"Site needs three or more spaced, non-crossing points with a valid area.");return false;}
+    if(!SamplePlan(&current.plan)){SiteActionError(0,"Could not sample the Site area. Adjust the shape or keep it inside the terrain.");return false;}
+    current.plan.complete=true;current.mode=PickMode::None;history.Commit(current.plan);ClearSiteActionError(0);Changed();Message("Site shape ready. Set the heights of its points, then save the Site.");return true;
 }
 bool MeasureTerrainWork(const Plan& plan,const TerrainGrid& grid,const GridRect& rect,double* total)
 {
@@ -662,6 +685,7 @@ void Process(const Command& command)
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Click vertices to draw the Site boundary, then finish the shape.");break;}
         if(current.plan.first) {creatingSite=true;siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"Saved Site draft reopened.":"Continue adding Site boundary points.");break;}
+        ClearSiteActionError(0);
         history.Reset(); current.plan = Plan{};shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false;current.lockToGrid=false; Changed();
         SetDefaultDraftSiteName();
         editingSiteId=0;creatingSite=true;siteEditorOpen=true;
@@ -671,7 +695,7 @@ void Process(const Command& command)
         break;
     case Action::Select:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
-        history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;SelectSingleSitePoint(0);current.mode=PickMode::DrawSite;RefreshProjectStatus();
+        ClearSiteActionError(0);history.Reset();current.plan=Plan{};shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false;Changed();SetDefaultDraftSiteName();editingSiteId=0;creatingSite=true;siteEditorOpen=true;SelectSingleSitePoint(0);current.mode=PickMode::DrawSite;RefreshProjectStatus();
         Message("Click at least three points around the Site boundary, then finish the shape.");break;
     case Action::SetShapeMode:
         if(!creatingSite||current.plan.complete||current.plan.pointCount>1||command.value<0.0f||command.value>2.0f)break;
@@ -693,6 +717,7 @@ void Process(const Command& command)
         const auto mode=static_cast<unsigned>(command.value);
         if(mode>static_cast<unsigned>(SafeAnglesMode::Vanilla))break;
         plan->safeAngles=static_cast<SafeAnglesMode>(mode);
+        ClearSiteActionError(creatingSite?0:editingSiteId);
         if(creatingSite)Changed();else ++current.revision;
         break;
     }
@@ -734,7 +759,7 @@ void Process(const Command& command)
             host->log("earthworks draw-click processed points=%u creating=%d cursorValid=%d cursorX=%.2f cursorZ=%.2f snap=%d grid=%d",
                 current.plan.pointCount,static_cast<int>(creatingSite),static_cast<int>(current.cursorValid),current.cursor.x,current.cursor.z,
                 static_cast<int>(siteDraftLockToGrid),static_cast<int>(current.terrainGridValid));
-        if (!current.cursorValid) { Message("No ground under the cursor. Try another point."); break; }
+        if (!current.cursorValid) { if(siteEditorOpen)SiteActionError(creatingSite?0:editingSiteId,"No ground under the cursor. Try another point.");else Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
             FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;RefreshProjectStatus();
             Message("Select your Earthworks facility in the Projects tab, then assign it to the selected project.");break;
@@ -745,7 +770,7 @@ void Process(const Command& command)
             grid.stepX=current.terrainGridStepX;grid.stepZ=current.terrainGridStepZ;
             p=SnapToTerrainGrid(p,grid);
         }
-        if (!ReadHeight(p.x,p.z,&p.y)) { Message("Cannot sample terrain here. Try another point."); break; }
+        if (!ReadHeight(p.x,p.z,&p.y)) { if(siteEditorOpen)SiteActionError(creatingSite?0:editingSiteId,"Cannot sample terrain here. Try another point.");else Message("Cannot sample terrain here. Try another point."); break; }
         if(current.mode==PickMode::None&&!siteEditorOpen) {
             auto site=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
                 if(item.projectId!=durableState.selectedProjectId)return false;
@@ -758,21 +783,21 @@ void Process(const Command& command)
         } else if(current.mode==PickMode::SampleSitePointTarget) {
             if(creatingSite) {
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,current.plan.pointCount);
-                if(selectedSitePointIndex>=current.plan.pointCount||!mask) {current.mode=PickMode::None;Message("Select at least one Site point before sampling its height.");break;}
+                if(selectedSitePointIndex>=current.plan.pointCount||!mask) {current.mode=PickMode::None;SiteActionError(0,"Select at least one Site point before sampling its height.");break;}
                 history.Commit(current.plan);for(unsigned i=0;i<current.plan.pointCount;++i)if(mask&PointMask(i))current.plan.points[i].y=p.y;current.plan.RefreshBounds();
-                current.mode=PickMode::None;Changed();Message("Draft point height sampled; terrain remains unchanged.");
+                current.mode=PickMode::None;ClearSiteActionError(0);Changed();Message("Draft point height sampled; terrain remains unchanged.");
             } else {
                 auto* site=FindProject(editingSiteId);
                 if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {
-                    current.mode=PickMode::None;Message("The selected Site can no longer be edited.");break;
+                    current.mode=PickMode::None;SiteActionError(editingSiteId,"The selected Site can no longer be edited.");break;
                 }
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,site->plan.pointCount);
-                if(selectedSitePointIndex>=site->plan.pointCount||!mask) {current.mode=PickMode::None;Message("Select at least one Site point before sampling its height.");break;}
+                if(selectedSitePointIndex>=site->plan.pointCount||!mask) {current.mode=PickMode::None;SiteActionError(site->id,"Select at least one Site point before sampling its height.");break;}
                 if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
                 if(site->status==ProjectStatus::Paused)site->needsReview=true;
                 for(unsigned i=0;i<site->plan.pointCount;++i)if(mask&PointMask(i))site->plan.points[i].y=p.y;
                 site->plan.RefreshBounds();current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
-                RefreshProjectStatus();Message(site->needsReview?"Point height sampled. Review this Site before resuming.":"Point height sampled; terrain remains unchanged.");
+                ClearSiteActionError(site->id);RefreshProjectStatus();Message(site->needsReview?"Point height sampled. Review this Site before resuming.":"Point height sampled; terrain remains unchanged.");
             }
         } else if (current.mode == PickMode::Sample) {
             history.Commit(current.plan); current.plan.target = p.y;
@@ -784,31 +809,31 @@ void Process(const Command& command)
                 const auto& first=current.plan.points[0];
                 const double dx=static_cast<double>(p.x)-first.x,dz=static_cast<double>(p.z)-first.z;
                 if(dx*dx+dz*dz<static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing) {
-                    if(current.plan.pointCount<3)Message("Add at least three boundary points before closing the shape.");
+                    if(current.plan.pointCount<3)SiteActionError(0,"Add at least three boundary points before closing the shape.");
                     else FinishCurrentSiteShape();
                     goto pick_done;
                 }
             }
-            if(current.plan.pointCount>=MaxSitePoints){Message("This Site has reached its 32-point limit.");break;}
+            if(current.plan.pointCount>=MaxSitePoints){SiteActionError(0,"This Site has reached its 32-point limit.");break;}
             if(shapeMode!=SiteShapeMode::FreeDraw&&current.plan.pointCount==1) {
                 Point corners[4]{};BuildTwoCornerShape(current.plan.points[0],p,shapeMode,corners);
                 const float width=std::abs(corners[2].x-corners[0].x),depth=std::abs(corners[2].z-corners[0].z);
-                if(width<MinSitePointSpacing||depth<MinSitePointSpacing){Message("Square and Rectangle sides must each be at least 5 m.");goto pick_done;}
+                if(width<MinSitePointSpacing||depth<MinSitePointSpacing){SiteActionError(0,"Square and Rectangle sides must each be at least 5 m.");goto pick_done;}
                 Plan candidate=current.plan;std::copy(std::begin(corners),std::end(corners),candidate.points.begin());candidate.pointCount=4;candidate.first=true;candidate.complete=false;candidate.RefreshBounds();
-                if(!ValidFootprint(candidate)){Message("That shape is invalid. Move farther from the first corner.");goto pick_done;}
-                if(!SamplePlan(&candidate)){Message("Could not sample the Site area. Keep it inside the terrain.");goto pick_done;}
+                if(!ValidFootprint(candidate)){SiteActionError(0,"That shape is invalid. Move farther from the first corner.");goto pick_done;}
+                if(!SamplePlan(&candidate)){SiteActionError(0,"Could not sample the Site area. Keep it inside the terrain.");goto pick_done;}
                 history.Commit(current.plan);candidate.complete=true;current.plan=std::move(candidate);current.mode=PickMode::None;
-                SelectSingleSitePoint(0);Changed();Message("Shape ready. Set point heights, then save the Site.");goto pick_done;
+                SelectSingleSitePoint(0);ClearSiteActionError(0);Changed();Message("Shape ready. Set point heights, then save the Site.");goto pick_done;
             }
         if(current.plan.pointCount) {
                 for(unsigned i=0;i<current.plan.pointCount;++i) {
                     const double dx=static_cast<double>(p.x)-current.plan.points[i].x,dz=static_cast<double>(p.z)-current.plan.points[i].z;
-                    if(dx*dx+dz*dz<static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing) {Message("Site points must be at least 5 m apart.");goto pick_done;}
+                    if(dx*dx+dz*dz<static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing) {SiteActionError(0,"Site points must be at least 5 m apart.");goto pick_done;}
                 }
                 p.y=current.plan.points[0].y;
             }
             history.Commit(current.plan);current.plan.points[current.plan.pointCount++]=p;current.plan.first=true;current.plan.complete=false;
-            current.plan.RefreshBounds();SelectSingleSitePoint(current.plan.pointCount-1);Message("Site boundary point added.");Changed();
+            current.plan.RefreshBounds();SelectSingleSitePoint(current.plan.pointCount-1);ClearSiteActionError(0);Message("Site boundary point added.");Changed();
         }
 pick_done:
         break;
@@ -817,22 +842,22 @@ pick_done:
         if (std::isfinite(command.value) && std::abs(command.value)<100000) {
             history.Commit(current.plan); current.plan.target = command.value;
             for(unsigned i=0;i<current.plan.pointCount;++i)current.plan.points[i].y=command.value;
-            current.plan.RefreshBounds();Changed(); Message("Target updated. Actual terrain is unchanged.");
+            current.plan.RefreshBounds();ClearSiteActionError(0);Changed(); Message("Target updated. Actual terrain is unchanged.");
         } else Message("Enter a finite height within the terrain preview's numeric range.");
         break;
     case Action::SetSiteTarget: {
         auto* site=FindProject(command.projectId);
         if(!site||site->projectId!=durableState.selectedProjectId||!std::isfinite(command.value)||std::abs(command.value)>=100000) {
-            Message("That Site target could not be updated.");break;
+            SiteActionError(command.projectId,"That Site target could not be updated.");break;
         }
-        if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {Message("Finished Sites cannot be edited.");break;}
+        if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
         const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
         if(pausedForEdit)site->status=ProjectStatus::Paused;
         if(site->status==ProjectStatus::Paused)site->needsReview=true;
         site->plan.target=command.value;
         for(unsigned i=0;i<site->plan.pointCount;++i)site->plan.points[i].y=command.value;
         site->plan.RefreshBounds();editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;
-        RefreshProjectStatus();Message(pausedForEdit?"Site paused and target updated. Review terrain before resuming.":site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
+        ClearSiteActionError(site->id);RefreshProjectStatus();Message(pausedForEdit?"Site paused and target updated. Review terrain before resuming.":site->needsReview?"Target changed. Review this Site before resuming.":"Site target updated; terrain remains unchanged.");break;
     }
     case Action::SelectSitePoint: {
         const Plan* plan=creatingSite?&current.plan:nullptr;
@@ -856,19 +881,19 @@ pick_done:
     case Action::AdjustSitePointTarget: {
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
-        if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {Message("Select a valid Site point and height.");break;}
-        if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){Message("Finished Sites cannot be edited.");break;}
+        if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {SiteActionError(site?site->id:0,"Select a valid Site point and height.");break;}
+        if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
         const bool relative=command.action==Action::AdjustSitePointTarget;
         const uint32_t selectedMask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
         const uint32_t mask=command.allSitePoints&&relative
             ?(plan->pointCount==MaxSitePoints?UINT32_MAX:((1u<<plan->pointCount)-1u)):selectedMask;
-        if(!mask){Message("Select at least one Site point before changing height.");break;}
+        if(!mask){SiteActionError(site?site->id:0,"Select at least one Site point before changing height.");break;}
         bool valid=true;
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i)) {
             const float height=relative?plan->points[i].y+command.value:command.value;
             if(!std::isfinite(height)||std::abs(height)>=100000)valid=false;
         }
-        if(!valid){Message("The adjusted height is outside the allowed range.");break;}
+        if(!valid){SiteActionError(site?site->id:0,"The adjusted height is outside the allowed range.");break;}
         if(site) {
             const bool active=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
             if(active)site->status=ProjectStatus::Paused;
@@ -877,8 +902,8 @@ pick_done:
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i))
             plan->points[i].y=relative?plan->points[i].y+command.value:command.value;
         plan->RefreshBounds();selectedSitePointIndex=command.pointIndex;selectedSitePointsMask=selectedMask;
-        if(site){editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;RefreshProjectStatus();Message(site->needsReview?"Point height changed. Review this Site before resuming.":"Point height changed; terrain remains unchanged.");}
-        else {Changed();Message("Point height changed; terrain is unchanged.");}
+        if(site){editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;ClearSiteActionError(site->id);++current.revision;RefreshProjectStatus();Message(site->needsReview?"Point height changed. Review this Site before resuming.":"Point height changed; terrain remains unchanged.");}
+        else {ClearSiteActionError(0);Changed();Message("Point height changed; terrain is unchanged.");}
         break;
     }
     case Action::AddSitePoint:
@@ -887,11 +912,11 @@ pick_done:
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||(!plan->complete&&!(creatingSite&&command.action==Action::MoveSitePoint))
-            ||(!creatingSite&&(!site||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled))) {Message("Select an editable Site first.");break;}
+            ||(!creatingSite&&(!site||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled))) {SiteActionError(site?site->id:0,"Select an editable Site first.");break;}
         Plan edited=*plan;
         const unsigned index=command.pointIndex;
         if(command.action==Action::AddSitePoint) {
-            if(edited.pointCount>=MaxSitePoints||index>=edited.pointCount){Message("Cannot add another point here.");break;}
+            if(edited.pointCount>=MaxSitePoints||index>=edited.pointCount){SiteActionError(site?site->id:0,"Cannot add another point here.");break;}
             const unsigned next=(index+1)%edited.pointCount;
             const double dx=static_cast<double>(edited.points[index].x)-edited.points[next].x,dz=static_cast<double>(edited.points[index].z)-edited.points[next].z;
             if(command.value>0.5f) {
@@ -901,44 +926,44 @@ pick_done:
                 const double spacingSquared=static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing;
                 if(!std::isfinite(command.point.x)||!std::isfinite(command.point.y)||!std::isfinite(command.point.z)
                     ||edgeLengthSquared<4.0*spacingSquared||ax*ax+az*az<spacingSquared||bx*bx+bz*bz<spacingSquared) {
-                    Message("Choose a point at least 5 m from both ends of the edge.");break;
+                    SiteActionError(site?site->id:0,"Choose a point at least 5 m from both ends of the edge.");break;
                 }
             } else if(dx*dx+dz*dz<4.0*MinSitePointSpacing*MinSitePointSpacing) {
-                Message("This edge is too short to add a point while keeping the 5 m spacing.");break;
+                SiteActionError(site?site->id:0,"This edge is too short to add a point while keeping the 5 m spacing.");break;
             }
             const Point insertedPoint=command.value>0.5f?command.point:Point{(edited.points[index].x+edited.points[next].x)*0.5f,(edited.points[index].y+edited.points[next].y)*0.5f,(edited.points[index].z+edited.points[next].z)*0.5f};
             for(unsigned i=edited.pointCount;i>next;--i)edited.points[i]=edited.points[i-1];
             edited.points[next]=insertedPoint;++edited.pointCount;selectedSitePointIndex=next;
         } else if(command.action==Action::RemoveSitePoint) {
-            if(edited.pointCount<=3||index>=edited.pointCount){Message("A Site needs at least three points.");break;}
+            if(edited.pointCount<=3||index>=edited.pointCount){SiteActionError(site?site->id:0,"A Site needs at least three points.");break;}
             for(unsigned i=index;i+1<edited.pointCount;++i)edited.points[i]=edited.points[i+1];
             --edited.pointCount;selectedSitePointIndex=std::min<unsigned>(index,edited.pointCount-1);
         } else {
-            if(index>=edited.pointCount||!std::isfinite(command.point.x)||!std::isfinite(command.point.z)){Message("Select a valid point to move.");break;}
+            if(index>=edited.pointCount||!std::isfinite(command.point.x)||!std::isfinite(command.point.z)){SiteActionError(site?site->id:0,"Select a valid point to move.");break;}
             edited.points[index].x=command.point.x;edited.points[index].z=command.point.z;selectedSitePointIndex=index;
         }
         edited.RefreshBounds();
         if(edited.complete) {
-            if(!ValidFootprint(edited)){Message("That edit makes the Site invalid. Keep points at least 5 m apart and avoid crossing edges.");break;}
+            if(!ValidFootprint(edited)){SiteActionError(site?site->id:0,"That edit makes the Site invalid. Keep points at least 5 m apart and avoid crossing edges.");break;}
             bool overlap=false;
             for(const auto& other:durableState.earthworks)if(other.id!=(site?site->id:0)&&ProjectReservesFootprint(other.status)&&FootprintsOverlap(edited,other.plan))overlap=true;
-            if(overlap){Message("That edit overlaps another unfinished Site.");break;}
-            if(!SamplePlan(&edited)){Message("Could not resample the edited Site. Its previous shape is kept.");break;}
+            if(overlap){SiteActionError(site?site->id:0,"That edit overlaps another unfinished Site.");break;}
+            if(!SamplePlan(&edited)){SiteActionError(site?site->id:0,"Could not resample the edited Site. Its previous shape is kept.");break;}
         } else {
             bool tooClose=false;
             for(unsigned i=0;i<edited.pointCount;++i)for(unsigned j=i+1;j<edited.pointCount;++j) {
                 const double dx=static_cast<double>(edited.points[i].x)-edited.points[j].x,dz=static_cast<double>(edited.points[i].z)-edited.points[j].z;
                 if(dx*dx+dz*dz<static_cast<double>(MinSitePointSpacing)*MinSitePointSpacing)tooClose=true;
             }
-            if(tooClose){Message("Site points must be at least 5 m apart.");break;}
+            if(tooClose){SiteActionError(site?site->id:0,"Site points must be at least 5 m apart.");break;}
         }
         if(site) {
             if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
         }
         *plan=std::move(edited);selectedSitePointsMask=PointMask(selectedSitePointIndex);
-        if(site){if(site->status==ProjectStatus::Paused)site->needsReview=true;editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;++current.revision;RefreshProjectStatus();Message(site->needsReview?"Site geometry changed. Review terrain before resuming.":"Site geometry updated; terrain is unchanged.");}
-        else {Changed();Message("Draft Site geometry updated.");}
+        if(site){if(site->status==ProjectStatus::Paused)site->needsReview=true;editingSiteId=site->id;selectedProjectId=site->id;siteEditorOpen=true;creatingSite=false;ClearSiteActionError(site->id);++current.revision;RefreshProjectStatus();Message(site->needsReview?"Site geometry changed. Review terrain before resuming.":"Site geometry updated; terrain is unchanged.");}
+        else {ClearSiteActionError(0);Changed();Message("Draft Site geometry updated.");}
         break;
     }
     case Action::Clear:
@@ -954,17 +979,17 @@ pick_done:
         Changed(); Message("Redid the draft edit."); break;
     case Action::ConfirmProject: {
         UpdateSiteDraftValidation();
-        if(current.siteDraftError[0]) {Message(current.siteDraftError);break;}
+        if(current.siteDraftError[0]) {SiteActionError(0,current.siteDraftError);break;}
         std::string siteName=command.text[0]?command.text:durableState.draftName;
         while(!siteName.empty()&&std::isspace(static_cast<unsigned char>(siteName.front())))siteName.erase(siteName.begin());
         while(!siteName.empty()&&std::isspace(static_cast<unsigned char>(siteName.back())))siteName.pop_back();
-        if(siteName.empty()||siteName.size()>MaxSavedNameBytes) {Message("Enter a Site name of 1 to 48 characters.");break;}
+        if(siteName.empty()||siteName.size()>MaxSavedNameBytes) {SiteActionError(0,"Enter a Site name of 1 to 48 characters.");break;}
         bool invalidName=false;for(unsigned char c:siteName)if(c<0x20||c==0x7f)invalidName=true;
-        if(invalidName) {Message("Site names cannot contain control characters.");break;}
+        if(invalidName) {SiteActionError(0,"Site names cannot contain control characters.");break;}
         bool duplicateName=false;
         for(const auto& existing:durableState.earthworks)
             if(existing.projectId==durableState.selectedProjectId&&_stricmp(existing.name.c_str(),siteName.c_str())==0)duplicateName=true;
-        if(duplicateName) {Message("A Site with that name already exists in this Project.");break;}
+        if(duplicateName) {SiteActionError(0,"A Site with that name already exists in this Project.");break;}
         SavedEarthwork project;
         project.id=1;
         for(const auto& saved:durableState.earthworks)project.id=std::max(project.id,saved.id+1);
@@ -977,6 +1002,7 @@ pick_done:
         durableState.earthworks.push_back(project);
         selectedProjectId=project.id;
         editingSiteId=project.id;creatingSite=false;siteEditorOpen=true;
+        ClearSiteActionError(0);
         RefreshProjectStatus();
         current.plan=Plan{};
         current.mode=PickMode::None;
@@ -995,6 +1021,7 @@ pick_done:
         bool invalid=false;for(unsigned char c:name)if(c<0x20||c==0x7f)invalid=true;
         if(invalid)break;
         durableState.draftName=std::move(name);
+        ClearSiteActionError(0);
         RefreshProjectStatus();
         break;
     }
@@ -1037,6 +1064,7 @@ pick_done:
         });
         if(unfinished) {Message("This Project still contains unfinished Sites and cannot be deleted.");break;}
         const auto deletedId=project->id;
+        for(const auto& site:durableState.earthworks)if(site.projectId==deletedId)ClearSiteActionError(site.id);
         durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site){return site.projectId==deletedId;}),durableState.earthworks.end());
         durableState.projects.erase(project);
         if(durableState.selectedProjectId==deletedId)durableState.selectedProjectId=durableState.projects.empty()?0:durableState.projects.front().id;
@@ -1046,10 +1074,10 @@ pick_done:
         auto* site=FindProject(command.projectId);if(!site||site->projectId!=durableState.selectedProjectId)break;
         std::string name=command.text;while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.front())))name.erase(name.begin());
         while(!name.empty()&&std::isspace(static_cast<unsigned char>(name.back())))name.pop_back();
-        if(name.empty()||name.size()>MaxSavedNameBytes) {Message("Enter a Site name of 1 to 48 characters.");break;}
+        if(name.empty()||name.size()>MaxSavedNameBytes) {SiteActionError(site->id,"Enter a Site name of 1 to 48 characters.");break;}
         bool duplicate=false;for(const auto& item:durableState.earthworks)if(item.projectId==site->projectId&&item.id!=site->id&&_stricmp(item.name.c_str(),name.c_str())==0)duplicate=true;
-        if(duplicate) {Message("A Site with that name already exists in this Project.");break;}
-        site->name=std::move(name);RefreshProjectStatus();Message("Site renamed.");break;
+        if(duplicate) {SiteActionError(site->id,"A Site with that name already exists in this Project.");break;}
+        site->name=std::move(name);ClearSiteActionError(site->id);RefreshProjectStatus();Message("Site renamed.");break;
     }
     case Action::AddProjectFacility: {
         auto* project=FindNamedProject(durableState.selectedProjectId);if(!project)break;
@@ -1106,6 +1134,7 @@ pick_done:
         const auto* editing=FindProject(editingSiteId);
         const bool closeEditor=editing&&editing->projectId==projectId&&isFinished(editing->status);
         const auto previousSize=durableState.earthworks.size();
+        for(const auto& item:durableState.earthworks)if(item.projectId==projectId&&isFinished(item.status))ClearSiteActionError(item.id);
         durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
             return item.projectId==projectId&&isFinished(item.status);
         }),durableState.earthworks.end());
@@ -1161,42 +1190,43 @@ pick_done:
     case Action::StartProject:
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Queued) {
             BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
+            ClearSiteActionError(project.id);
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
-                Message("Native terrain writer is unavailable for this game build. Project remains queued.");break;
+                SiteActionError(project.id,"Native terrain writer is unavailable for this game build. Site remains queued.");break;
             }
             if(!FindAssignedFacility(project,&facilityId,&facility)) {
-                Message("Assigned Earthworks facility is missing or unreadable.");break;
+                SiteActionError(project.id,"Assigned Earthworks facility is missing or unreadable.");break;
             }
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
                 ||!workforce.vehiclesValid||!workforce.parkedValid) {
-                Message("Assigned facility readings are incomplete. Try again when the building can be read.");break;
+                SiteActionError(project.id,"Assigned facility readings are incomplete. Try again when the building can be read.");break;
             }
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {
                 host->log("earthworks  start rejected project=%llu facility=%u area=%s grid=%dx%d origin=(%.3f,%.3f) step=(%.3f,%.3f) plan=(%.3f,%.3f)..(%.3f,%.3f)",
                     static_cast<unsigned long long>(project.id),facilityId,ProjectAreaErrorText(areaError),grid.width,grid.depth,
                     grid.originX,grid.originZ,grid.stepX,grid.stepZ,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
-                Message(ProjectAreaMessage(areaError));break;
+                SiteActionError(project.id,ProjectAreaMessage(areaError));break;
             }
             Plan refreshed=project.plan;
-            if(!SamplePlan(&refreshed)) {Message("Cannot recheck every planned terrain sample. Replan this project before starting.");break;}
+            if(!SamplePlan(&refreshed)) {SiteActionError(project.id,"Cannot recheck every planned terrain sample. Replan this Site before starting.");break;}
             float maxDifference=0;
             for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
             if(maxDifference>TerrainReadbackToleranceMeters) {
                 host->log("earthworks  start rejected project=%llu terrain changed after planning maxDelta=%.6f tolerance=%.3f area=(%.3f,%.3f)..(%.3f,%.3f)",
                     static_cast<unsigned long long>(project.id),maxDifference,TerrainReadbackToleranceMeters,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
-                Message("Terrain changed since planning. Replan the footprint before starting.");break;
+                SiteActionError(project.id,"Terrain changed since planning. Replan the footprint before starting.");break;
             }
             double totalWork=0;
             if(!MeasureTerrainWork(project.plan,grid,rect,&totalWork)) {
-                Message("Could not measure the Site's starting terrain work. It remains queued.");break;
+                SiteActionError(project.id,"Could not measure the Site's starting terrain work. It remains queued.");break;
             }
             project.totalWorkM3=static_cast<float>(totalWork);
             project.progress=totalWork<=1e-6?0.0f:std::clamp(project.progress,0.0f,0.999999f);
             project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
             host->log("earthworks  site=%llu started terrain work=%.3f m3",static_cast<unsigned long long>(project.id),totalWork);
             lastSimulationHour=SimulationHourClock(current);
-            RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
+            ClearSiteActionError(project.id);RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
         }
         break;
     case Action::PauseProject:
@@ -1207,23 +1237,25 @@ pick_done:
     case Action::ResumeProject:
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Paused && !project.needsReview) {
             BuildingReading facility{};uint32_t facilityId=0;
-            if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility first.");break;}
+            ClearSiteActionError(project.id);
+            if(!FindAssignedFacility(project,&facilityId,&facility)){SiteActionError(project.id,"Assign this paused Project to an available Earthworks facility first.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
-            if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
+            if(areaError!=ProjectAreaError::None) {SiteActionError(project.id,ProjectAreaMessage(areaError));break;}
             project.status=ProjectStatus::Running;lastSimulationHour=SimulationHourClock(current);
-            RefreshProjectStatus();Message("Site resumed.");break;
+            ClearSiteActionError(project.id);RefreshProjectStatus();Message("Site resumed.");break;
         }
         break;
     case Action::ReviewResumeProject:
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
             BuildingReading facility{};uint32_t facilityId=0;
-            if(!FindAssignedFacility(project,&facilityId,&facility)){Message("Assign this paused project to an available Earthworks facility before reviewing it.");break;}
+            ClearSiteActionError(project.id);
+            if(!FindAssignedFacility(project,&facilityId,&facility)){SiteActionError(project.id,"Assign this paused Project to an available Earthworks facility before reviewing it.");break;}
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
-            if(areaError!=ProjectAreaError::None) {Message(ProjectAreaMessage(areaError));break;}
-            if(!SamplePlan(&project.plan)) {Message("Could not read the project footprint. It remains paused for review.");break;}
+            if(areaError!=ProjectAreaError::None) {SiteActionError(project.id,ProjectAreaMessage(areaError));break;}
+            if(!SamplePlan(&project.plan)) {SiteActionError(project.id,"Could not read the Site footprint. It remains paused for review.");break;}
             double remainingWork=0;
             if(!MeasureTerrainWork(project.plan,grid,rect,&remainingWork)||!std::isfinite(remainingWork)||remainingWork<0) {
-                Message("Could not recalculate this Site's remaining work. It remains paused for review.");break;
+                SiteActionError(project.id,"Could not recalculate this Site's remaining work. It remains paused for review.");break;
             }
             const double oldProgress=std::clamp(static_cast<double>(project.progress),0.0,1.0);
             const double completedWork=project.totalWorkM3>1e-6
@@ -1236,7 +1268,7 @@ pick_done:
                 project.needsReview=false;project.status=ProjectStatus::Completed;
                 host->log("earthworks  site=%llu reviewed progress rebase old=%.5f completed=%.3f remaining=%.3f total=%.3f new=1.00000",
                     static_cast<unsigned long long>(project.id),oldProgress,completedWork,remainingWork,completedWork);
-                RefreshProjectStatus();Message("Footprint reviewed. The revised target is already satisfied; the Site is complete.");break;
+                ClearSiteActionError(project.id);RefreshProjectStatus();Message("Footprint reviewed. The revised target is already satisfied; the Site is complete.");break;
             }
             const double recalculatedTotal=std::min(1.0e12,completedWork+remainingWork);
             project.totalWorkM3=static_cast<float>(recalculatedTotal);
@@ -1248,7 +1280,7 @@ pick_done:
                 static_cast<double>(project.progress));
             project.needsReview=false;project.status=ProjectStatus::Running;
             lastSimulationHour=SimulationHourClock(current);
-            RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
+            ClearSiteActionError(project.id);RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
         }
         break;
     case Action::CancelProject:
@@ -1344,7 +1376,7 @@ void NotifyNativeTerrainEditImpl(float x,float z,float brushRadius) noexcept
         if(overlaps) {
             project.status=ProjectStatus::Paused;project.needsReview=true;
             RefreshProjectStatus();
-            Message("Native terrain edit overlapped this project. It is paused; review the footprint before resuming.");
+            SiteActionError(project.id,"Native terrain edit overlapped this Site. It is paused; review the footprint before resuming.");
             host->log("earthworks  project=%llu paused for overlapping native terrain edit at (%.2f,%.2f), radius=%.2f",
                 static_cast<unsigned long long>(project.id),x,z,radius);
             break;
@@ -1361,7 +1393,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         host->log("earthworks  project=%llu paused by area check: %s grid=%dx%d origin=(%.3f,%.3f) step=(%.3f,%.3f) plan=(%.3f,%.3f)..(%.3f,%.3f)",
             static_cast<unsigned long long>(project->id),ProjectAreaErrorText(areaError),grid.width,grid.depth,
             grid.originX,grid.originZ,grid.stepX,grid.stepZ,project->plan.a.x,project->plan.a.z,project->plan.b.x,project->plan.b.z);
-        Message(ProjectAreaMessage(areaError));return;
+        SiteActionError(project->id,ProjectAreaMessage(areaError));return;
     }
     void* terrain=TerrainObject();if(!terrain)return;
     // Provisional Stage 8 conversion: one relative manual-rate unit completes
@@ -1383,12 +1415,12 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
             static_cast<unsigned long long>(project->id),openHeightmap!=nullptr,closeHeightmap!=nullptr,
             raiseLower!=nullptr,heightQuery!=nullptr);
         project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
-        Message("Native terrain writer became unavailable. Project paused for review.");return;
+        SiteActionError(project->id,"Native terrain writer became unavailable. The Site paused for review.");return;
     }
     __try { openHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) {
         host->log("earthworks  site=%llu paused for review: opening terrain writer raised exception=0x%08lX",
             static_cast<unsigned long long>(project->id),GetExceptionCode());
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();Message("Terrain writer failed to open; project paused for review.");return;
+        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();SiteActionError(project->id,"Terrain writer failed to open. The Site paused for review.");return;
     }
     double usedVolume=0;int edited=0;bool failed=false;const char* failureStage="";Point failurePoint{};
     for(uint32_t scan=0;scan<static_cast<uint32_t>(count)&&edited<batch;++scan) {
@@ -1414,7 +1446,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         host->log("earthworks  site=%llu paused for review: terrain operation=%s at (%.3f,%.3f)",
             static_cast<unsigned long long>(project->id),failureStage,failurePoint.x,failurePoint.z);
         project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
-        Message("Terrain edit/readback failed. Project paused for review; inspect the area before resuming.");return;
+        SiteActionError(project->id,"Terrain edit/readback failed. The Site paused for review; inspect the area before resuming.");return;
     }
     project->workRemainderM3=static_cast<float>(std::max(0.0,static_cast<double>(project->workRemainderM3)-usedVolume));
     if(project->totalWorkM3<=1e-6) {
@@ -1464,8 +1496,9 @@ void TickProjectRunner()
         if(!namedProject||namedProject->facilityIds.empty()) {
             for(auto* job:jobs) {
                 job->status=ProjectStatus::Paused;job->needsReview=false;schedulerStateChanged=true;
+                SiteActionError(job->id,"This Site paused because its Project has no assigned Earthworks facility.");
             }
-            Message("Started project has no facility assignment. Assign a facility before resuming.");continue;
+            continue;
         }
         std::vector<unsigned> availableMachineRateUnits;
         bool facilityReadFailed=false;uint32_t failedFacilityId=0;WorkforceView failedFacility{};
@@ -1491,7 +1524,8 @@ void TickProjectRunner()
             host->log("earthworks  project=%llu waiting: facility=%u reading unavailable building=%d parked=%d vehicles=%d; terrain review not required",
                 static_cast<unsigned long long>(first.projectId),failedFacilityId,failedFacility.buildingValid,
                 failedFacility.parkedValid,failedFacility.vehiclesValid);
-            if(newlyWaiting)Message("Facility readings are temporarily unavailable. Sites will wait and retry automatically; no terrain review is needed.");
+            if(newlyWaiting)for(auto* job:jobs)
+                SiteActionError(job->id,"Assigned facility readings are temporarily unavailable. This Site will wait and retry automatically.");
             continue;
         }
         if(jobs.empty())continue;

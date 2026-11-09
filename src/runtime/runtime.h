@@ -66,6 +66,7 @@ struct Snapshot {
     unsigned editorAllocatedMachines=0,editorAllocatedRateUnits=0;
     bool assignedMachineReadingsValid=false;
     char siteDraftError[192]{};
+    char siteActionError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;
     bool facilityListTruncated=false;
     std::array<unsigned,MaxProjectFacilities> assignedFacilityIds{};

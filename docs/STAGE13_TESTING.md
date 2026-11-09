@@ -146,3 +146,12 @@ The denominator is an estimate derived from terrain height differences on the na
 2. Create or open a Site. Turn on **Winter Mode**. Confirm the wireframe, cut/fill colors, point markers, and queued Site outlines use darker colors that remain visible against snow.
 3. Turn **Winter Mode** off. Confirm the normal colors return.
 4. Repeat with a draft, a queued Site, and an active Site if available. Confirm the toggle changes display colors only. It must not change Site geometry, terrain, progress, or status.
+
+## Persistent Site editor validation — build 0.16.43-site-editor-validation
+
+1. Open a queued Site in the Site editor without assigning an Earthworks facility. Confirm a red explanation wraps inside the editor and tells you to assign a facility.
+2. Assign a facility, then start the Site from its table row. If start validation fails, open that Site. Confirm the red failure explanation is visible in its editor, even though the table action did not open the editor.
+3. If a running Site encounters a terrain or facility read error, open its editor. Confirm the affected Site's error appears there and remains visible while the editor stays open.
+4. Correct the issue or retry successfully. Confirm the message clears after the successful action. Reopening an unchanged draft must not clear its error.
+5. Trigger a draft validation error, such as an invalid or overlapping shape. Confirm its message wraps inside the draft editor and remains visible until the draft is corrected or discarded.
+6. Start, pause, or cancel a Site from the list. Confirm those controls do not open the Site editor automatically. Open the affected Site to read any stored error.
