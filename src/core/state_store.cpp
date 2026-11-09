@@ -11,7 +11,7 @@ namespace {
 constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
 constexpr size_t PlanSize = 2 + 7 * sizeof(float) + 3 + MaxSitePoints * 3 * sizeof(float) + GridSide * GridSide * sizeof(float);
-constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * 4)
+constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * (4 + 1 + 4 + 63 + 3 * sizeof(float)))
     + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
 
 void Put32(std::vector<uint8_t>& out, uint32_t v)
@@ -58,9 +58,9 @@ struct Reader {
         uint8_t b[8]; if (!Take(b, sizeof(b))) return false;
         *out = 0; for (unsigned i = 0; i < 8; ++i) *out |= static_cast<uint64_t>(b[i]) << (i * 8); return true;
     }
-    bool String(std::string* out) {
+    bool String(std::string* out,size_t maxLength=MaxSavedNameBytes) {
         uint32_t length=0;
-        if(!out||!U32(&length)||length==0||length>MaxSavedNameBytes||pos>size||length>size-pos)return false;
+        if(!out||!U32(&length)||length==0||length>maxLength||pos>size||length>size-pos)return false;
         out->assign(reinterpret_cast<const char*>(data+pos),length);pos+=length;
         for(unsigned char c:*out)if(c<0x20||c==0x7f)return false;
         return true;
@@ -139,6 +139,12 @@ bool ValidName(const std::string& value)
     for(unsigned char c:value)if(c<0x20||c==0x7f)return false;
     return true;
 }
+bool ValidAssetName(const std::string& value)
+{
+    if(value.empty()||value.size()>63)return false;
+    for(unsigned char c:value)if(c<0x20||c>0x7e)return false;
+    return true;
+}
 }
 
 bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
@@ -154,7 +160,8 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
     Put32(payload,static_cast<uint32_t>(state.projects.size()));
     for (size_t i=0; i<state.projects.size(); ++i) {
         const auto& p=state.projects[i];
-        if (!p.id || !ValidName(p.name) || p.facilityIds.size()>MaxProjectFacilities) return false;
+        if (!p.id || !ValidName(p.name) || p.facilityIds.size()>MaxProjectFacilities
+            ||(!p.facilityAnchors.empty()&&p.facilityAnchors.size()!=p.facilityIds.size())) return false;
         for (size_t j=0; j<i; ++j) if (state.projects[j].id == p.id) return false;
         for(size_t j=0;j<p.facilityIds.size();++j) {
             if(!p.facilityIds[j])return false;
@@ -163,7 +170,17 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
                 for(uint32_t priorFacility:state.projects[prior].facilityIds)if(priorFacility==p.facilityIds[j])return false;
         }
         Put64(payload,p.id);PutString(payload,p.name);Put32(payload,static_cast<uint32_t>(p.facilityIds.size()));
-        for(uint32_t facility:p.facilityIds)Put32(payload,facility);
+        for(size_t j=0;j<p.facilityIds.size();++j) {
+            Put32(payload,p.facilityIds[j]);
+            const bool hasAnchor=!p.facilityAnchors.empty()&&p.facilityAnchors[j].valid;
+            payload.push_back(hasAnchor?1:0);
+            if(hasAnchor) {
+                const auto& anchor=p.facilityAnchors[j];
+                if(!ValidAssetName(anchor.assetName)||!std::isfinite(anchor.position.x)||!std::isfinite(anchor.position.y)||!std::isfinite(anchor.position.z))return false;
+                PutString(payload,anchor.assetName);
+                PutFloat(payload,anchor.position.x);PutFloat(payload,anchor.position.y);PutFloat(payload,anchor.position.z);
+            }
+        }
     }
     auto selected=std::find_if(state.projects.begin(),state.projects.end(),[&](const SavedProject& p){return p.id==state.selectedProjectId;});
     if((state.projects.empty()&&state.selectedProjectId!=0)||(!state.projects.empty()&&selected==state.projects.end()))return false;
@@ -192,7 +209,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
@@ -214,6 +231,17 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
             for(uint32_t prior:p.facilityIds)if(prior==id)return false;
             for(const auto& priorProject:parsed.projects)for(uint32_t prior:priorProject.facilityIds)if(prior==id)return false;
             p.facilityIds.push_back(id);
+            SavedProject::FacilityAnchor anchor{};
+            if(version>=11) {
+                uint8_t valid=0;
+                if(!r.U8(&valid)||valid>1)return false;
+                if(valid) {
+                    if(!r.String(&anchor.assetName,63)||!ValidAssetName(anchor.assetName)
+                        ||!r.Float(&anchor.position.x)||!r.Float(&anchor.position.y)||!r.Float(&anchor.position.z))return false;
+                    anchor.valid=true;
+                }
+            }
+            p.facilityAnchors.push_back(std::move(anchor));
         }
         parsed.projects.push_back(std::move(p));
     }

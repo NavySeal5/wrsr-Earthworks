@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 namespace ew {
 const TsmHost* host = nullptr;
@@ -43,6 +44,8 @@ bool loadMessagePending = false;
 ULONGLONG lastFacilityRefresh = 0;
 ULONGLONG lastProjectFacilityReadings = 0;
 ULONGLONG lastWorldFacilityScan = 0;
+ULONGLONG lastFacilityIdentityReconcile = 0;
+size_t lastUnresolvedFacilityIdentityCount = static_cast<size_t>(-1);
 ULONGLONG lastEditorVolumeEstimate = 0;
 uint64_t editorVolumeSiteId = 0;
 Volumes cachedEditorVolumes{};
@@ -334,6 +337,74 @@ uint32_t AssignedFacility(const SavedEarthwork& earthwork)
     const auto* project=FindNamedProject(earthwork.projectId);
     return project&&!project->facilityIds.empty()?project->facilityIds.front():0;
 }
+bool SameFacilityAnchor(const SavedProject::FacilityAnchor& anchor,const BuildingReading& building)
+{
+    if(!anchor.valid||anchor.assetName!=building.assetName)return false;
+    const double dx=static_cast<double>(anchor.position.x)-building.position.x;
+    const double dz=static_cast<double>(anchor.position.z)-building.position.z;
+    return dx*dx+dz*dz<=4.0; // two metres allows small float differences, not a nearby site.
+}
+void SaveFacilityAnchor(SavedProject::FacilityAnchor& anchor,const BuildingReading& building)
+{
+    anchor.assetName=building.assetName;
+    anchor.position=building.position;
+    anchor.valid=building.assetName[0]!=0&&std::isfinite(building.position.x)&&std::isfinite(building.position.y)&&std::isfinite(building.position.z);
+}
+void ReconcileSavedFacilities()
+{
+    std::array<BuildingReading,WorldEarthworksFacilities> buildings{};
+    unsigned count=0;bool truncated=false;
+    if(!ReadWorldEarthworksFacilities(&buildings,&count,&truncated)||truncated)return;
+    std::vector<unsigned> usedIds;
+    std::vector<std::pair<SavedProject*,size_t>> unresolvedLegacy;
+    size_t unresolvedAnchored=0;
+    bool changed=false;
+    for(auto& project:durableState.projects) {
+        if(project.facilityAnchors.size()!=project.facilityIds.size())project.facilityAnchors.resize(project.facilityIds.size());
+        for(size_t i=0;i<project.facilityIds.size();++i) {
+            auto& anchor=project.facilityAnchors[i];
+            unsigned match=static_cast<unsigned>(count);unsigned matches=0;
+            if(anchor.valid) {
+                for(unsigned j=0;j<count;++j)if(SameFacilityAnchor(anchor,buildings[j])
+                    &&std::find(usedIds.begin(),usedIds.end(),buildings[j].id)==usedIds.end()) {match=j;++matches;}
+                if(matches==1) {
+                    const auto oldId=project.facilityIds[i];project.facilityIds[i]=buildings[match].id;
+                    usedIds.push_back(buildings[match].id);
+                    if(oldId!=project.facilityIds[i]) {
+                        changed=true;
+                        host->log("earthworks  restored facility link project=%llu oldId=%u newId=%u asset=%s position=(%.2f,%.2f)",
+                            static_cast<unsigned long long>(project.id),oldId,project.facilityIds[i],buildings[match].assetName,
+                            buildings[match].position.x,buildings[match].position.z);
+                    }
+                } else ++unresolvedAnchored;
+                continue;
+            }
+            for(unsigned j=0;j<count;++j)if(buildings[j].id==project.facilityIds[i]
+                &&std::find(usedIds.begin(),usedIds.end(),buildings[j].id)==usedIds.end()) {match=j;++matches;}
+            if(matches==1) {
+                SaveFacilityAnchor(anchor,buildings[match]);
+                usedIds.push_back(buildings[match].id);changed|=anchor.valid;
+            } else unresolvedLegacy.emplace_back(&project,i);
+        }
+    }
+    // Old companion files stored only native IDs. Recover those links only
+    // when one saved assignment and one unclaimed Earthworks building remain.
+    std::vector<unsigned> unclaimed;
+    for(unsigned i=0;i<count;++i)if(std::find(usedIds.begin(),usedIds.end(),buildings[i].id)==usedIds.end())unclaimed.push_back(i);
+    if(unresolvedLegacy.size()==1&&unresolvedAnchored==0&&unclaimed.size()==1) {
+        auto [project,index]=unresolvedLegacy.front();const auto& building=buildings[unclaimed.front()];
+        project->facilityIds[index]=building.id;SaveFacilityAnchor(project->facilityAnchors[index],building);
+        usedIds.push_back(building.id);changed=true;unresolvedLegacy.clear();
+        host->log("earthworks  recovered legacy facility link project=%llu newId=%u asset=%s position=(%.2f,%.2f)",
+            static_cast<unsigned long long>(project->id),building.id,building.assetName,building.position.x,building.position.z);
+    }
+    if(changed)RefreshProjectStatus();
+    const size_t unresolvedCount=unresolvedLegacy.size()+unresolvedAnchored;
+    if(unresolvedCount!=lastUnresolvedFacilityIdentityCount) {
+        if(unresolvedCount)host->log("earthworks  facility links unresolved=%zu unclaimedBuildings=%zu; no ambiguous link was changed",unresolvedCount,unclaimed.size());
+        lastUnresolvedFacilityIdentityCount=unresolvedCount;
+    }
+}
 bool FindAssignedFacility(const SavedEarthwork& earthwork,uint32_t* id,BuildingReading* reading)
 {
     const auto* project=FindNamedProject(earthwork.projectId);
@@ -383,7 +454,7 @@ void ResetWorld()
     SelectSingleSitePoint(0);
     durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;lastSimulationHour=-1;
     lastEditorVolumeEstimate=0;editorVolumeSiteId=0;cachedEditorVolumes={};cachedEditorVolumesValid=false;
-    lastWorldFacilityScan=0;
+    lastWorldFacilityScan=0;lastFacilityIdentityReconcile=0;lastUnresolvedFacilityIdentityCount=static_cast<size_t>(-1);
     durableState.projects.push_back({1,"Project 1",{}});
     durableState.selectedProjectId=1;
     history.Reset(); panelOpen = false; mouseCapture = false; keyboardCapture = false; mapPickCapture = false; escapeCapture = false;
@@ -974,7 +1045,10 @@ pick_done:
         if(owner&&owner->id!=project->id) {Message("That facility is already assigned to another Project.");break;}
         if(std::find(project->facilityIds.begin(),project->facilityIds.end(),id)!=project->facilityIds.end())break;
         if(project->facilityIds.size()>=MaxProjectFacilities) {Message("This Project has reached its facility limit.");break;}
-        project->facilityIds.push_back(id);RefreshProjectStatus();Message("Facility added to this Project.");break;
+        project->facilityIds.push_back(id);
+        project->facilityAnchors.resize(project->facilityIds.size());
+        SaveFacilityAnchor(project->facilityAnchors.back(),facility);
+        RefreshProjectStatus();Message("Facility added to this Project.");break;
     }
     case Action::RemoveProjectFacility: {
         auto* project=FindNamedProject(durableState.selectedProjectId);if(!project)break;
@@ -984,7 +1058,11 @@ pick_done:
         if(active) {Message("Pause active Sites before changing this Project's facilities.");break;}
         const auto id=static_cast<uint32_t>(command.projectId);
         const auto it=std::find(project->facilityIds.begin(),project->facilityIds.end(),id);
-        if(it!=project->facilityIds.end())project->facilityIds.erase(it);
+        if(it!=project->facilityIds.end()) {
+            const auto index=static_cast<size_t>(std::distance(project->facilityIds.begin(),it));
+            project->facilityIds.erase(it);
+            if(index<project->facilityAnchors.size())project->facilityAnchors.erase(project->facilityAnchors.begin()+index);
+        }
         RefreshProjectStatus();Message("Facility removed from this Project.");break;
     }
     case Action::SelectProject:
@@ -1050,7 +1128,9 @@ pick_done:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && (project.status==ProjectStatus::Queued||project.status==ProjectStatus::Paused)) {
             auto* namedProject=FindNamedProject(project.projectId);
             if(!namedProject)break;
-            namedProject->facilityIds.assign(1,workforce.building.id);RefreshProjectStatus();
+            namedProject->facilityIds.assign(1,workforce.building.id);
+            namedProject->facilityAnchors.resize(1);SaveFacilityAnchor(namedProject->facilityAnchors.front(),workforce.building);
+            RefreshProjectStatus();
             SelectEarthworksFacility(workforce.building.id);
             Message(project.status==ProjectStatus::Paused
                 ? (project.needsReview?"Project reassigned. Progress is kept; review the footprint before resuming.":"Project reassigned while paused. Progress is kept.")
@@ -1061,7 +1141,7 @@ pick_done:
     }
     case Action::ClearProjectAssignment:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
-            if(auto* namedProject=FindNamedProject(project.projectId))namedProject->facilityIds.clear();
+            if(auto* namedProject=FindNamedProject(project.projectId)) {namedProject->facilityIds.clear();namedProject->facilityAnchors.clear();}
         }
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
@@ -1403,6 +1483,11 @@ void Tick()
     if (!ReadNative(&current)) { current.ready = false; current.cursorValid = false; current.cameraValid = false; }
     if (wasReady && !current.ready) ResetWorld();
     UpdateTerrainGridSnapshot();
+    const auto reconcileNow=GetTickCount64();
+    if(current.ready&&reconcileNow-lastFacilityIdentityReconcile>=1000) {
+        lastFacilityIdentityReconcile=reconcileNow;
+        ReconcileSavedFacilities();
+    }
     if (!wasReady && current.ready) {
         if(loadMessagePending) loadMessagePending=false;
         else current.message[0]=0;
@@ -1459,6 +1544,8 @@ void HookedLoad()
     const auto loadResult=LoadDurableState(host,host->exeBase+0x9D4F10,&loaded);
     if (loadResult==StateLoadResult::Loaded) {
         durableState=std::move(loaded);
+        lastFacilityIdentityReconcile=0;lastUnresolvedFacilityIdentityCount=static_cast<size_t>(-1);
+        ReconcileSavedFacilities();
         current.plan=durableState.draft;
         RefreshProjectStatus();
         if(current.projectFacilityId)SelectEarthworksFacility(current.projectFacilityId);

@@ -8,7 +8,7 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 10;
+constexpr uint32_t StateSchemaVersion = 11;
 constexpr size_t MaxSavedProjects = 32;
 constexpr size_t MaxSavedEarthworks = 128;
 constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;
@@ -21,6 +21,14 @@ struct SavedProject {
     uint64_t id = 0;
     std::string name;
     std::vector<uint32_t> facilityIds;
+    // Native building IDs can change when a saved republic is loaded. Keep a
+    // value-only locator beside each ID so runtime can safely resolve it again.
+    struct FacilityAnchor {
+        std::string assetName;
+        Point position{};
+        bool valid = false;
+    };
+    std::vector<FacilityAnchor> facilityAnchors;
 };
 
 struct SavedEarthwork {
