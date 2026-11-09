@@ -59,7 +59,7 @@ The Developer tab can log the parked vehicles linked to a selected Earthworks fa
 
 The latest snapshot for building 16 found two linked/parked machines:
 
-- `DLC3_service_exvacator_MIIIP` (vehicle ID 21): `$SKILL_CONSTRUCTION_GROUNDWORKS 15`; its `$SKILL_CONSTRUCTION_BULLDOZER 12` line is commented out.
+- `DLC3_service_exvacator_MIIIP` (vehicle ID 21): `$SKILL_GRAVELMINING 21` and `$SKILL_CONSTRUCTION_GROUNDWORKS 15`; its `$SKILL_CONSTRUCTION_BULLDOZER 12` line is commented out. The user identifies 21 as the M III's displayed level. Keep it distinct from the construction Groundworks skill (15) when estimating terraforming work.
 - `DLC3_bulldozer_stalinets_s60` (vehicle ID 23): `$SKILL_CONSTRUCTION_BULLDOZER 15`.
 
 The snapshot initially reported both as unavailable because the diagnostic only searched `media_soviet/vehicles/<type>/script.ini`. DLC vehicle internal names have a `DLC<n>_` prefix, while their definitions live under `media_soviet/dlc<n>/vehicles/<asset-name>/script.ini`. The lookup now resolves that layout, including the two DLC3 vehicles above. Their configured skill values do not by themselves establish their autonomous Earthworks throughput or the game's displayed “Speed/Level” number; that still needs behavioral evidence or further game-code/asset research.
