@@ -23,6 +23,9 @@ namespace ew {
 const TsmHost* host = nullptr;
 std::atomic<bool> panelOpen{false}, mouseCapture{false}, keyboardCapture{false}, leftRelease{false}, mapPickCapture{false}, escapeCapture{false};
 namespace {
+// Native terrain sampling varies by a few millimeters between reads. Keep
+// terrain review protection while allowing this observed readback jitter.
+constexpr float TerrainReadbackToleranceMeters=0.02f;
 std::mutex dataMutex;
 Snapshot published, current;
 std::deque<Command> commands;
@@ -1085,9 +1088,9 @@ pick_done:
             if(!SamplePlan(&refreshed)) {Message("Cannot recheck every planned terrain sample. Replan this project before starting.");break;}
             float maxDifference=0;
             for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
-            if(maxDifference>0.001f) {
-                host->log("earthworks  start rejected project=%llu terrain changed after planning maxDelta=%.6f area=(%.3f,%.3f)..(%.3f,%.3f)",
-                    static_cast<unsigned long long>(project.id),maxDifference,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
+            if(maxDifference>TerrainReadbackToleranceMeters) {
+                host->log("earthworks  start rejected project=%llu terrain changed after planning maxDelta=%.6f tolerance=%.3f area=(%.3f,%.3f)..(%.3f,%.3f)",
+                    static_cast<unsigned long long>(project.id),maxDifference,TerrainReadbackToleranceMeters,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
                 Message("Terrain changed since planning. Replan the footprint before starting.");break;
             }
             double totalWork=0;
@@ -1400,7 +1403,7 @@ void Tick()
                 float difference=0;
                 for(size_t i=0;i<check.ground.size();++i) difference=std::max(difference,std::abs(check.ground[i]-before.ground[i]));
                 host->log("earthworks  terrain readback: samples=%d maxDelta=%.6f after action=%d",GridSide*GridSide,difference,static_cast<int>(command.action));
-                if (difference>0.001f) Message("Ground changed since selection. Select the area again to refresh this preview.");
+                if (difference>TerrainReadbackToleranceMeters) Message("Ground changed since selection. Select the area again to refresh this preview.");
             } else Message("Ground readback unavailable. Select the area again before relying on this preview.");
         }
     }
