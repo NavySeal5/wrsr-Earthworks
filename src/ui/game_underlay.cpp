@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <mutex>
@@ -56,6 +57,7 @@ std::mutex interactivePreviewMutex;
 Plan interactivePreviewPlan{};
 uint64_t interactivePreviewSiteId=0;
 bool interactivePreviewActive=false;
+std::atomic<bool> winterWireframeMode{false};
 struct UiRect { float left=0,top=0,right=0,bottom=0; };
 std::array<UiRect,MaxNativeUiRects> nativeUiRects{};
 size_t nativeUiRectCount=0;
@@ -68,20 +70,21 @@ SegmentGroup groups[GroupCount];
 
 void ResetGroups()
 {
-    groups[0].color = IM_COL32(55,220,200,225); groups[0].width = 1.5f;
-    groups[1].color = IM_COL32(255,175,55,225); groups[1].width = 1.5f;
-    groups[2].color = IM_COL32(175,180,190,210); groups[2].width = 1.5f;
-    groups[3].color = IM_COL32(205,210,220,235); groups[3].width = 2.5f;
-    groups[4].color = IM_COL32(245,250,255,255); groups[4].width = 2.5f;
-    groups[5].color = IM_COL32(62,221,166,55); groups[5].width = ShadeRowPixels;
-    groups[6].color = IM_COL32(255,159,67,55); groups[6].width = ShadeRowPixels;
+    const bool winter=winterWireframeMode.load(std::memory_order_relaxed);
+    groups[0].color = winter?IM_COL32(0,93,105,235):IM_COL32(55,220,200,225); groups[0].width = 1.5f;
+    groups[1].color = winter?IM_COL32(157,64,20,235):IM_COL32(255,175,55,225); groups[1].width = 1.5f;
+    groups[2].color = winter?IM_COL32(83,88,98,230):IM_COL32(175,180,190,210); groups[2].width = 1.5f;
+    groups[3].color = winter?IM_COL32(26,54,82,245):IM_COL32(205,210,220,235); groups[3].width = 2.5f;
+    groups[4].color = winter?IM_COL32(35,62,92,255):IM_COL32(245,250,255,255); groups[4].width = 2.5f;
+    groups[5].color = winter?IM_COL32(15,88,160,55):IM_COL32(62,221,166,55); groups[5].width = ShadeRowPixels;
+    groups[6].color = winter?IM_COL32(184,73,18,55):IM_COL32(255,159,67,55); groups[6].width = ShadeRowPixels;
     groups[7].color = IM_COL32(20,25,30,240); groups[7].width = 5.0f;
-    groups[8].color = IM_COL32(62,221,166,255); groups[8].width = 2.5f;
-    groups[9].color = IM_COL32(255,159,67,255); groups[9].width = 2.5f;
+    groups[8].color = winter?IM_COL32(0,78,153,255):IM_COL32(62,221,166,255); groups[8].width = 2.5f;
+    groups[9].color = winter?IM_COL32(177,66,16,255):IM_COL32(255,159,67,255); groups[9].width = 2.5f;
     groups[10].color = IM_COL32(35,45,55,255); groups[10].width = 5.0f;
-    groups[11].color = IM_COL32(255,245,130,255); groups[11].width = 2.5f;
-    groups[12].color = IM_COL32(120,220,255,255); groups[12].width = 2.5f;
-    groups[13].color = IM_COL32(245,250,255,245); groups[13].width = 2.5f;
+    groups[11].color = winter?IM_COL32(190,0,100,255):IM_COL32(255,245,130,255); groups[11].width = 2.5f;
+    groups[12].color = winter?IM_COL32(0,78,170,255):IM_COL32(120,220,255,255); groups[12].width = 2.5f;
+    groups[13].color = winter?IM_COL32(45,58,75,245):IM_COL32(245,250,255,245); groups[13].width = 2.5f;
     for (auto& group : groups) group.count = 0;
 }
 
@@ -488,5 +491,10 @@ void SetInteractiveSitePreview(uint64_t siteId,const Plan* plan)
     std::lock_guard<std::mutex> lock(interactivePreviewMutex);
     if(!plan){interactivePreviewActive=false;interactivePreviewSiteId=0;return;}
     interactivePreviewPlan=*plan;interactivePreviewSiteId=siteId;interactivePreviewActive=true;
+}
+
+void SetWinterWireframeMode(bool enabled)
+{
+    winterWireframeMode.store(enabled,std::memory_order_relaxed);
 }
 }

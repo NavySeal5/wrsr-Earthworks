@@ -139,3 +139,10 @@ The denominator is an estimate derived from terrain height differences on the na
 4. Save the republic and reload it. Confirm the warning no longer appears for the removed links, and confirm valid facility assignments remain attached to their Projects.
 5. Load a save whose facility assignments all resolve. Confirm no warning appears.
 6. If the companion-file update fails, confirm the warning stays open and no saved assignments are removed. Share the runtime log if this occurs.
+
+## Winter wireframe colors — build 0.16.42-winter-wireframe-mode
+
+1. Open **Earthworks** and select **Projects and Sites**. Confirm **Winter Mode** is off by default.
+2. Create or open a Site. Turn on **Winter Mode**. Confirm the wireframe, cut/fill colors, point markers, and queued Site outlines use darker colors that remain visible against snow.
+3. Turn **Winter Mode** off. Confirm the normal colors return.
+4. Repeat with a draft, a queued Site, and an active Site if available. Confirm the toggle changes display colors only. It must not change Site geometry, terrain, progress, or status.

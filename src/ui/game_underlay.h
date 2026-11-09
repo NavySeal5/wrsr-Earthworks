@@ -13,4 +13,6 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info=nullptr);
 // Supplies a frame-to-frame Site geometry preview while the user drags a point.
 // A null Plan clears the temporary override; it never changes runtime state.
 void SetInteractiveSitePreview(uint64_t siteId, const Plan* plan);
+// Changes the terrain-preview palette for bright, snow-covered terrain.
+void SetWinterWireframeMode(bool enabled);
 }
