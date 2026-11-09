@@ -14,9 +14,10 @@ struct Command { Action action; float value = 0; uint64_t generation = 0; uint64
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
 struct ProjectFacilityBrief {
     unsigned id=0,eligibleMachines=0;
+    unsigned eligibleMachineRateUnits=0;
     float distance=0;
     uint64_t assignedProjectId=0;
-    bool machineCountValid=false;
+    bool machineCountValid=false,machineRateValid=false;
     char assetName[64]{};
     char displayName[257]{};
     char assignedProjectName[MaxSavedNameBytes+1]{};
@@ -26,7 +27,7 @@ struct ProjectBrief {
     char name[MaxSavedNameBytes+1]{};
     ProjectStatus status = ProjectStatus::Draft;
     unsigned facilityId = 0;
-    unsigned allocatedWorkers = 0, allocatedMachines = 0;
+    unsigned allocatedWorkers = 0, allocatedMachines = 0, allocatedRateUnits = 0;
     float progress = 0;
     bool needsReview = false;
     SiteOutline outline{};
@@ -60,7 +61,8 @@ struct Snapshot {
     Plan editorPlan{};
     Volumes editorVolumes{};
     bool editorVolumesValid=false;
-    unsigned assignedEligibleMachines=0, editorAllocatedMachines=0;
+    unsigned assignedEligibleMachines=0, assignedMachineRateUnits=0;
+    unsigned editorAllocatedMachines=0,editorAllocatedRateUnits=0;
     bool assignedMachineReadingsValid=false;
     char siteDraftError[192]{};
     unsigned assignedFacilityCount = 0, facilityCandidateCount = 0;

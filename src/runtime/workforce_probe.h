@@ -21,6 +21,8 @@ struct VehicleReading {
     bool parked=false,home=false,assigned=false,positionValid=false,earthworksAllowed=false,groundworksMachine=false;
     bool nativeJobStateValid=false,routeValid=false,firstRouteStopIsFacility=false;
     float distance=0;
+    unsigned constructionRateUnits=0;
+    bool constructionSkillValid=false;
     char type[65]{};
 };
 struct WorkforceView {
@@ -28,7 +30,8 @@ struct WorkforceView {
     unsigned candidateCount=0,samples=0,occupantSlots=0,occupants=0,parkedSlots=0;
     unsigned homeCount=0,assignedCount=0,parkedCount=0,matchedCount=0,rowCount=0,unreadableVehicles=0;
     bool selectedIsEarthworksFacility=false;
-    unsigned eligibleMachineCandidates=0,blockedConstructionAssignments=0;
+    unsigned eligibleMachineCandidates=0,eligibleMachineRateUnits=0,blockedConstructionAssignments=0;
+    bool machineSkillReadingsValid=true;
     BuildingReading building{};
     std::array<BuildingReading,WorkforceCandidates> candidates{};
     std::array<VehicleReading,WorkforceRows> vehicles{};

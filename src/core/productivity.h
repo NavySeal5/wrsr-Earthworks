@@ -2,17 +2,15 @@
 
 namespace ew {
 
-// Provisional machine-only scale for Earthworks. A 22-rated mechanism is the
-// reference machine; worker availability does not gate Earthworks output.
-constexpr double ReferenceGroundworksRating = 22.0;
-// Current provisional execution scale: one relative manual-rate unit processes
-// this much terrain per simulated hour. UI forecasts use the same value.
+// Construction skill is converted to machine rate units by flooring skill / 3.
+// Worker availability does not gate Earthworks output.
+// Each rate unit processes this much terrain per simulated hour; UI forecasts
+// and execution use the same value.
 constexpr double VolumePerRateUnitPerSimulationHour = 10.0;
 // The game's calendar clock advances through 60 simulation hours per date.
 constexpr double SimulationHoursPerInGameDay = 60.0;
 
-// Rate is relative to one unit of player-performed manual terraforming. The
-// machine rating is provisional; this does not estimate volume/time.
-double MachineRate(double groundworksRating) noexcept;
+// Each vehicle contributes floor(constructionSkill / 3) rate units.
+double MachineRate(double constructionSkill) noexcept;
 
 } // namespace ew

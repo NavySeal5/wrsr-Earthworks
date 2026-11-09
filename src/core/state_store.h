@@ -36,6 +36,8 @@ struct SavedEarthwork {
     bool needsReview = false;
     float workRemainderM3 = 0;
     unsigned allocatedWorkers = 0, allocatedMachines = 0;
+    // Runtime-only total of floor(construction skill / 3) for allocated machines.
+    unsigned allocatedRateUnits = 0;
     Plan plan{};
 };
 

@@ -6,10 +6,12 @@
 #include "runtime.h"
 #include "workforce_probe.h"
 #include "vehicle_filter.h"
+#include "../core/productivity.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 
 namespace ew {
 namespace {
@@ -227,6 +229,19 @@ bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool
     }
     std::fclose(file);return true;
 }
+bool ConstructionSkillForVehicle(const char* typeName,float* skill)
+{
+    if(!typeName||!skill)return false;
+    const bool bulldozer=std::strstr(typeName,"bulldozer")||std::strstr(typeName,"buldozer");
+    const bool excavator=std::strstr(typeName,"excavator")||std::strstr(typeName,"exvacator");
+    if(!bulldozer&&!excavator)return false;
+    float bulldozerSkill=0,groundworksSkill=0;bool hasBulldozer=false,hasGroundworks=false;char source[MAX_PATH]{};
+    if(!ReadConfiguredConstructionSkills(typeName,&bulldozerSkill,&hasBulldozer,
+        &groundworksSkill,&hasGroundworks,source,sizeof(source)))return false;
+    if(bulldozer&&hasBulldozer){*skill=bulldozerSkill;return true;}
+    if(excavator&&hasGroundworks){*skill=groundworksSkill;return true;}
+    return false;
+}
 bool SampleIdentity(const Identity& identity,WorkforceView* output)
 {
     if(!output)return false;
@@ -267,7 +282,19 @@ bool SampleIdentity(const Identity& identity,WorkforceView* output)
         if(!Vehicle(address,building,parkedAddresses.data(),next.parkedValid?parked.count:0,next.building.position,&row)) {++next.unreadableVehicles;continue;}
         if(!row.home && !row.assigned && !row.parked)continue;
         next.homeCount+=row.home?1u:0u;next.assignedCount+=row.assigned?1u:0u;next.parkedCount+=row.parked?1u:0u;
-        if(row.parked && row.earthworksAllowed && row.groundworksMachine)++next.eligibleMachineCandidates;
+        if(row.parked && row.earthworksAllowed && row.groundworksMachine) {
+            ++next.eligibleMachineCandidates;
+            float constructionSkill=0;
+            if(ConstructionSkillForVehicle(row.type,&constructionSkill)) {
+                row.constructionSkillValid=true;
+                const double rateUnits=MachineRate(constructionSkill);
+                row.constructionRateUnits=rateUnits>=std::numeric_limits<unsigned>::max()
+                    ?std::numeric_limits<unsigned>::max():static_cast<unsigned>(rateUnits);
+                if(row.constructionRateUnits>std::numeric_limits<unsigned>::max()-next.eligibleMachineRateUnits)
+                    next.eligibleMachineRateUnits=std::numeric_limits<unsigned>::max();
+                else next.eligibleMachineRateUnits+=row.constructionRateUnits;
+            } else next.machineSkillReadingsValid=false;
+        }
         ++next.matchedCount;
         if(next.rowCount<WorkforceRows)next.vehicles[next.rowCount++]=row;
     }
@@ -375,22 +402,26 @@ WorkforceView ReadWorkforce() {return view;}
 void LogWorkforce()
 {
     if(view.selected)Sample();
-    host->log("earthworks  stage07 DRY RUN selected=%d buildingValid=%d building=%u slot=%u asset=%s earthworksFacility=%d category=%d subtype=%d pos=(%.1f,%.1f) sample=%u occupantsValid=%d occupantSlots=%u nonnull=%u parkedValid=%d parkedSlots=%u vehiclesValid=%d unreadable=%u home=%u assigned=%u parked=%u matched=%u shown=%u blockedConstructionAssignments=%u status=%s",
+    host->log("earthworks  stage07 DRY RUN selected=%d buildingValid=%d building=%u slot=%u asset=%s earthworksFacility=%d category=%d subtype=%d pos=(%.1f,%.1f) sample=%u occupantsValid=%d occupantSlots=%u nonnull=%u parkedValid=%d parkedSlots=%u vehiclesValid=%d unreadable=%u home=%u assigned=%u parked=%u matched=%u shown=%u eligibleMachines=%u eligibleRateUnits=%u skillReadingsValid=%d blockedConstructionAssignments=%u status=%s",
         view.selected,view.buildingValid,view.building.id,view.building.slot,view.building.assetName,view.selectedIsEarthworksFacility,view.building.category,view.building.subtype,view.building.position.x,view.building.position.z,
         view.samples,view.occupantsValid,view.occupantSlots,view.occupants,view.parkedValid,view.parkedSlots,view.vehiclesValid,view.unreadableVehicles,
-        view.homeCount,view.assignedCount,view.parkedCount,view.matchedCount,view.rowCount,view.blockedConstructionAssignments,view.status);
+        view.homeCount,view.assignedCount,view.parkedCount,view.matchedCount,view.rowCount,view.eligibleMachineCandidates,
+        view.eligibleMachineRateUnits,view.machineSkillReadingsValid,view.blockedConstructionAssignments,view.status);
     for(unsigned i=0;i<view.rowCount;++i) {
         const auto& r=view.vehicles[i];
-        host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d jobStateValid=%d jobState=%d routeValid=%d routeStops=%u firstRouteIsFacility=%d positionValid=%d distance=%.1f",
-            r.id,r.type,r.category,r.home,r.assigned,r.parked,r.nativeJobStateValid,r.nativeJobState,r.routeValid,r.routeStopCount,r.firstRouteStopIsFacility,r.positionValid,r.distance);
+    host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d jobStateValid=%d jobState=%d routeValid=%d routeStops=%u firstRouteIsFacility=%d positionValid=%d distance=%.1f constructionRateUnits=%s%u",
+            r.id,r.type,r.category,r.home,r.assigned,r.parked,r.nativeJobStateValid,r.nativeJobState,r.routeValid,r.routeStopCount,r.firstRouteStopIsFacility,r.positionValid,r.distance,
+            r.constructionSkillValid?"":"unknown/",r.constructionRateUnits);
         if(r.groundworksMachine) {
             float bulldozer=0,groundworks=0;bool hasBulldozer=false,hasGroundworks=false;char source[MAX_PATH]{};
             if(ReadConfiguredConstructionSkills(r.type,&bulldozer,&hasBulldozer,&groundworks,&hasGroundworks,source,sizeof(source))) {
                 char bulldozerText[32]{},groundworksText[32]{};
                 if(hasBulldozer)sprintf_s(bulldozerText,"%.3f",bulldozer);else strcpy_s(bulldozerText,"n/a");
                 if(hasGroundworks)sprintf_s(groundworksText,"%.3f",groundworks);else strcpy_s(groundworksText,"n/a");
-                host->log("earthworks  skill-source vehicle=%u type=%s bulldozerSkill=%s groundworksSkill=%s source=%s",
-                    r.id,r.type,bulldozerText,groundworksText,source);
+                float relevantSkill=0;const bool hasRelevantSkill=ConstructionSkillForVehicle(r.type,&relevantSkill);
+                host->log("earthworks  skill-source vehicle=%u type=%s bulldozerSkill=%s groundworksSkill=%s selectedConstructionSkill=%s%.3f derivedRateUnits=%u source=%s",
+                    r.id,r.type,bulldozerText,groundworksText,hasRelevantSkill?"":"n/a/",hasRelevantSkill?relevantSkill:0.0f,
+                    r.constructionRateUnits,source);
             }
             else host->log("earthworks  skill-source vehicle=%u type=%s unavailable (no matching supported media_soviet vehicle script.ini)",r.id,r.type);
         }

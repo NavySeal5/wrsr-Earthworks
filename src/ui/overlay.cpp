@@ -1107,16 +1107,14 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::TextColored({0.55f,0.25f,0.10f,1},"Cut estimate: %.1f m3",volume.cut);
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.1f m3",volume.fill);
     const bool assignedCapacityKnown=s.assignedMachineReadingsValid;
-    const double ratePerMachinePerDay=MachineRate(ReferenceGroundworksRating)
-        *VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay;
     const bool useCurrentAllocation=!s.creatingSite&&s.projectStatus==ProjectStatus::Running&&s.editorAllocatedMachines>0;
-    const unsigned siteRateMachines=useCurrentAllocation
-        ?s.editorAllocatedMachines:s.assignedEligibleMachines;
-    const double siteRateM3PerDay=siteRateMachines*ratePerMachinePerDay;
+    const unsigned siteRateUnits=useCurrentAllocation?s.editorAllocatedRateUnits:s.assignedMachineRateUnits;
+    const double ratePerUnitPerDay=VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay;
+    const double siteRateM3PerDay=siteRateUnits*ratePerUnitPerDay;
     if(!assignedCapacityKnown)ImGui::Text("Assigned capacity: reading unavailable");
     else if(!s.assignedEligibleMachines)ImGui::Text("Assigned capacity: 0 m3/day (no eligible machines)");
     else ImGui::Text("Assigned capacity: ~%.0f m3/day (%u machines)",
-        s.assignedEligibleMachines*ratePerMachinePerDay,s.assignedEligibleMachines);
+        s.assignedMachineRateUnits*ratePerUnitPerDay,s.assignedEligibleMachines);
     if(!s.creatingSite&&s.projectStatus==ProjectStatus::Completed) {
         ImGui::Text("Estimated time: complete");
     } else if(!assignedCapacityKnown||siteRateM3PerDay<=0.0) {
@@ -1127,7 +1125,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(useCurrentAllocation)ImGui::Text("Estimated time: ~%.1f in-game days (~%.0f m3/day current rate)",days,siteRateM3PerDay);
         else ImGui::Text("Estimated time: ~%.1f in-game days at full assigned capacity",days);
     }
-    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each eligible machine contributes one rate unit (10 m3 per simulation hour; 60 simulation hours per calendar day). Running Sites use their current allocated machines; other states assume all assigned capacity is available. Shared work or changes in machine availability can change the estimate.");
+    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each machine contributes floor(its construction skill / 3) rate units. Each rate unit processes 10 m3 per simulation hour; the calendar advances 60 simulation hours per in-game day. Running Sites use their current allocation; other states assume all assigned capacity is available.");
     ImGui::Separator();
     const bool editable=(s.creatingSite)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     const unsigned selectedPoint=std::min<unsigned>(s.selectedSitePoint,plan.pointCount-1);

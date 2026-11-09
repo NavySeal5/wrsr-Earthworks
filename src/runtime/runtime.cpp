@@ -413,6 +413,7 @@ void RefreshProjectStatus()
     current.assignedFacilities.fill(ProjectFacilityBrief{});
     current.assignedFacilityCount=selectedContainer?static_cast<unsigned>(std::min(selectedContainer->facilityIds.size(),MaxProjectFacilities)):0;
     current.assignedEligibleMachines=0;
+    current.assignedMachineRateUnits=0;
     current.assignedMachineReadingsValid=selectedContainer!=nullptr;
     for(unsigned i=0;i<current.assignedFacilityCount;++i) {
         const auto id=selectedContainer->facilityIds[i];
@@ -421,21 +422,30 @@ void RefreshProjectStatus()
         bool cached=false;
         for(unsigned j=0;j<previousFacilityCount;++j)if(previousFacilities[j].id==id) {
             target.eligibleMachines=previousFacilities[j].eligibleMachines;
+            target.eligibleMachineRateUnits=previousFacilities[j].eligibleMachineRateUnits;
             target.machineCountValid=previousFacilities[j].machineCountValid;
+            target.machineRateValid=previousFacilities[j].machineRateValid;
             cached=true;break;
         }
         if(!cached||refreshFacilityReadings) {
             WorkforceView facility{};
-            target.eligibleMachines=0;target.machineCountValid=false;
+            target.eligibleMachines=0;target.eligibleMachineRateUnits=0;
+            target.machineCountValid=false;target.machineRateValid=false;
             if(ReadEarthworksFacilityWorkforce(id,&facility) && facility.buildingValid && facility.selectedIsEarthworksFacility
                 && facility.parkedValid && facility.vehiclesValid && facility.unreadableVehicles==0) {
                 target.eligibleMachines=facility.eligibleMachineCandidates;
                 target.machineCountValid=true;
+                target.eligibleMachineRateUnits=facility.eligibleMachineRateUnits;
+                target.machineRateValid=facility.machineSkillReadingsValid;
             }
         }
         if(target.machineCountValid)current.assignedEligibleMachines=std::min<unsigned>(
             MaxSavedEarthworks,current.assignedEligibleMachines+target.eligibleMachines);
         else current.assignedMachineReadingsValid=false;
+        if(target.machineRateValid) {
+            const uint64_t total=static_cast<uint64_t>(current.assignedMachineRateUnits)+target.eligibleMachineRateUnits;
+            current.assignedMachineRateUnits=static_cast<unsigned>(std::min<uint64_t>(MaxSavedEarthworks*32u,total));
+        } else current.assignedMachineReadingsValid=false;
     }
     if(refreshFacilityReadings||current.assignedFacilityCount!=previousFacilityCount)lastProjectFacilityReadings=now;
     if(!current.ready||now-lastWorldFacilityScan>=1000) {
@@ -465,6 +475,7 @@ void RefreshProjectStatus()
         strncpy_s(target.name,source.name.c_str(),_TRUNCATE);
         target.allocatedWorkers=source.status==ProjectStatus::Running?source.allocatedWorkers:0;
         target.allocatedMachines=source.status==ProjectStatus::Running?source.allocatedMachines:0;
+        target.allocatedRateUnits=source.status==ProjectStatus::Running?source.allocatedRateUnits:0;
         target.progress=source.progress;target.needsReview=source.needsReview;
         target.outline.points=source.plan.points;target.outline.pointCount=source.plan.pointCount;
         target.a=source.plan.a;target.b=source.plan.b;target.target=source.plan.target;
@@ -477,6 +488,7 @@ void RefreshProjectStatus()
     current.projectNeedsReview=false;
     current.projectProgress=0;
     current.editorAllocatedMachines=0;
+    current.editorAllocatedRateUnits=0;
     current.selectedSiteName[0]=0;
     current.siteEditorOpen=siteEditorOpen;current.creatingSite=creatingSite;current.editingSiteId=editingSiteId;current.shapeMode=shapeMode;
     current.selectedSitePoint=selectedSitePointIndex;
@@ -496,6 +508,7 @@ void RefreshProjectStatus()
         strncpy_s(current.selectedSiteName,selected->name.c_str(),_TRUNCATE);
         current.projectStatus=selected->status;current.projectNeedsReview=selected->needsReview;current.projectProgress=selected->progress;
         current.editorAllocatedMachines=selected->status==ProjectStatus::Running?selected->allocatedMachines:0;
+        current.editorAllocatedRateUnits=selected->status==ProjectStatus::Running?selected->allocatedRateUnits:0;
         current.projectFacilityId=AssignedFacility(*selected);
         if(current.projectFacilityId) {
             BuildingReading facility{};
@@ -1298,37 +1311,49 @@ void TickProjectRunner()
             }
             Message("Started project has no facility assignment. Assign a facility before resuming.");continue;
         }
-        unsigned machinesAvailable=0;bool facilityReadFailed=false;
+        std::vector<unsigned> availableMachineRateUnits;
+        bool facilityReadFailed=false;
         for(const auto facilityId:namedProject->facilityIds) {
             WorkforceView workforce{};
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
                 ||!workforce.parkedValid||!workforce.vehiclesValid) {
                 facilityReadFailed=true;break;
             }
-            machinesAvailable=std::min(static_cast<unsigned>(MaxSavedEarthworks),
-                machinesAvailable+std::min(workforce.eligibleMachineCandidates,static_cast<unsigned>(MaxSavedEarthworks)));
+            for(unsigned i=0;i<workforce.rowCount;++i) {
+                const auto& vehicle=workforce.vehicles[i];
+                if(vehicle.parked&&vehicle.earthworksAllowed&&vehicle.groundworksMachine
+                    &&vehicle.constructionSkillValid&&vehicle.constructionRateUnits>0)
+                    availableMachineRateUnits.push_back(vehicle.constructionRateUnits);
+            }
         }
         if(facilityReadFailed) {
             for(auto* job:jobs){job->status=ProjectStatus::Paused;job->needsReview=true;schedulerStateChanged=true;}
             Message("A Project facility vehicle reading failed. Its Sites are paused for review.");continue;
         }
         if(jobs.empty())continue;
-        unsigned machinesLeft=machinesAvailable;
+        std::sort(availableMachineRateUnits.begin(),availableMachineRateUnits.end(),std::greater<unsigned>());
+        size_t machineCursor=0;
         std::vector<Allocation> projectAllocations;
         projectAllocations.reserve(jobs.size());
-        for(auto* job:jobs)projectAllocations.push_back({job,0,0});
-        if(machinesLeft) {
+        for(auto* job:jobs) {
+            job->allocatedRateUnits=0;
+            projectAllocations.push_back({job,0,0});
+        }
+        if(machineCursor<availableMachineRateUnits.size()) {
             // Machines alone provide capacity. Give one to each eligible Site
             // in priority order, then send remaining machines to earlier Sites.
-            for(auto& allocation:projectAllocations)if(machinesLeft) {
-                --machinesLeft;
-                allocation.rate+=MachineRate(ReferenceGroundworksRating);
+            // Stronger construction skills are assigned first.
+            for(auto& allocation:projectAllocations)if(machineCursor<availableMachineRateUnits.size()) {
+                const auto rateUnits=availableMachineRateUnits[machineCursor++];
+                allocation.rate+=rateUnits;
                 ++allocation.machines;
+                allocation.project->allocatedRateUnits+=rateUnits;
             }
-            for(auto& allocation:projectAllocations)while(machinesLeft) {
-                --machinesLeft;
-                allocation.rate+=MachineRate(ReferenceGroundworksRating);
+            for(auto& allocation:projectAllocations)while(machineCursor<availableMachineRateUnits.size()) {
+                const auto rateUnits=availableMachineRateUnits[machineCursor++];
+                allocation.rate+=rateUnits;
                 ++allocation.machines;
+                allocation.project->allocatedRateUnits+=rateUnits;
             }
         }
         for(auto& allocation:projectAllocations) {

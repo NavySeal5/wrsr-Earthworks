@@ -4,10 +4,10 @@
 
 namespace ew {
 
-double MachineRate(double groundworksRating) noexcept
+double MachineRate(double constructionSkill) noexcept
 {
-    if (!std::isfinite(groundworksRating) || groundworksRating <= 0.0) groundworksRating = ReferenceGroundworksRating;
-    return groundworksRating / ReferenceGroundworksRating;
+    if (!std::isfinite(constructionSkill) || constructionSkill <= 0.0) return 0.0;
+    return std::floor(constructionSkill / 3.0);
 }
 
 } // namespace ew

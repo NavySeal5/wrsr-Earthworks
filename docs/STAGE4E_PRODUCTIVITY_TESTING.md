@@ -63,3 +63,16 @@ The latest snapshot for building 16 found two linked/parked machines:
 - `DLC3_bulldozer_stalinets_s60` (vehicle ID 23): `$SKILL_CONSTRUCTION_BULLDOZER 15`.
 
 The snapshot initially reported both as unavailable because the diagnostic only searched `media_soviet/vehicles/<type>/script.ini`. DLC vehicle internal names have a `DLC<n>_` prefix, while their definitions live under `media_soviet/dlc<n>/vehicles/<asset-name>/script.ini`. The lookup now resolves that layout, including the two DLC3 vehicles above. Their configured skill values do not by themselves establish their autonomous Earthworks throughput or the game's displayed “Speed/Level” number; that still needs behavioral evidence or further game-code/asset research.
+
+## Provisional construction-skill productivity rule
+
+The scheduler now derives each eligible vehicle's rate from its relevant configured construction skill:
+
+- Excavators use `$SKILL_CONSTRUCTION_GROUNDWORKS`.
+- Bulldozers use `$SKILL_CONSTRUCTION_BULLDOZER`.
+- Rate units per vehicle are `floor(construction skill / 3)`. Fractional units are discarded.
+- Each rate unit processes 10 m³ per simulation hour. The calendar advances 60 simulation hours per in-game day, so one rate unit represents 600 m³ per in-game day.
+
+For the observed M III excavator and Stalinets S-60 bulldozer, the relevant construction skill is 15 for each. Each therefore contributes 5 rate units, equivalent to 50 m³ per simulation hour or 3,000 m³ per in-game day. Together, if assigned to the same Site, they provide 10 rate units (100 m³ per simulation hour; 6,000 m³ per in-game day). The M III's Gravel Mining level of 21 is not used.
+
+Previously every eligible machine contributed one fixed rate unit (10 m³ per simulation hour, or 600 m³ per in-game day), regardless of its construction skill. The skill-based conversion is a provisional balancing rule; the formula is now implemented consistently in scheduling and the UI forecast, but the resulting throughput has not been validated in-game.
