@@ -920,7 +920,7 @@ void DrawInterface(const Snapshot& s)
                         if(site.status==ProjectStatus::Queued){workAction=Action::StartProject;workLabel="Start";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
-                        else if(site.status==ProjectStatus::Completed){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
+                        else if(site.status==ProjectStatus::Completed||site.status==ProjectStatus::Cancelled){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
                         const bool removable=site.status==ProjectStatus::Completed||site.status==ProjectStatus::Cancelled;

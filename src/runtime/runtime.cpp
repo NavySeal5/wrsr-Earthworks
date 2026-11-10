@@ -1196,18 +1196,27 @@ pick_done:
     case Action::RestartProject:
         for(auto& project:durableState.earthworks) {
             const bool restarting=command.action==Action::RestartProject;
-            if(project.id!=command.projectId||(restarting?project.status!=ProjectStatus::Completed:project.status!=ProjectStatus::Queued))continue;
+            const auto initialStatus=project.status;
+            const bool restartableStatus=initialStatus==ProjectStatus::Completed||initialStatus==ProjectStatus::Cancelled;
+            if(project.id!=command.projectId||(restarting?!restartableStatus:initialStatus!=ProjectStatus::Queued))continue;
+            const char* retainedStatus=restarting&&initialStatus==ProjectStatus::Cancelled?"The Site remains cancelled.":"The Site remains completed.";
             BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
             ClearSiteActionError(project.id);
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
-                SiteActionError(project.id,restarting?"Native terrain writer is unavailable. The Site remains completed.":"Native terrain writer is unavailable for this game build. Site remains queued.");break;
+                if(restarting){char message[112]{};sprintf_s(message,"Native terrain writer is unavailable. %s",retainedStatus);SiteActionError(project.id,message);}
+                else SiteActionError(project.id,"Native terrain writer is unavailable for this game build. Site remains queued.");
+                break;
             }
             if(!FindAssignedFacility(project,&facilityId,&facility)) {
-                SiteActionError(project.id,restarting?"Assigned Earthworks facility is missing or unreadable. The Site remains completed.":"Assigned Earthworks facility is missing or unreadable.");break;
+                if(restarting){char message[112]{};sprintf_s(message,"Assigned Earthworks facility is missing or unreadable. %s",retainedStatus);SiteActionError(project.id,message);}
+                else SiteActionError(project.id,"Assigned Earthworks facility is missing or unreadable.");
+                break;
             }
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
                 ||!workforce.vehiclesValid||!workforce.parkedValid) {
-                SiteActionError(project.id,restarting?"Assigned facility readings are incomplete. The Site remains completed.":"Assigned facility readings are incomplete. Try again when the building can be read.");break;
+                if(restarting){char message[112]{};sprintf_s(message,"Assigned facility readings are incomplete. %s",retainedStatus);SiteActionError(project.id,message);}
+                else SiteActionError(project.id,"Assigned facility readings are incomplete. Try again when the building can be read.");
+                break;
             }
             if(restarting) {
                 const bool overlapsOtherProject=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& other) {
@@ -1224,7 +1233,11 @@ pick_done:
                 SiteActionError(project.id,ProjectAreaMessage(areaError));break;
             }
             Plan refreshed=project.plan;
-            if(!SamplePlan(&refreshed)) {SiteActionError(project.id,restarting?"Cannot read the current Site terrain. The Site remains completed.":"Cannot recheck every planned terrain sample. Replan this Site before starting.");break;}
+            if(!SamplePlan(&refreshed)) {
+                if(restarting){char message[112]{};sprintf_s(message,"Cannot read the current Site terrain. %s",retainedStatus);SiteActionError(project.id,message);}
+                else SiteActionError(project.id,"Cannot recheck every planned terrain sample. Replan this Site before starting.");
+                break;
+            }
             float maxDifference=0;
             if(!restarting)for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
             if(!restarting&&maxDifference>TerrainReadbackToleranceMeters) {
@@ -1234,7 +1247,9 @@ pick_done:
             }
             double totalWork=0;
             if(!MeasureTerrainWork(refreshed,grid,rect,&totalWork)) {
-                SiteActionError(project.id,restarting?"Could not measure current terrain work. The Site remains completed.":"Could not measure the Site's starting terrain work. It remains queued.");break;
+                if(restarting){char message[112]{};sprintf_s(message,"Could not measure current terrain work. %s",retainedStatus);SiteActionError(project.id,message);}
+                else SiteActionError(project.id,"Could not measure the Site's starting terrain work. It remains queued.");
+                break;
             }
             if(restarting)project.plan=std::move(refreshed);
             project.totalWorkM3=static_cast<float>(totalWork);
