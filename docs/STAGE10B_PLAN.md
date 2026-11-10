@@ -21,14 +21,14 @@ Organize multiple terrain work sites under named Projects, and make creating/edi
 - Separate the persisted data model into named Project containers, project-level facility assignments, and Site records. Keep terrain plan, progress, review state, editable sequential default name (`Site-1`, `Site-2`, etc.) and scheduling priority on each Site; attach one or more facilities to the Project.
 - Update the save companion format with bounded counts, validation, checksum and terrain fingerprint protections. Store named Projects, their facility pools, the selected-project ID, and child Earthworks with their names, plans and execution state.
 - Use a fresh save for the reorganized schema. The user confirmed that old WIP records do not need migration; do not spend implementation time converting the old flat project list.
-- Keep current terrain execution, rate, overlap, machine/worker allocation, facility rules and no-material/no-fuel behavior unchanged. This stage is organization and interaction only.
+- Keep current terrain execution, rate, overlap, facility rules and no-material/no-fuel behavior unchanged. Within each Project, use FIFO Site scheduling: the first eligible started Site receives all available machine capacity until completion; paused or review-blocked Sites are skipped (D135).
 - Keep the accepted game-like parchment/control styling across the redesigned panel and detached editor.
 - Remove the Plan tab. Keep the two-corner rectangle selection. **New Site** begins selection and binds the result to the selected container.
 - Add the detached site editor. It shows the target height now; angle remains deferred. Reopening an Earthwork's editor must not start another site selection.
 - The completed-item cleanup button affects only the selected named Project.
 - Block deleting a named Project while it contains any queued, running, waiting or paused Site. If it contains only completed/cancelled Sites, deleting the container removes those history rows without changing terrain.
 - Move-up/move-down priority controls order Sites only within their named Project.
-- Assign one or more facilities to each named Project, and do not allow a facility to be shared between Projects. A Project's facilities form the work pool for its Sites; current staffing, machine capacity, concurrent work and priority rules operate within that Project's Sites list.
+- Assign one or more facilities to each named Project, and do not allow a facility to be shared between Projects. A Project's facilities form the work pool for its Sites; FIFO priority operates within that Project's Sites list.
 
 ## Checkpoints and in-game review gates
 

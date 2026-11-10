@@ -1563,17 +1563,14 @@ void TickProjectRunner()
             job->allocatedRateUnits=0;
             projectAllocations.push_back({job,0,0});
         }
-        if(machineCursor<availableMachineRateUnits.size()) {
-            // Machines alone provide capacity. Give one to each eligible Site
-            // in priority order, then send remaining machines to earlier Sites.
-            // Stronger construction skills are assigned first.
-            for(auto& allocation:projectAllocations)if(machineCursor<availableMachineRateUnits.size()) {
-                const auto rateUnits=availableMachineRateUnits[machineCursor++];
-                allocation.rate+=rateUnits;
-                ++allocation.machines;
-                allocation.project->allocatedRateUnits+=rateUnits;
-            }
-            for(auto& allocation:projectAllocations)while(machineCursor<availableMachineRateUnits.size()) {
+        if(machineCursor<availableMachineRateUnits.size()&&!projectAllocations.empty()) {
+            // FIFO within this named Project: the first started, eligible Site
+            // in the persisted priority order receives the full machine pool.
+            // Lower-priority started Sites remain Waiting until it completes.
+            // Paused and review-blocked Sites are not in `jobs`, so they are
+            // skipped and the next eligible started Site receives the pool.
+            auto& allocation=projectAllocations.front();
+            while(machineCursor<availableMachineRateUnits.size()) {
                 const auto rateUnits=availableMachineRateUnits[machineCursor++];
                 allocation.rate+=rateUnits;
                 ++allocation.machines;
