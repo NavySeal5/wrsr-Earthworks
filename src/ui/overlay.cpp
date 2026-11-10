@@ -1075,10 +1075,12 @@ void DrawInterface(const Snapshot& s)
                         centerCellItem(30.0f);
                         if(siteCancelIcon) {
                             if(drawIconButton("##DeleteSite",siteCancelIcon,"Delete Site",24.0f)) {
-                                deleteSiteTarget=site.id;openSiteDeletePopup=true;
+                                if(site.status==ProjectStatus::Completed)SendProject(Action::RemoveProject,site.id);
+                                else {deleteSiteTarget=site.id;openSiteDeletePopup=true;}
                             }
                         } else if(ImGui::Button("×",{32,32})) {
-                            deleteSiteTarget=site.id;openSiteDeletePopup=true;
+                            if(site.status==ProjectStatus::Completed)SendProject(Action::RemoveProject,site.id);
+                            else {deleteSiteTarget=site.id;openSiteDeletePopup=true;}
                         }
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
