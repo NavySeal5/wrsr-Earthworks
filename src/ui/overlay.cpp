@@ -41,6 +41,9 @@ ID3D11ShaderResourceView* siteCancelIcon = nullptr;
 ID3D11ShaderResourceView* siteRenameIcon = nullptr;
 ID3D11ShaderResourceView* siteHideIcon = nullptr;
 ID3D11ShaderResourceView* siteShowIcon = nullptr;
+ID3D11ShaderResourceView* siteStatusWaitingIcon = nullptr;
+ID3D11ShaderResourceView* siteStatusWarningIcon = nullptr;
+ID3D11ShaderResourceView* siteStatusCompletedIcon = nullptr;
 ID3D11ShaderResourceView* siteMoveUpIcon = nullptr;
 ID3D11ShaderResourceView* siteMoveDownIcon = nullptr;
 ID3D11ShaderResourceView* projectNewIcon = nullptr;
@@ -870,11 +873,12 @@ void DrawInterface(const Snapshot& s)
                 bool openSiteRenamePopup=false,openSiteDeletePopup=false;
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
-                if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                if(s.projectCount&&ImGui::BeginTable("Site rows",8,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
                     const float priorityControlWidth=24.0f*2.0f+ImGui::GetStyle().ItemSpacing.x+ImGui::GetStyle().CellPadding.x*2.0f;
                     const float priorityWidth=std::max(ImGui::CalcTextSize("Priority").x+ImGui::GetStyle().CellPadding.x*2.0f,priorityControlWidth);
                     const float visibilityWidth=siteHideIcon&&siteShowIcon?36.0f:52.0f;
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
+                    ImGui::TableSetupColumn("Status",ImGuiTableColumnFlags_WidthFixed,52.0f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.05f);
                     ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthFixed,priorityWidth);
                     ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.35f);
@@ -883,6 +887,7 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers,32.0f);
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Site");
+                    ImGui::TableNextColumn();ImGui::TextUnformatted("Status");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Progress");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Priority");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
@@ -929,6 +934,56 @@ void DrawInterface(const Snapshot& s)
                         const float innerHeight=rowHeight-2.0f*cellPaddingY;
                         ImGui::SetCursorPosY(ImGui::GetCursorPosY()+std::max(0.0f,(innerHeight-height)*0.5f));
                     };
+                    auto drawSiteStatusIcon=[&](const ProjectBrief& site) {
+                        constexpr float iconSize=24.0f;
+                        centerCellItem(iconSize);
+                        ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.0f,(ImGui::GetContentRegionAvail().x-iconSize)*0.5f));
+                        ImGui::Dummy({iconSize,iconSize});
+                        const ImVec2 min=ImGui::GetItemRectMin();
+                        const ImVec2 max=ImGui::GetItemRectMax();
+                        ImDrawList* draw=ImGui::GetWindowDrawList();
+                        ID3D11ShaderResourceView* nativeIcon=nullptr;
+                        if(site.needsReview)nativeIcon=siteStatusWarningIcon;
+                        else if(site.status==ProjectStatus::Queued||site.status==ProjectStatus::Waiting)nativeIcon=siteStatusWaitingIcon;
+                        else if(site.status==ProjectStatus::Completed)nativeIcon=siteStatusCompletedIcon;
+                        if(nativeIcon) {
+                            const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(nativeIcon)));
+                            draw->AddImage(image,min,max);
+                        } else {
+                            const ImVec2 center{(min.x+max.x)*0.5f,(min.y+max.y)*0.5f};
+                            const bool running=site.status==ProjectStatus::Running;
+                            const bool paused=site.status==ProjectStatus::Paused;
+                            const bool draft=site.status==ProjectStatus::Draft;
+                            const bool review=site.needsReview;
+                            const ImU32 fill=review?IM_COL32(207,141,34,255):running?IM_COL32(71,145,76,255):draft?IM_COL32(120,132,141,255):IM_COL32(126,105,78,255);
+                            draw->AddCircleFilled(center,10.0f,fill,24);
+                            draw->AddCircle(center,10.0f,IM_COL32(86,66,47,255),24,1.0f);
+                            if(review) {
+                                draw->AddLine({center.x,center.y-5.0f},{center.x,center.y+2.0f},IM_COL32(255,248,230,255),2.0f);
+                                draw->AddCircleFilled({center.x,center.y+6.0f},1.2f,IM_COL32(255,248,230,255),12);
+                            } else if(running) {
+                                draw->AddTriangleFilled({center.x-3.0f,center.y-5.0f},{center.x-3.0f,center.y+5.0f},{center.x+5.0f,center.y},IM_COL32(255,248,230,255));
+                            } else if(paused) {
+                                draw->AddRectFilled({center.x-4.0f,center.y-5.0f},{center.x-1.0f,center.y+5.0f},IM_COL32(255,248,230,255),0.5f);
+                                draw->AddRectFilled({center.x+1.0f,center.y-5.0f},{center.x+4.0f,center.y+5.0f},IM_COL32(255,248,230,255),0.5f);
+                            } else if(draft) {
+                                draw->AddCircle(center,5.0f,IM_COL32(255,248,230,255),16,1.5f);
+                                draw->AddLine({center.x+3.5f,center.y+3.5f},{center.x+7.0f,center.y+7.0f},IM_COL32(255,248,230,255),1.5f);
+                            } else {
+                                // A missing native asset should not make a queued, waiting, or
+                                // completed Site look paused. Use a clock for queued/waiting and
+                                // a check for completed as a visual fallback.
+                                if(site.status==ProjectStatus::Completed) {
+                                    draw->AddLine({center.x-5.0f,center.y},{center.x-1.5f,center.y+4.0f},IM_COL32(255,248,230,255),2.0f);
+                                    draw->AddLine({center.x-1.5f,center.y+4.0f},{center.x+6.0f,center.y-5.0f},IM_COL32(255,248,230,255),2.0f);
+                                } else {
+                                    draw->AddCircle(center,5.0f,IM_COL32(255,248,230,255),20,1.5f);
+                                    draw->AddLine(center,{center.x,center.y-3.5f},IM_COL32(255,248,230,255),1.5f);
+                                    draw->AddLine(center,{center.x+3.0f,center.y+1.5f},IM_COL32(255,248,230,255),1.5f);
+                                }
+                            }
+                        }
+                    };
                     for(size_t i=0;i<s.projectCount;++i) {
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
                         ImGui::TableNextRow(ImGuiTableRowFlags_None,44.0f);
@@ -940,6 +995,7 @@ void DrawInterface(const Snapshot& s)
                         const auto siteLabelMax=ImGui::GetItemRectMax();
                         const float siteLabelY=siteLabelMin.y+(siteLabelMax.y-siteLabelMin.y-ImGui::GetTextLineHeight())*0.5f;
                         ImGui::GetWindowDrawList()->AddText({siteLabelMin.x+4.0f,siteLabelY},ImGui::GetColorU32(ImGuiCol_Text),label);
+                        ImGui::TableNextColumn();drawSiteStatusIcon(site);
                         ImGui::TableNextColumn();char progressLabel[24];sprintf_s(progressLabel,"%.1f%%",site.progress*100.0f);centerCellItem(28.0f);ImGui::ProgressBar(site.progress,{ImGui::GetContentRegionAvail().x,28},progressLabel);
                         ImGui::TableNextColumn();
                         centerCellItem(32.0f);
@@ -1584,6 +1640,9 @@ void LoadSiteRowIcons()
     LoadGameUiIcon(L"button_rename.png",&siteRenameIcon);
     LoadGameUiIcon(L"button_view_cancel.png",&siteHideIcon);
     LoadGameUiIcon(L"button_view.png",&siteShowIcon);
+    LoadGameUiIcon(L"status_waiting.png",&siteStatusWaitingIcon);
+    LoadGameUiIcon(L"status_warning.png",&siteStatusWarningIcon);
+    LoadGameUiIcon(L"status_ok.png",&siteStatusCompletedIcon);
     LoadGameUiIcon(L"sort_up.png",&siteMoveUpIcon);
     LoadGameUiIcon(L"sort_down.png",&siteMoveDownIcon);
     LoadGameUiIcon(L"button_plus.png",&projectNewIcon);
