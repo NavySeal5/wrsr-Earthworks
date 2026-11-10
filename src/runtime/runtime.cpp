@@ -347,9 +347,10 @@ void UpdateSiteDraftValidation()
     if(areaError!=ProjectAreaError::None) {
         fail(ProjectAreaMessage(areaError));return;
     }
-    for(const auto& saved:durableState.earthworks)if(ProjectReservesFootprint(saved.status)&&FootprintsOverlap(current.plan,saved.plan)) {
+    for(const auto& saved:durableState.earthworks)if(saved.projectId!=durableState.selectedProjectId
+        &&ProjectReservesFootprint(saved.status)&&FootprintsOverlap(current.plan,saved.plan)) {
         char message[192]{};
-        sprintf_s(message,"This Site overlaps %s. Move it or cancel that unfinished Site first.",saved.name.c_str());
+        sprintf_s(message,"This Site overlaps %s in another Project. Move it or cancel that unfinished Site first.",saved.name.c_str());
         fail(message);return;
     }
 }
@@ -968,9 +969,12 @@ pick_done:
         edited.RefreshBounds();
         if(edited.complete) {
             if(!ValidFootprint(edited)){SiteActionError(site?site->id:0,"That edit makes the Site invalid. Keep points at least 5 m apart and avoid crossing edges.");break;}
+            const uint64_t editedProjectId=site?site->projectId:durableState.selectedProjectId;
             bool overlap=false;
-            for(const auto& other:durableState.earthworks)if(other.id!=(site?site->id:0)&&ProjectReservesFootprint(other.status)&&FootprintsOverlap(edited,other.plan))overlap=true;
-            if(overlap){SiteActionError(site?site->id:0,"That edit overlaps another unfinished Site.");break;}
+            for(const auto& other:durableState.earthworks)if(other.id!=(site?site->id:0)
+                &&other.projectId!=editedProjectId
+                &&ProjectReservesFootprint(other.status)&&FootprintsOverlap(edited,other.plan))overlap=true;
+            if(overlap){SiteActionError(site?site->id:0,"That edit overlaps an unfinished Site in another Project.");break;}
             if(!SamplePlan(&edited)){SiteActionError(site?site->id:0,"Could not resample the edited Site. Its previous shape is kept.");break;}
         } else {
             bool tooClose=false;

@@ -48,7 +48,7 @@ The estimate now uses four interior samples per planning-grid cell and counts on
 3. Select an edge and use **Add point on next edge**. Confirm the new point appears on that edge, can be selected, and can receive an independent height.
 4. Hover over a different edge. A grey, plus-marked point preview should appear on the edge. Click the edge at the preview and confirm the new point is inserted at that position and selected. Try near both ends; positions less than 5 m from an endpoint should not offer insertion.
 5. Remove a selected point. Confirm the polygon remains valid and has at least three points.
-6. Try to move vertices into a self-crossing shape, within 5 m of another point, or into an overlap with a queued/running/paused Site. Invalid edits should be rejected and the prior valid shape should remain.
+6. Try to move vertices into a self-crossing shape or within 5 m of another point. Invalid edits should be rejected and the prior valid shape should remain. Overlap behavior is listed below.
 7. Confirm the editor reports a 32-point limit. Test exceeding it only if convenient; do not spend time placing 32 points if the counter and disabled control already make the limit clear.
 
 ## Save/reload and work rules
@@ -164,3 +164,11 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Try a normal click near an edge. Confirm it still adds a point. Try Shift-click on a point handle. Confirm it still toggles that point's selection without moving the whole Site.
 6. Try to move the Site so it overlaps another unfinished Site or leaves the terrain. Confirm the editor reports an error and keeps the old footprint.
 7. If the Site was Running, confirm the move pauses it and requires terrain review before it can resume.
+
+## Project-scoped Site overlap
+
+1. In one named Project, create two unfinished Sites whose footprints overlap. Confirm both Sites can be saved.
+2. Move or reshape one of those Sites so the overlap increases. Confirm the edit is accepted if its own geometry remains valid.
+3. Create or select a different named Project. Try to create a Site that overlaps an unfinished Site in the first Project. Confirm the draft editor shows an overlap error and blocks saving.
+4. Try to move an unfinished Site from the second Project into overlap with an unfinished Site in the first Project. Confirm the edit is rejected and the previous shape remains.
+5. Complete or cancel a Site in the first Project, then retry the cross-Project overlap. Confirm the completed or cancelled footprint does not block the new Site, matching the existing reservation rule.
