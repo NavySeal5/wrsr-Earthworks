@@ -93,8 +93,8 @@ constexpr float SitePointHitRadiusPixels=20.0f;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
-ImU32 CutWireColor() { return winterMode?IM_COL32(177,66,16,255):IM_COL32(255,159,67,255); }
-ImU32 FillWireColor() { return winterMode?IM_COL32(0,78,153,255):IM_COL32(62,221,166,255); }
+ImU32 CutWireColor() { return winterMode?IM_COL32(255,105,0,255):IM_COL32(255,159,67,255); }
+ImU32 FillWireColor() { return winterMode?IM_COL32(255,211,0,255):IM_COL32(62,221,166,255); }
 bool Project(const Snapshot& s,Point p,ImVec2* out);
 void Send(Action action, float value = 0)
 {
@@ -488,7 +488,7 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
 void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
 {
     if(p.pointCount<2) return;
-    const ImU32 gray=winterMode?IM_COL32(83,88,98,230):IM_COL32(175,180,190,210);
+    const ImU32 gray=winterMode?IM_COL32(255,174,0,230):IM_COL32(175,180,190,210);
     if(p.complete)for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
         const auto a=p.Vertex(x,z,true,s.terrainCellSize);
         if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
@@ -497,7 +497,7 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
     const unsigned edgeCount=p.complete?p.pointCount:p.pointCount-1;
     for(unsigned i=0;i<edgeCount;++i) {
         const auto& a=p.points[i];const auto& b=p.points[(i+1)%p.pointCount];
-        Line(s,a,b,winterMode?IM_COL32(26,54,82,245):IM_COL32(205,210,220,235),2.5f);
+        Line(s,a,b,winterMode?IM_COL32(194,75,0,245):IM_COL32(205,210,220,235),2.5f);
     }
 }
 template<class Shape>
@@ -525,10 +525,10 @@ void DrawSiteEdgeInsertionPreview(const Snapshot& s)
     SiteEdgePreview edge{};
     if(!FindSiteEdgeAtScreen(s,mouse.x,mouse.y,&edge))return;
     auto* draw=ImGui::GetForegroundDrawList();
-    draw->AddCircleFilled(edge.screen,9.0f,winterMode?IM_COL32(210,215,225,210):IM_COL32(115,120,125,150),16);
-    draw->AddCircle(edge.screen,9.0f,winterMode?IM_COL32(24,48,75,235):IM_COL32(60,65,70,190),16,1.5f);
-    draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},winterMode?IM_COL32(24,48,75,240):IM_COL32(45,50,55,210),1.5f);
-    draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},winterMode?IM_COL32(24,48,75,240):IM_COL32(45,50,55,210),1.5f);
+    draw->AddCircleFilled(edge.screen,9.0f,winterMode?IM_COL32(255,225,90,235):IM_COL32(115,120,125,150),16);
+    draw->AddCircle(edge.screen,9.0f,winterMode?IM_COL32(190,70,0,255):IM_COL32(60,65,70,190),16,1.5f);
+    draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},winterMode?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
+    draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},winterMode?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
 }
 bool BuildDraggedSitePlan(const Plan& source,unsigned pointIndex,Point cursor,Plan* output)
 {
@@ -606,11 +606,11 @@ void DrawPreview(const Snapshot& s)
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId)DrawQueuedWireframe(s,livePlan&&liveSiteId==project.id?*livePlan:s.queuedPlan);
-            else DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(83,88,98,230):IM_COL32(175,180,190,205));
+            else DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,174,0,230):IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
-            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(0,93,105,235):IM_COL32(100,190,155,190));
+            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,220,40,245):IM_COL32(100,190,155,190));
         else if(project.status==ProjectStatus::Cancelled)
-            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(157,64,20,235):IM_COL32(170,135,135,170));
+            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,105,0,235):IM_COL32(170,135,135,170));
     }
     if(s.siteEditorOpen) {
         const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
@@ -622,7 +622,7 @@ void DrawPreview(const Snapshot& s)
     if (!p.complete) {
         ImVec2 first;
         for(unsigned i=0;i<p.pointCount;++i) {
-            ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,winterMode?IM_COL32(190,0,100,255):IM_COL32(255,235,135,235),12);
+            ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,winterMode?IM_COL32(255,105,0,255):IM_COL32(255,235,135,235),12);
             if(i+1<p.pointCount)Line(s,p.points[i],p.points[i+1],FillWireColor(),2.0f);
         }
         if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
@@ -653,7 +653,7 @@ void DrawPreview(const Snapshot& s)
         if (x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
         if (z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
-    DrawQueuedOutline(s,p,winterMode?IM_COL32(35,62,92,255):IM_COL32(245,250,255,255));
+    DrawQueuedOutline(s,p,winterMode?IM_COL32(255,245,120,255):IM_COL32(245,250,255,255));
 }
 bool CursorOnVisibleSite(const Snapshot& s)
 {

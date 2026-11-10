@@ -143,9 +143,16 @@ The denominator is an estimate derived from terrain height differences on the na
 ## Winter wireframe colors — build 0.16.42-winter-wireframe-mode
 
 1. Open **Earthworks** and select **Projects and Sites**. Confirm **Winter Mode** is off by default.
-2. Create or open a Site. Turn on **Winter Mode**. Confirm the wireframe, cut/fill colors, point markers, and queued Site outlines use darker colors that remain visible against snow.
+2. Create or open a Site. Turn on **Winter Mode**. Confirm the wireframe, cut/fill colors, point markers, and queued Site outlines use warm colors that remain visible against snow.
 3. Turn **Winter Mode** off. Confirm the normal colors return.
 4. Repeat with a draft, a queued Site, and an active Site if available. Confirm the toggle changes display colors only. It must not change Site geometry, terrain, progress, or status.
+
+## Brighter Winter Mode colors — build 0.16.47-winter-warm-colors
+
+1. Open **Earthworks** and select **Projects and Sites**. Turn on **Winter Mode** in a snowy area.
+2. Confirm fill uses bright yellow and cut uses bright orange. Confirm Site edges, point markers, queued outlines, completed outlines, and cancelled outlines use brighter yellow, gold, or orange tones.
+3. Turn **Winter Mode** off. Confirm the standard colors return.
+4. Confirm the color change does not alter Site geometry, terrain, progress, status, or save data.
 
 ## Persistent Site editor validation — build 0.16.43-site-editor-validation
 
