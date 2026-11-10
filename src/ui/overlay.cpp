@@ -239,6 +239,7 @@ Point SiteDrawingCursor(const Snapshot& s)
     grid.stepX=s.terrainGridStepX;grid.stepZ=s.terrainGridStepZ;
     return SnapToTerrainGrid(s.cursor,grid);
 }
+bool BuildDraggedSitePlan(const Plan& source,unsigned pointIndex,Point cursor,Plan* output);
 bool KeyboardShortcutPassesThrough(UINT message,WPARAM key)
 {
     if(message==WM_SYSKEYDOWN||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_SYSDEADCHAR)return true;
@@ -350,6 +351,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         draggingSitePoint=!shiftDown?handleIndex:static_cast<unsigned>(MaxSitePoints);
         draggingSitePointButtonHeld=draggingSitePoint<MaxSitePoints;
         dragSitePointCommitPending=false;
+        dragWholeSiteCommitPending=false;
         dragSitePointArmedAt=draggingSitePoint<MaxSitePoints?GetTickCount64()+(wasSoleSelected?0:SitePointSelectDebounceMs):0;
         draggingSitePointMoved=false;dragSitePoint=snapshot.cursor;dragSitePointStart=snapshot.cursor;
         SendSitePointCommand(Action::SelectSitePoint,snapshot.editingSiteId,handleIndex,{},shiftDown);
@@ -360,6 +362,11 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             dragSitePoint=snapshot.cursor;
             const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
             if(GetTickCount64()>=dragSitePointArmedAt&&dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
+            if(draggingSitePointMoved&&snapshot.siteEditorOpen&&draggingSitePoint<snapshot.editorPlan.pointCount) {
+                Plan livePlan{};
+                if(BuildDraggedSitePlan(snapshot.editorPlan,draggingSitePoint,dragSitePoint,&livePlan))
+                    SetInteractiveSitePreview(snapshot.creatingSite?0:snapshot.editingSiteId,&livePlan);
+            }
         }
     }
     if(message==WM_MOUSEMOVE&&!nativeUiOccluded&&draggingWholeSiteButtonHeld&&(wParam&MK_LBUTTON)) {
@@ -388,6 +395,11 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid)dragSitePoint=snapshot.cursor;
         if(GetTickCount64()>=dragSitePointArmedAt&&draggingSitePointMoved&&(snapshot.editingSiteId||snapshot.creatingSite)) {
             SendSitePointCommand(Action::MoveSitePoint,snapshot.editingSiteId,draggingSitePoint,dragSitePoint);
+            if(snapshot.siteEditorOpen&&draggingSitePoint<snapshot.editorPlan.pointCount) {
+                Plan livePlan{};
+                if(BuildDraggedSitePlan(snapshot.editorPlan,draggingSitePoint,dragSitePoint,&livePlan))
+                    SetInteractiveSitePreview(snapshot.creatingSite?0:snapshot.editingSiteId,&livePlan);
+            }
             dragSitePointCommitPending=true;dragSitePointReleasedAt=GetTickCount64();
         } else {
             draggingSitePoint=static_cast<unsigned>(MaxSitePoints);draggingSitePointMoved=false;
@@ -571,7 +583,11 @@ void DrawPreview(const Snapshot& s)
     siteHandleRectCount=0;
     if (!s.ready || !s.cameraValid) {SetInteractiveSitePreview(0,nullptr);return;}
     Plan liveSitePlan{};const Plan* livePlan=nullptr;uint64_t liveSiteId=0;
-    if(s.siteEditorOpen&&draggingWholeSiteButtonHeld&&draggingWholeSiteMoved) {
+    if(s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
+        &&draggingSitePoint<s.editorPlan.pointCount) {
+        liveSiteId=s.creatingSite?0:s.editingSiteId;
+        if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
+    } else if(s.siteEditorOpen&&draggingWholeSiteButtonHeld&&draggingWholeSiteMoved) {
         liveSiteId=s.creatingSite?0:s.editingSiteId;
         if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
     } else if(dragWholeSiteCommitPending&&s.siteEditorOpen) {
@@ -585,11 +601,7 @@ void DrawPreview(const Snapshot& s)
             if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
         }
     }
-    if(!livePlan&&s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
-        &&draggingSitePoint<s.editorPlan.pointCount) {
-        liveSiteId=s.creatingSite?0:s.editingSiteId;
-        if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
-    } else if(!livePlan&&dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
+    if(!livePlan&&dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
         const auto& point=s.editorPlan.points[draggingSitePoint];
         const float dx=point.x-dragSitePoint.x,dz=point.z-dragSitePoint.z;
         if(dx*dx+dz*dz<=0.25f||GetTickCount64()-dragSitePointReleasedAt>=SitePointPreviewCommitGraceMs) {

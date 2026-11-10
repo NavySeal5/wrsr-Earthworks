@@ -188,3 +188,10 @@ The denominator is an estimate derived from terrain height differences on the na
 4. Confirm the X button deletes a Completed Site. Confirm it also deletes a Cancelled Site.
 5. For an unfinished Site, confirm X still cancels it and retains terrain changes. Click X on the cancelled row again to delete it.
 6. Confirm the Work column has no deletion action. Try to delete a Project that still contains Sites; confirm it asks you to delete Sites with their X buttons first.
+
+## Live point-drag preview
+
+1. Open a draft or an editable Site and hold the left mouse button on a point handle.
+2. Drag the point across the terrain without releasing the mouse. Confirm the Site wireframe follows the point continuously.
+3. Release the mouse. Confirm the saved Site geometry matches the final preview.
+4. Repeat after Shift-dragging the full Site. Confirm a later point drag updates the point preview and does not retain the previous whole-Site preview.
