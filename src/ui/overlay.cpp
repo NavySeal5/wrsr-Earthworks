@@ -836,7 +836,7 @@ void DrawInterface(const Snapshot& s)
             }
             if(ImGui::BeginPopupModal("Delete Project",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
                 RememberRect(&popupRect);popupRectValid=true;
-                ImGui::TextWrapped("Delete this Project and its completed or cancelled Site records? Unfinished Sites must be finished or cancelled first.");
+                ImGui::TextWrapped("Delete this Project after you delete each Site with its X button.");
                 if(ImGui::Button("Delete")) {SendProject(Action::DeleteNamedProject,deleteTarget);ImGui::CloseCurrentPopup();}
                 ImGui::SameLine();if(ImGui::Button("Keep Project"))ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
@@ -862,7 +862,7 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
-                    if(ImGui::IsItemHovered()) NativeTooltip("Cancel");
+                    if(ImGui::IsItemHovered()) NativeTooltip("Cancel or delete Site");
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Rename");
@@ -908,12 +908,10 @@ void DrawInterface(const Snapshot& s)
                         if(site.status==ProjectStatus::Queued){workAction=Action::StartProject;workLabel="Start";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
-                        else if(site.status==ProjectStatus::Completed){workAction=Action::RemoveProject;workLabel="Remove";workEnabled=true;}
-                        centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32})) {
-                            if(workAction==Action::RemoveProject)SendProject(workAction,site.id);else SendProjectAction(workAction,site.id);
-                        }ImGui::EndDisabled();
+                        else if(site.status==ProjectStatus::Completed){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
+                        centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
                         ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
-                        const bool removable=site.status==ProjectStatus::Cancelled;
+                        const bool removable=site.status==ProjectStatus::Completed||site.status==ProjectStatus::Cancelled;
                         centerCellItem(30.0f);
                         ImGui::BeginDisabled(!cancellable&&!removable);
                         if(siteCancelIcon) {

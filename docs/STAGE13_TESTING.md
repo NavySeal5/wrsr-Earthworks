@@ -179,3 +179,12 @@ The denominator is an estimate derived from terrain height differences on the na
 3. Create or select a different named Project. Try to create a Site that overlaps an unfinished Site in the first Project. Confirm the draft editor shows an overlap error and blocks saving.
 4. Try to move an unfinished Site from the second Project into overlap with an unfinished Site in the first Project. Confirm the edit is rejected and the previous shape remains.
 5. Complete or cancel a Site in the first Project, then retry the cross-Project overlap. Confirm the completed or cancelled footprint does not block the new Site, matching the existing reservation rule.
+
+## Completed Site restart and deletion
+
+1. Complete a disposable Site. Confirm its Work action reads **Restart**.
+2. Change the terrain inside its footprint with the native terrain tool. Click **Restart**. Confirm the Site keeps its saved shape and point target heights, samples the current terrain, resets progress, and starts.
+3. If the terrain already matches the saved target, confirm the Site remains Completed with a message that the target is already satisfied.
+4. Confirm the X button deletes a Completed Site. Confirm it also deletes a Cancelled Site.
+5. For an unfinished Site, confirm X still cancels it and retains terrain changes. Click X on the cancelled row again to delete it.
+6. Confirm the Work column has no deletion action. Try to delete a Project that still contains Sites; confirm it asks you to delete Sites with their X buttons first.

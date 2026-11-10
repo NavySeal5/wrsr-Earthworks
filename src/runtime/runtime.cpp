@@ -328,7 +328,7 @@ void UpdateSiteDraftValidation()
         fail(current.plan.first?"Add at least three Site points, then finish the shape.":"Select at least three points before finishing the Site.");return;
     }
     if(durableState.earthworks.size()>=MaxSavedEarthworks) {
-        fail("The save has reached its 128 Site limit. Remove finished Sites before adding another.");return;
+        fail("The save has reached its 128 Site limit. Delete Sites with the X button before adding another.");return;
     }
     if(!ValidFootprint(current.plan)) {
         fail("Site shape is invalid. Check point spacing and make sure its edges do not cross.");return;
@@ -1086,16 +1086,14 @@ pick_done:
         if(creatingSite&&command.projectId==durableState.selectedProjectId) {Message("Save or discard the current Site draft before deleting its Project.");break;}
         const auto project=std::find_if(durableState.projects.begin(),durableState.projects.end(),[&](const SavedProject& item){return item.id==command.projectId;});
         if(project==durableState.projects.end())break;
-        const bool unfinished=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
-            return site.projectId==project->id&&(site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused);
+        const bool containsSites=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
+            return site.projectId==project->id;
         });
-        if(unfinished) {Message("This Project still contains unfinished Sites and cannot be deleted.");break;}
+        if(containsSites) {Message("Delete each Site with its X button before deleting this Project.");break;}
         const auto deletedId=project->id;
-        for(const auto& site:durableState.earthworks)if(site.projectId==deletedId)ClearSiteActionError(site.id);
-        durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site){return site.projectId==deletedId;}),durableState.earthworks.end());
         durableState.projects.erase(project);
         if(durableState.selectedProjectId==deletedId)durableState.selectedProjectId=durableState.projects.empty()?0:durableState.projects.front().id;
-        selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();Message("Project and its finished Site records were deleted.");break;
+        selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;RefreshProjectStatus();Message("Project deleted.");break;
     }
     case Action::RenameSite: {
         auto* site=FindProject(command.projectId);if(!site||site->projectId!=durableState.selectedProjectId)break;
@@ -1153,26 +1151,6 @@ pick_done:
         Message("Finished Site removed from the list.");
         break;
     }
-    case Action::RemoveCompletedProjects: {
-        const auto selected=FindProject(selectedProjectId);
-        const auto projectId=durableState.selectedProjectId;
-        const auto isFinished=[](ProjectStatus status) {return status==ProjectStatus::Completed||status==ProjectStatus::Cancelled;};
-        const bool clearSelection=selected&&selected->projectId==projectId&&isFinished(selected->status);
-        const auto* editing=FindProject(editingSiteId);
-        const bool closeEditor=editing&&editing->projectId==projectId&&isFinished(editing->status);
-        const auto previousSize=durableState.earthworks.size();
-        for(const auto& item:durableState.earthworks)if(item.projectId==projectId&&isFinished(item.status))ClearSiteActionError(item.id);
-        durableState.earthworks.erase(std::remove_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
-            return item.projectId==projectId&&isFinished(item.status);
-        }),durableState.earthworks.end());
-        const auto removed=previousSize-durableState.earthworks.size();
-        if(clearSelection)selectedProjectId=0;
-        if(closeEditor){editingSiteId=0;siteEditorOpen=false;}
-        RefreshProjectStatus();
-        host->log("earthworks  finished sites cleared count=%zu",removed);
-        char message[80];sprintf_s(message,"Removed %zu finished or cancelled Site(s) from the list.",removed);Message(message);
-        break;
-    }
     case Action::MoveProjectUp:
     case Action::MoveProjectDown: {
         auto it=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& p){return p.id==command.projectId;});
@@ -1215,18 +1193,28 @@ pick_done:
         }
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
-        for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Queued) {
+    case Action::RestartProject:
+        for(auto& project:durableState.earthworks) {
+            const bool restarting=command.action==Action::RestartProject;
+            if(project.id!=command.projectId||(restarting?project.status!=ProjectStatus::Completed:project.status!=ProjectStatus::Queued))continue;
             BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
             ClearSiteActionError(project.id);
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
-                SiteActionError(project.id,"Native terrain writer is unavailable for this game build. Site remains queued.");break;
+                SiteActionError(project.id,restarting?"Native terrain writer is unavailable. The Site remains completed.":"Native terrain writer is unavailable for this game build. Site remains queued.");break;
             }
             if(!FindAssignedFacility(project,&facilityId,&facility)) {
-                SiteActionError(project.id,"Assigned Earthworks facility is missing or unreadable.");break;
+                SiteActionError(project.id,restarting?"Assigned Earthworks facility is missing or unreadable. The Site remains completed.":"Assigned Earthworks facility is missing or unreadable.");break;
             }
             if(!ReadEarthworksFacilityWorkforce(facilityId,&workforce)||!workforce.buildingValid
                 ||!workforce.vehiclesValid||!workforce.parkedValid) {
-                SiteActionError(project.id,"Assigned facility readings are incomplete. Try again when the building can be read.");break;
+                SiteActionError(project.id,restarting?"Assigned facility readings are incomplete. The Site remains completed.":"Assigned facility readings are incomplete. Try again when the building can be read.");break;
+            }
+            if(restarting) {
+                const bool overlapsOtherProject=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& other) {
+                    return other.id!=project.id&&other.projectId!=project.projectId
+                        &&ProjectReservesFootprint(other.status)&&FootprintsOverlap(project.plan,other.plan);
+                });
+                if(overlapsOtherProject) {SiteActionError(project.id,"This Site overlaps an unfinished Site in another Project. Move or cancel that Site before restarting.");break;}
             }
             TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project.plan,&grid,&rect);
             if(areaError!=ProjectAreaError::None) {
@@ -1236,24 +1224,27 @@ pick_done:
                 SiteActionError(project.id,ProjectAreaMessage(areaError));break;
             }
             Plan refreshed=project.plan;
-            if(!SamplePlan(&refreshed)) {SiteActionError(project.id,"Cannot recheck every planned terrain sample. Replan this Site before starting.");break;}
+            if(!SamplePlan(&refreshed)) {SiteActionError(project.id,restarting?"Cannot read the current Site terrain. The Site remains completed.":"Cannot recheck every planned terrain sample. Replan this Site before starting.");break;}
             float maxDifference=0;
-            for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
-            if(maxDifference>TerrainReadbackToleranceMeters) {
+            if(!restarting)for(size_t i=0;i<refreshed.ground.size();++i)maxDifference=std::max(maxDifference,std::abs(refreshed.ground[i]-project.plan.ground[i]));
+            if(!restarting&&maxDifference>TerrainReadbackToleranceMeters) {
                 host->log("earthworks  start rejected project=%llu terrain changed after planning maxDelta=%.6f tolerance=%.3f area=(%.3f,%.3f)..(%.3f,%.3f)",
                     static_cast<unsigned long long>(project.id),maxDifference,TerrainReadbackToleranceMeters,project.plan.a.x,project.plan.a.z,project.plan.b.x,project.plan.b.z);
                 SiteActionError(project.id,"Terrain changed since planning. Replan the footprint before starting.");break;
             }
             double totalWork=0;
-            if(!MeasureTerrainWork(project.plan,grid,rect,&totalWork)) {
-                SiteActionError(project.id,"Could not measure the Site's starting terrain work. It remains queued.");break;
+            if(!MeasureTerrainWork(refreshed,grid,rect,&totalWork)) {
+                SiteActionError(project.id,restarting?"Could not measure current terrain work. The Site remains completed.":"Could not measure the Site's starting terrain work. It remains queued.");break;
             }
+            if(restarting)project.plan=std::move(refreshed);
             project.totalWorkM3=static_cast<float>(totalWork);
-            project.progress=totalWork<=1e-6?0.0f:std::clamp(project.progress,0.0f,0.999999f);
-            project.status=ProjectStatus::Running;project.needsReview=false;project.workRemainderM3=0;
-            host->log("earthworks  site=%llu started terrain work=%.3f m3",static_cast<unsigned long long>(project.id),totalWork);
+            project.progress=totalWork<=1e-6?1.0f:(restarting?0.0f:std::clamp(project.progress,0.0f,0.999999f));
+            project.status=totalWork<=1e-6?ProjectStatus::Completed:ProjectStatus::Running;
+            project.needsReview=false;project.workRemainderM3=0;project.allocatedRateUnits=0;project.allocatedMachines=0;project.allocatedWorkers=0;
+            host->log("earthworks  site=%llu %s terrain work=%.3f m3",static_cast<unsigned long long>(project.id),restarting?"restarted":"started",totalWork);
             lastSimulationHour=SimulationHourClock(current);
-            ClearSiteActionError(project.id);RefreshProjectStatus();Message("Site started. It works when its priority receives Project facility capacity.");break;
+            ClearSiteActionError(project.id);RefreshProjectStatus();
+            Message(totalWork<=1e-6?"Site is already at its saved target height.":(restarting?"Site restarted from the current terrain using its saved shape and target heights.":"Site started. It works when its priority receives Project facility capacity."));break;
         }
         break;
     case Action::PauseProject:
