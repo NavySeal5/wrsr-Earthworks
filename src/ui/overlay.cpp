@@ -871,7 +871,8 @@ void DrawInterface(const Snapshot& s)
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                    const float priorityWidth=ImGui::CalcTextSize("Priority").x+ImGui::GetStyle().CellPadding.x*2.0f;
+                    const float priorityControlWidth=24.0f*2.0f+ImGui::GetStyle().ItemSpacing.x+ImGui::GetStyle().CellPadding.x*2.0f;
+                    const float priorityWidth=std::max(ImGui::CalcTextSize("Priority").x+ImGui::GetStyle().CellPadding.x*2.0f,priorityControlWidth);
                     const float visibilityWidth=siteHideIcon&&siteShowIcon?36.0f:52.0f;
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.05f);
@@ -910,6 +911,19 @@ void DrawInterface(const Snapshot& s)
                         if(hovered&&tooltip) NativeTooltip(tooltip);
                         return pressed;
                     };
+                    auto drawPriorityButton=[](const char* id,ID3D11ShaderResourceView* texture) {
+                        if(!texture)return false;
+                        constexpr ImVec2 hitSize{24.0f,28.0f},iconSize{20.0f,20.0f};
+                        const bool pressed=ImGui::InvisibleButton(id,hitSize);
+                        const bool hovered=ImGui::IsItemHovered();
+                        const auto min=ImGui::GetItemRectMin();
+                        const auto max=ImGui::GetItemRectMax();
+                        const ImVec2 iconMin{min.x+(hitSize.x-iconSize.x)*0.5f,min.y+(hitSize.y-iconSize.y)*0.5f};
+                        const ImVec2 iconMax{iconMin.x+iconSize.x,iconMin.y+iconSize.y};
+                        const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
+                        ImGui::GetWindowDrawList()->AddImage(image,iconMin,iconMax,{0,0},{1,1},ImGui::GetColorU32(hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1}));
+                        return pressed;
+                    };
                     auto centerCellItem=[](float height) {
                         constexpr float rowHeight=44.0f,cellPaddingY=3.0f;
                         const float innerHeight=rowHeight-2.0f*cellPaddingY;
@@ -932,9 +946,9 @@ void DrawInterface(const Snapshot& s)
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
                         ImGui::BeginDisabled(!movable);
                         if(siteMoveUpIcon&&siteMoveDownIcon) {
-                            if(drawIconButton("##MoveSiteUp",siteMoveUpIcon,nullptr,20.0f,false))SendProject(Action::MoveProjectUp,site.id);
+                            if(drawPriorityButton("##MoveSiteUp",siteMoveUpIcon))SendProject(Action::MoveProjectUp,site.id);
                             ImGui::SameLine();
-                            if(drawIconButton("##MoveSiteDown",siteMoveDownIcon,nullptr,20.0f,false))SendProject(Action::MoveProjectDown,site.id);
+                            if(drawPriorityButton("##MoveSiteDown",siteMoveDownIcon))SendProject(Action::MoveProjectDown,site.id);
                         } else {
                             if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);
                             ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);

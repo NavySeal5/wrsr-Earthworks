@@ -216,6 +216,12 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
 6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
 
+## Priority button hit targets — build 0.16.53-priority-button-hit-target
+
+1. Open **Earthworks → Projects and Sites** in a Project with at least two unfinished Sites.
+2. Click the up and down sort icons. Confirm the Sites change order and the FIFO order changes with them.
+3. Confirm the icons remain disabled for Completed Sites and work on queued, running, waiting, or paused Sites.
+
 ## Visibility state icon — build 0.16.52-visibility-state-icon
 
 1. Open **Earthworks → Projects and Sites**.
