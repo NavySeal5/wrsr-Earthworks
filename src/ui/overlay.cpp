@@ -933,7 +933,7 @@ void DrawInterface(const Snapshot& s)
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
                         ImGui::TableNextRow(ImGuiTableRowFlags_None,44.0f);
                         ImGui::TableNextColumn();
-                        char label[96];sprintf_s(label,"%s  |  %s%s",site.name,ProjectStatusName(site.status),site.visible?"":"  |  Hidden");
+                        char label[96];sprintf_s(label,"%s",site.name);
                         centerCellItem(38.0f);
                         if(ImGui::Selectable("##SelectSiteRow",s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
                         const auto siteLabelMin=ImGui::GetItemRectMin();

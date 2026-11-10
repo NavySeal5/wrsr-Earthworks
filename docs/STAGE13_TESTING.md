@@ -216,6 +216,12 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
 6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
 
+## Clean Site name column — build 0.16.54-clean-site-name-column
+
+1. Open **Earthworks → Projects and Sites**.
+2. Confirm the first column shows only each Site's name, without status or hidden-state suffixes.
+3. Confirm the Work control still presents the available action for each Site state.
+
 ## Priority button hit targets — build 0.16.53-priority-button-hit-target
 
 1. Open **Earthworks → Projects and Sites** in a Project with at least two unfinished Sites.
