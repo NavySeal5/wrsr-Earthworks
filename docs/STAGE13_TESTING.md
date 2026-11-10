@@ -216,6 +216,12 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
 6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
 
+## Visibility state icon — build 0.16.52-visibility-state-icon
+
+1. Open **Earthworks → Projects and Sites**.
+2. Confirm a visible Site has an open-eye icon and a hidden Site has an eye-with-X icon.
+3. Click each icon and confirm the Site visibility changes, then the icon reflects the new state.
+
 ## Site table column sizing — build 0.16.51-site-table-column-sizing
 
 1. Open **Earthworks → Projects and Sites** with a Project containing several Sites.

@@ -948,7 +948,7 @@ void DrawInterface(const Snapshot& s)
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
                         ImGui::TableNextColumn();centerCellItem(30.0f);
                         if(siteHideIcon&&siteShowIcon) {
-                            if(drawIconButton("##ToggleSiteVisibility",site.visible?siteHideIcon:siteShowIcon,nullptr))
+                            if(drawIconButton("##ToggleSiteVisibility",site.visible?siteShowIcon:siteHideIcon,nullptr))
                                 SendProjectValue(Action::SetSiteVisibility,site.id,site.visible?0.0f:1.0f);
                         } else {
                             bool visible=site.visible;
