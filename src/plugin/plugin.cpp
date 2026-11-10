@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.47-winter-warm-colors";
+    info->version = "0.16.57-site-table-space-reclaim";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");

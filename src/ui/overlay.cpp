@@ -872,21 +872,22 @@ void DrawInterface(const Snapshot& s)
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
                 bool openSiteRenamePopup=false,openSiteDeletePopup=false;
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
-                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{3.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",8,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                    const float priorityControlWidth=24.0f*2.0f+ImGui::GetStyle().ItemSpacing.x+ImGui::GetStyle().CellPadding.x*2.0f;
+                    constexpr float priorityButtonGap=2.0f;
+                    const float priorityControlWidth=24.0f*2.0f+priorityButtonGap+ImGui::GetStyle().CellPadding.x*2.0f;
                     const float priorityWidth=std::max(ImGui::CalcTextSize("Order").x+ImGui::GetStyle().CellPadding.x*2.0f,priorityControlWidth);
                     const float progressWidth=std::max(68.0f,ImGui::CalcTextSize("Progress").x+ImGui::GetStyle().CellPadding.x*2.0f);
                     const float workWidth=ImGui::CalcTextSize("Restart").x+ImGui::GetStyle().FramePadding.x*2.0f+ImGui::GetStyle().CellPadding.x*2.0f+4.0f;
-                    const float visibilityWidth=siteHideIcon&&siteShowIcon?36.0f:52.0f;
+                    const float visibilityWidth=siteHideIcon&&siteShowIcon?30.0f:52.0f;
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,1.0f);
                     ImGui::TableSetupColumn("State",ImGuiTableColumnFlags_WidthFixed,44.0f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthFixed,progressWidth);
                     ImGui::TableSetupColumn("Order",ImGuiTableColumnFlags_WidthFixed,priorityWidth);
                     ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthFixed,workWidth);
                     ImGui::TableSetupColumn("##VisibilityHeader",ImGuiTableColumnFlags_WidthFixed,visibilityWidth);
-                    ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
-                    ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
+                    ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,30.0f);
+                    ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,30.0f);
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers,32.0f);
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Site");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("State");
@@ -895,12 +896,12 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
                     ImGui::TableNextColumn();
                     if(!siteHideIcon||!siteShowIcon)ImGui::TextUnformatted("Hide");
-                    else ImGui::Dummy({44,24});
+                    else ImGui::Dummy({24,24});
                     ImGui::TableNextColumn();
-                    ImGui::Dummy({32,24});
+                    ImGui::Dummy({24,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Delete Site");
                     ImGui::TableNextColumn();
-                    ImGui::Dummy({32,24});
+                    ImGui::Dummy({24,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Rename");
                     auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture,const char* tooltip,float iconSize=30.0f,bool center=true) {
                         if(!texture)return false;
@@ -1005,11 +1006,11 @@ void DrawInterface(const Snapshot& s)
                         ImGui::BeginDisabled(!movable);
                         if(siteMoveUpIcon&&siteMoveDownIcon) {
                             if(drawPriorityButton("##MoveSiteUp",siteMoveUpIcon))SendProject(Action::MoveProjectUp,site.id);
-                            ImGui::SameLine();
+                            ImGui::SameLine(0.0f,priorityButtonGap);
                             if(drawPriorityButton("##MoveSiteDown",siteMoveDownIcon))SendProject(Action::MoveProjectDown,site.id);
                         } else {
                             if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);
-                            ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);
+                            ImGui::SameLine(0.0f,priorityButtonGap);if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);
                         }
                         ImGui::EndDisabled();
                         ImGui::TableNextColumn();Action workAction=Action::StartProject;const char* workLabel="Done";bool workEnabled=false;
@@ -1020,7 +1021,7 @@ void DrawInterface(const Snapshot& s)
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
                         ImGui::TableNextColumn();centerCellItem(30.0f);
                         if(siteHideIcon&&siteShowIcon) {
-                            if(drawIconButton("##ToggleSiteVisibility",site.visible?siteShowIcon:siteHideIcon,nullptr))
+                            if(drawIconButton("##ToggleSiteVisibility",site.visible?siteShowIcon:siteHideIcon,nullptr,24.0f))
                                 SendProjectValue(Action::SetSiteVisibility,site.id,site.visible?0.0f:1.0f);
                         } else {
                             bool visible=site.visible;
@@ -1029,7 +1030,7 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
                         if(siteCancelIcon) {
-                            if(drawIconButton("##DeleteSite",siteCancelIcon,"Delete Site")) {
+                            if(drawIconButton("##DeleteSite",siteCancelIcon,"Delete Site",24.0f)) {
                                 deleteSiteTarget=site.id;openSiteDeletePopup=true;
                             }
                         } else if(ImGui::Button("×",{32,32})) {
@@ -1038,7 +1039,7 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
                         if(siteRenameIcon) {
-                            if(drawIconButton("##RenameSite",siteRenameIcon,"Rename Site")) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
+                            if(drawIconButton("##RenameSite",siteRenameIcon,"Rename Site",24.0f)) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         } else if(ImGui::Button("R",{32,32})) {strncpy_s(nameBuffer,site.name,_TRUNCATE);renameAction=Action::RenameSite;renameTarget=site.id;openSiteRenamePopup=true;}
                         ImGui::PopID();
                     }
