@@ -12,7 +12,7 @@ constexpr uint8_t Magic[8] = {'E','W','R','S','T','A','T','E'};
 constexpr size_t HeaderSize = 20;
 constexpr size_t PlanSize = 2 + 7 * sizeof(float) + 3 + MaxSitePoints * 3 * sizeof(float) + GridSide * GridSide * sizeof(float);
 constexpr size_t MaxFileSize = HeaderSize + 32 + PlanSize + 4 + MaxSavedNameBytes + 64 + MaxSavedProjects * (16 + MaxSavedNameBytes + MaxProjectFacilities * (4 + 1 + 4 + 63 + 3 * sizeof(float)))
-    + MaxSavedEarthworks * (32 + MaxSavedNameBytes + PlanSize);
+    + MaxSavedEarthworks * (33 + MaxSavedNameBytes + PlanSize);
 
 void Put32(std::vector<uint8_t>& out, uint32_t v)
 {
@@ -195,7 +195,7 @@ bool EncodeState(const DurableState& state, std::vector<uint8_t>* bytes)
         for(size_t j=0;j<i;++j)if(state.earthworks[j].id==e.id)return false;
         Put64(payload,e.id);Put64(payload,e.projectId);PutString(payload,e.name);payload.push_back(static_cast<uint8_t>(e.status));
         Put32(payload,e.executionCursor);PutFloat(payload,e.progress);PutFloat(payload,e.totalWorkM3);PutFloat(payload,e.workRemainderM3);
-        payload.push_back(e.needsReview?1:0);PutPlan(payload,e.plan);
+        payload.push_back(e.needsReview?1:0);payload.push_back(e.visible?1:0);PutPlan(payload,e.plan);
     }
     bytes->clear(); bytes->reserve(HeaderSize+payload.size());
     bytes->insert(bytes->end(),std::begin(Magic),std::end(Magic));
@@ -209,7 +209,7 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
     if (!bytes || !state || size < HeaderSize || size > MaxFileSize || std::memcmp(bytes,Magic,sizeof(Magic)) != 0) return false;
     Reader h{bytes,size,sizeof(Magic)};
     uint32_t version=0,payloadSize=0,crc=0;
-    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != StateSchemaVersion)
+    if (!h.U32(&version) || !h.U32(&payloadSize) || !h.U32(&crc) || (version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != 12 && version != StateSchemaVersion)
         || payloadSize != size-HeaderSize || Crc32(bytes+HeaderSize,payloadSize) != crc) return false;
     Reader r{bytes+HeaderSize,payloadSize};
     DurableState parsed; parsed.schema=version;
@@ -249,20 +249,22 @@ bool DecodeState(const uint8_t* bytes, size_t size, DurableState* state)
         &&std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==parsed.selectedProjectId;})==parsed.projects.end()))return false;
     if(!r.U32(&count)||count>MaxSavedEarthworks)return false;
     for(uint32_t i=0;i<count;++i) {
-        SavedEarthwork e;uint8_t status=0,review=0;
+        SavedEarthwork e;uint8_t status=0,review=0,visible=1;
         const uint8_t maximumStatus=version<=11?6:static_cast<uint8_t>(ProjectStatus::Waiting);
         if(!r.U64(&e.id)||!e.id||!r.U64(&e.projectId)||!r.String(&e.name)||!r.U8(&status)
             ||status>maximumStatus||!r.U32(&e.executionCursor)||!r.Float(&e.progress)
             ||e.progress<0||e.progress>1)return false;
         if(version>=8&&(!r.Float(&e.totalWorkM3)||!std::isfinite(e.totalWorkM3)||e.totalWorkM3<0))return false;
-        if(!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1
-            ||!readPlan(&e.plan)||!e.plan.complete)return false;
+        if(!r.Float(&e.workRemainderM3)||e.workRemainderM3<0||!r.U8(&review)||review>1)return false;
+        if(version>=13&&(!r.U8(&visible)||visible>1))return false;
+        if(!readPlan(&e.plan)||!e.plan.complete)return false;
         // Schemas through 11 used status 5 for Cancelled and 6 for Waiting.
         // Normalize Cancelled Sites to Paused and remove the obsolete state.
         if(version<=11) e.status=status==5?ProjectStatus::Paused
             :status==6?ProjectStatus::Waiting:static_cast<ProjectStatus>(status);
         else e.status=static_cast<ProjectStatus>(status);
         e.needsReview=review!=0;
+        e.visible=visible!=0;
         if(std::find_if(parsed.projects.begin(),parsed.projects.end(),[&](const SavedProject& p){return p.id==e.projectId;})==parsed.projects.end())return false;
         for(const auto& prior:parsed.earthworks)if(prior.id==e.id)return false;
         parsed.earthworks.push_back(std::move(e));

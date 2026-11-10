@@ -197,6 +197,7 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
     if (!s.ready || !s.cameraValid) return;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& project=s.projects[i];
+        if(!project.visible)continue;
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId && s.queuedPlan.complete) {
@@ -210,7 +211,10 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
             } else DrawOutline(s,project.outline,2,width,height);
         } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.outline,0,width,height);
     }
-    if(s.siteEditorOpen) {
+    bool editorVisible=s.creatingSite;
+    if(s.siteEditorOpen&&!editorVisible)for(size_t i=0;i<s.projectCount;++i)
+        if(s.projects[i].id==s.editingSiteId){editorVisible=s.projects[i].visible;break;}
+    if(s.siteEditorOpen&&editorVisible) {
         const auto& editor=livePlan?*livePlan:s.editorPlan;
         const uint32_t selectedMask=s.selectedSitePointsMask;
         for(unsigned i=0;i<editor.pointCount;++i) {

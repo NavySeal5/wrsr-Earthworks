@@ -585,7 +585,7 @@ void RefreshProjectStatus()
         target.allocatedWorkers=source.status==ProjectStatus::Running?source.allocatedWorkers:0;
         target.allocatedMachines=source.status==ProjectStatus::Running?source.allocatedMachines:0;
         target.allocatedRateUnits=source.status==ProjectStatus::Running?source.allocatedRateUnits:0;
-        target.progress=source.progress;target.needsReview=source.needsReview;
+        target.progress=source.progress;target.needsReview=source.needsReview;target.visible=source.visible;
         target.outline.points=source.plan.points;target.outline.pointCount=source.plan.pointCount;
         target.a=source.plan.a;target.b=source.plan.b;target.target=source.plan.target;
     }
@@ -1136,6 +1136,27 @@ pick_done:
             selectedProjectId=site->id;editingSiteId=site->id;creatingSite=false;siteEditorOpen=true;SelectSingleSitePoint(0);RefreshProjectStatus();
         }
         break;
+    case Action::SetSiteVisibility: {
+        auto* site=FindProject(command.projectId);
+        if(!site||site->projectId!=durableState.selectedProjectId)break;
+        site->visible=command.value!=0.0f;
+        ++current.revision;RefreshProjectStatus();
+        Message(site->visible?"Site shown on the terrain.":"Site hidden from the terrain.");
+        break;
+    }
+    case Action::SetProjectSitesVisibility: {
+        auto* project=FindNamedProject(command.projectId);
+        if(!project||project->id!=durableState.selectedProjectId)break;
+        const bool visible=command.value!=0.0f;
+        bool changed=false;
+        for(auto& site:durableState.earthworks)if(site.projectId==project->id&&site.visible!=visible) {
+            site.visible=visible;changed=true;
+        }
+        if(changed)++current.revision;
+        RefreshProjectStatus();
+        Message(visible?"All Sites in this Project are shown on the terrain.":"All Sites in this Project are hidden from the terrain.");
+        break;
+    }
     case Action::RemoveProject: {
         const auto project=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
             return item.id==command.projectId;

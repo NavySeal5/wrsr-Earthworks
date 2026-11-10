@@ -196,3 +196,13 @@ The denominator is an estimate derived from terrain height differences on the na
 2. Drag the point across the terrain without releasing the mouse. Confirm the Site wireframe follows the point continuously.
 3. Release the mouse. Confirm the saved Site geometry matches the final preview.
 4. Repeat after Shift-dragging the full Site. Confirm a later point drag updates the point preview and does not retain the previous whole-Site preview.
+
+## Hide and show Sites — build 0.16.48-site-visibility
+
+1. Open **Earthworks → Projects and Sites** and select a Project with several Sites.
+2. Click **Hide** on one Site. Confirm its terrain wireframe, outline, point handles, and point-to-ground guides disappear. The Site row remains and shows **Hidden**.
+3. Click the hidden Site row. Confirm the terrain footprint does not select it. Use **Show** in the row to restore its terrain display and map selection.
+4. Click **Hide Project Sites**. Confirm all Sites in the selected Project disappear from the terrain. Click **Show Project Sites** and confirm all Sites return.
+5. Hide one Site, then use **Hide Project Sites**. Confirm every Site is hidden. Use **Show Project Sites** and confirm every Site is visible.
+6. Start a Site, hide it, and confirm its status and progress continue to update in the table. Show it again and confirm its current terrain outline matches its work state.
+7. Save and reload the republic. Confirm each Site keeps its hidden or visible state. Saves created before this build should load all Sites as visible.

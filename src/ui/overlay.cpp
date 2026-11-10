@@ -104,7 +104,7 @@ void Send(Action action, float value = 0)
 void SendProject(Action action,uint64_t projectId) { Enqueue({action,0,frameGeneration,projectId}); }
 void SendProjectValue(Action action,uint64_t projectId,float value)
 {
-    Command command{};command.action=action;command.value=value;command.projectId=projectId;command.generation=frameGeneration;Enqueue(command);
+    Command command{};command.action=action;command.value=value;command.generation=frameGeneration;command.projectId=projectId;Enqueue(command);
 }
 void SendSitePointValue(uint64_t projectId,unsigned pointIndex,float value,bool adjust=false,bool allSitePoints=false)
 {
@@ -126,10 +126,16 @@ void SendProjectText(Action action,uint64_t projectId,const char* text)
     if(text)strncpy_s(command.text,text,_TRUNCATE);
     Enqueue(command);
 }
+bool CursorSiteVisible(const Snapshot& s,uint64_t id)
+{
+    if(!id)return false;
+    for(size_t i=0;i<s.projectCount;++i)if(s.projects[i].id==id)return s.projects[i].visible;
+    return false;
+}
 bool FindSiteEdgeAtScreen(const Snapshot& s,float x,float y,SiteEdgePreview* result)
 {
     if(!result||!s.siteEditorOpen||s.mode!=PickMode::None||!s.editorPlan.complete||s.editorPlan.pointCount<3
-        ||(!s.creatingSite&&s.projectStatus==ProjectStatus::Completed))return false;
+        ||(!s.creatingSite&&(!CursorSiteVisible(s,s.editingSiteId)||s.projectStatus==ProjectStatus::Completed)))return false;
     constexpr float hitRadius=12.0f;
     const float maxDistanceSquared=hitRadius*hitRadius;
     SiteEdgePreview best{};best.distanceSquared=maxDistanceSquared;
@@ -304,7 +310,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         &&GetForegroundWindow()==gameWindow&&shiftDown) {
         const auto& snapshot=inputSnapshot;
         const bool editable=snapshot.siteEditorOpen&&snapshot.mode==PickMode::None&&snapshot.editorPlan.complete
-            &&(snapshot.creatingSite||snapshot.projectStatus!=ProjectStatus::Completed);
+            &&(snapshot.creatingSite||(CursorSiteVisible(snapshot,snapshot.editingSiteId)&&snapshot.projectStatus!=ProjectStatus::Completed));
         const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
             ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam));
         if(editable&&!uiHit&&WorldHit(lParam)&&snapshot.cursorValid
@@ -581,15 +587,16 @@ void DrawPreview(const Snapshot& s)
 {
     siteHandleRectCount=0;
     if (!s.ready || !s.cameraValid) {SetInteractiveSitePreview(0,nullptr);return;}
+    const bool editorTerrainVisible=s.siteEditorOpen&&(s.creatingSite||CursorSiteVisible(s,s.editingSiteId));
     Plan liveSitePlan{};const Plan* livePlan=nullptr;uint64_t liveSiteId=0;
-    if(s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
+    if(editorTerrainVisible&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
         &&draggingSitePoint<s.editorPlan.pointCount) {
         liveSiteId=s.creatingSite?0:s.editingSiteId;
         if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
-    } else if(s.siteEditorOpen&&draggingWholeSiteButtonHeld&&draggingWholeSiteMoved) {
+    } else if(editorTerrainVisible&&draggingWholeSiteButtonHeld&&draggingWholeSiteMoved) {
         liveSiteId=s.creatingSite?0:s.editingSiteId;
         if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
-    } else if(dragWholeSiteCommitPending&&s.siteEditorOpen) {
+    } else if(dragWholeSiteCommitPending&&editorTerrainVisible) {
         const auto& first=s.editorPlan.points[0];
         const float expectedX=dragWholeSiteFirstPoint.x+dragWholeSiteDelta.x,expectedZ=dragWholeSiteFirstPoint.z+dragWholeSiteDelta.z;
         if(std::abs(first.x-expectedX)<=0.5f&&std::abs(first.z-expectedZ)<=0.5f
@@ -600,7 +607,7 @@ void DrawPreview(const Snapshot& s)
             if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
         }
     }
-    if(!livePlan&&dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
+    if(!livePlan&&dragSitePointCommitPending&&editorTerrainVisible&&draggingSitePoint<s.editorPlan.pointCount) {
         const auto& point=s.editorPlan.points[draggingSitePoint];
         const float dx=point.x-dragSitePoint.x,dz=point.z-dragSitePoint.z;
         if(dx*dx+dz*dz<=0.25f||GetTickCount64()-dragSitePointReleasedAt>=SitePointPreviewCommitGraceMs) {
@@ -614,6 +621,7 @@ void DrawPreview(const Snapshot& s)
     SetInteractiveSitePreview(livePlan?liveSiteId:0,livePlan);
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& project=s.projects[i];
+        if(!project.visible)continue;
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId)DrawQueuedWireframe(s,livePlan&&liveSiteId==project.id?*livePlan:s.queuedPlan);
@@ -621,7 +629,7 @@ void DrawPreview(const Snapshot& s)
         } else if(project.status==ProjectStatus::Completed)
             DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,220,40,245):IM_COL32(100,190,155,190));
     }
-    if(s.siteEditorOpen) {
+    if(editorTerrainVisible) {
         const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
         DrawSitePointHandles(s,editorPlan);
         DrawSiteEdgeInsertionPreview(s);
@@ -669,7 +677,7 @@ bool CursorOnVisibleSite(const Snapshot& s)
     if(!s.cursorValid)return false;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
-        if(site.outline.Contains(s.cursor.x,s.cursor.z))return true;
+        if(site.visible&&site.outline.Contains(s.cursor.x,s.cursor.z))return true;
     }
     return false;
 }
@@ -678,7 +686,7 @@ bool CursorOnEditingSite(const Snapshot& s)
     if(!s.cursorValid||!s.editingSiteId)return false;
     for(size_t i=0;i<s.projectCount;++i) {
         const auto& site=s.projects[i];
-        if(site.id==s.editingSiteId)
+        if(site.id==s.editingSiteId&&site.visible)
             return site.outline.Contains(s.cursor.x,s.cursor.z);
     }
     return false;
@@ -858,18 +866,21 @@ void DrawInterface(const Snapshot& s)
                 bool openSiteRenamePopup=false,openSiteDeletePopup=false;
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
-                if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
-                    ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.5f);
-                    ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.15f);
-                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,1.05f);
-                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.05f);
-                    ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,40.0f);
-                    ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,40.0f);
+                if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                    ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
+                    ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.05f);
+                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,0.95f);
+                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.0f);
+                    ImGui::TableSetupColumn("##VisibilityHeader",ImGuiTableColumnFlags_WidthFixed,52.0f);
+                    ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
+                    ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers,32.0f);
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Site");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Progress");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Priority");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
+                    ImGui::TableNextColumn();
+                    ImGui::Dummy({44,24});
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Delete Site");
@@ -902,7 +913,7 @@ void DrawInterface(const Snapshot& s)
                         const auto& site=s.projects[i];ImGui::PushID(static_cast<int>(site.id));
                         ImGui::TableNextRow(ImGuiTableRowFlags_None,44.0f);
                         ImGui::TableNextColumn();
-                        char label[80];sprintf_s(label,"%s  |  %s",site.name,ProjectStatusName(site.status));
+                        char label[96];sprintf_s(label,"%s  |  %s%s",site.name,ProjectStatusName(site.status),site.visible?"":"  |  Hidden");
                         centerCellItem(38.0f);
                         if(ImGui::Selectable("##SelectSiteRow",s.projectId==site.id,ImGuiSelectableFlags_None,{0,38}))SendProject(Action::SelectProject,site.id);
                         const auto siteLabelMin=ImGui::GetItemRectMin();
@@ -920,6 +931,8 @@ void DrawInterface(const Snapshot& s)
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Completed){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
+                        ImGui::TableNextColumn();centerCellItem(24.0f);
+                        if(ImGui::SmallButton(site.visible?"Hide":"Show"))SendProjectValue(Action::SetSiteVisibility,site.id,site.visible?0.0f:1.0f);
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
                         if(siteCancelIcon) {
@@ -951,7 +964,17 @@ void DrawInterface(const Snapshot& s)
                 }
                 ImGui::BeginDisabled(!s.selectedNamedProjectId);
                 const char* draftAction=(s.creatingSite||s.plan.first)?"Continue draft":"New Site";
-                if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
+                const float actionRowWidth=ImGui::GetContentRegionAvail().x;
+                const float spacing=ImGui::GetStyle().ItemSpacing.x;
+                const float toggleWidth=std::min(190.0f,actionRowWidth*0.38f);
+                if(ImGui::Button(draftAction,{actionRowWidth-toggleWidth-spacing,36}))Send(Action::NewSite);
+                ImGui::SameLine();
+                bool anyVisibleSite=false;
+                for(size_t i=0;i<s.projectCount;++i)anyVisibleSite|=s.projects[i].visible;
+                const char* visibilityAction=anyVisibleSite?"Hide Project Sites":"Show Project Sites";
+                ImGui::BeginDisabled(!s.projectCount);
+                if(ImGui::Button(visibilityAction,{toggleWidth,36}))SendProjectValue(Action::SetProjectSitesVisibility,s.selectedNamedProjectId,anyVisibleSite?0.0f:1.0f);
+                ImGui::EndDisabled();
                 ImGui::EndDisabled();
                 ImGui::SeparatorText("Facilities");
                 if(ImGui::SmallButton(showAllFacilities?"Hide other Projects":"Show all facilities"))showAllFacilities=!showAllFacilities;
