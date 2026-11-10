@@ -316,6 +316,25 @@ SavedEarthwork* FindProject(uint64_t id)
     for(auto& project:durableState.earthworks)if(project.id==id)return &project;
     return nullptr;
 }
+bool MoveCompletedSiteToProjectEnd(uint64_t siteId)
+{
+    auto& sites=durableState.earthworks;
+    size_t sourceIndex=sites.size();
+    for(size_t i=0;i<sites.size();++i)if(sites[i].id==siteId) {sourceIndex=i;break;}
+    if(sourceIndex==sites.size()||sites[sourceIndex].status!=ProjectStatus::Completed)return false;
+
+    const auto projectId=sites[sourceIndex].projectId;
+    size_t insertionIndex=sourceIndex+1;
+    for(size_t i=sourceIndex+1;i<sites.size();++i)
+        if(sites[i].projectId==projectId)insertionIndex=i+1;
+    if(insertionIndex==sourceIndex+1)return false;
+
+    SavedEarthwork completed=std::move(sites[sourceIndex]);
+    sites.erase(sites.begin()+static_cast<std::ptrdiff_t>(sourceIndex));
+    --insertionIndex;
+    sites.insert(sites.begin()+static_cast<std::ptrdiff_t>(insertionIndex),std::move(completed));
+    return true;
+}
 void UpdateSiteDraftValidation()
 {
     current.siteDraftError[0]=0;
@@ -1214,7 +1233,8 @@ pick_done:
         }
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
-    case Action::RestartProject:
+    case Action::RestartProject: {
+        uint64_t completedSiteId=0;
         for(auto& project:durableState.earthworks) {
             const bool restarting=command.action==Action::RestartProject;
             const auto initialStatus=project.status;
@@ -1276,13 +1296,17 @@ pick_done:
             project.totalWorkM3=static_cast<float>(totalWork);
             project.progress=totalWork<=1e-6?1.0f:(restarting?0.0f:std::clamp(project.progress,0.0f,0.999999f));
             project.status=totalWork<=1e-6?ProjectStatus::Completed:ProjectStatus::Running;
+            if(project.status==ProjectStatus::Completed)completedSiteId=project.id;
             project.needsReview=false;project.workRemainderM3=0;project.allocatedRateUnits=0;project.allocatedMachines=0;project.allocatedWorkers=0;
             host->log("earthworks  site=%llu %s terrain work=%.3f m3",static_cast<unsigned long long>(project.id),restarting?"restarted":"started",totalWork);
             lastSimulationHour=SimulationHourClock(current);
-            ClearSiteActionError(project.id);RefreshProjectStatus();
+            ClearSiteActionError(project.id);
+            if(!completedSiteId)RefreshProjectStatus();
             Message(totalWork<=1e-6?"Site is already at its saved target height.":(restarting?"Site restarted from the current terrain using its saved shape and target heights.":"Site started. It works when its priority receives Project facility capacity."));break;
         }
+        if(completedSiteId) {MoveCompletedSiteToProjectEnd(completedSiteId);RefreshProjectStatus();}
         break;
+    }
     case Action::PauseProject:
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && (project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting)) {
             project.status=ProjectStatus::Paused;project.allocatedRateUnits=0;project.allocatedMachines=0;project.allocatedWorkers=0;RefreshProjectStatus();Message("Site paused. Current terrain and progress are kept.");break;
@@ -1300,6 +1324,8 @@ pick_done:
         }
         break;
     case Action::ReviewResumeProject:
+    {
+        uint64_t completedSiteId=0;
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && project.status==ProjectStatus::Paused && project.needsReview) {
             BuildingReading facility{};uint32_t facilityId=0;
             ClearSiteActionError(project.id);
@@ -1320,9 +1346,10 @@ pick_done:
                 project.progress=1.0f;
                 project.workRemainderM3=0;
                 project.needsReview=false;project.status=ProjectStatus::Completed;
+                completedSiteId=project.id;
                 host->log("earthworks  site=%llu reviewed progress rebase old=%.5f completed=%.3f remaining=%.3f total=%.3f new=1.00000",
                     static_cast<unsigned long long>(project.id),oldProgress,completedWork,remainingWork,completedWork);
-                ClearSiteActionError(project.id);RefreshProjectStatus();Message("Footprint reviewed. The revised target is already satisfied; the Site is complete.");break;
+                ClearSiteActionError(project.id);Message("Footprint reviewed. The revised target is already satisfied; the Site is complete.");break;
             }
             const double recalculatedTotal=std::min(1.0e12,completedWork+remainingWork);
             project.totalWorkM3=static_cast<float>(recalculatedTotal);
@@ -1336,7 +1363,9 @@ pick_done:
             lastSimulationHour=SimulationHourClock(current);
             ClearSiteActionError(project.id);RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
         }
+        if(completedSiteId) {MoveCompletedSiteToProjectEnd(completedSiteId);RefreshProjectStatus();}
         break;
+    }
     case Action::InspectBuilding:
         current.mode=PickMode::InspectBuilding;Message("Click near your Earthworks facility on the map. Select it in the Projects tab.");break;
     case Action::ChooseBuilding:
@@ -1516,7 +1545,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
             if(!project->plan.Contains(point.x,point.z)||!project->plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&targetHeight))continue;
             if(!ReadHeight(point.x,point.z,&value) || std::abs(targetHeight-value)>precision*1.1) {complete=false;break;}
         }
-        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();Message("Earthworks Site completed.");}
+        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;Message("Earthworks Site completed.");}
         else if(edited)current.projectProgress=project->progress;
     } else if(edited)current.projectProgress=project->progress;
 }
@@ -1620,11 +1649,16 @@ void TickProjectRunner()
         }
     }
     bool changed=false;
+    std::vector<uint64_t> completedSiteIds;
     for(const auto& allocation:allocations)if(simulationElapsed>0&&allocation.project&&allocation.project->status==ProjectStatus::Running&&allocation.rate>0) {
         const auto before=allocation.project->status;
         ExecuteProjectSlice(allocation.project,allocation.rate,simulationElapsed);
-        if(before!=allocation.project->status)changed=true;
+        if(before!=allocation.project->status) {
+            changed=true;
+            if(allocation.project->status==ProjectStatus::Completed)completedSiteIds.push_back(allocation.project->id);
+        }
     }
+    for(const auto siteId:completedSiteIds)MoveCompletedSiteToProjectEnd(siteId);
     if(changed||schedulerStateChanged||!allocations.empty()||projectSchedulerDirty)RefreshProjectStatus();
 }
 void Tick()

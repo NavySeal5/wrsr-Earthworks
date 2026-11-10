@@ -206,3 +206,12 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Hide one Site, then use **Hide Project Sites**. Confirm every Site is hidden. Use **Show Project Sites** and confirm every Site is visible.
 6. Start a Site, hide it, and confirm its status and progress continue to update in the table. Show it again and confirm its current terrain outline matches its work state.
 7. Save and reload the republic. Confirm each Site keeps its hidden or visible state. Saves created before this build should load all Sites as visible.
+
+## Move completed Sites to the bottom — build 0.16.49-completed-sites-bottom
+
+1. In a disposable Project with at least three Sites, note their current order. Make the first Site small enough to complete quickly and leave the other Sites unfinished.
+2. Start and complete the first Site. Confirm it moves to the bottom of that Project's Site list and the relative order of the remaining Sites stays the same.
+3. Repeat with a Site that becomes complete after **Review** finds its target already satisfied. Confirm it also moves to the bottom.
+4. Start or restart a Site whose target is already satisfied. Confirm it completes immediately and moves to the bottom.
+5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
+6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
