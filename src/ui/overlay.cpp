@@ -237,6 +237,33 @@ bool Hit(const RECT& rect, LPARAM point)
     const POINT p = {GET_X_LPARAM(point),GET_Y_LPARAM(point)};
     return PtInRect(&rect,p) != FALSE;
 }
+bool RectsOverlap(const RECT& a,const RECT& b)
+{
+    return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+}
+bool FindLauncherPosition(ImVec2 display,ImVec2* output)
+{
+    constexpr float width=150.0f,height=42.0f,left=70.0f,margin=8.0f;
+    const float maxX=display.x-width-margin;
+    const float maxY=display.y-height-margin;
+    if(maxX<left||maxY<85.0f)return false;
+    const ImVec2 cursor=ImGui::GetIO().MousePos;
+    const float preferredY=std::min(maxY,display.y-132.0f);
+    for(float y=preferredY;y>=85.0f;y-=48.0f) {
+        for(float x=left;x<=maxX;x+=164.0f) {
+            RECT candidate{static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+width),static_cast<LONG>(y+height)};
+            if((panelOpen&&panelRectValid&&RectsOverlap(candidate,panelRect))
+                ||(settingsRectValid&&RectsOverlap(candidate,settingsRect))
+                ||(editorRectValid&&RectsOverlap(candidate,editorRect))
+                ||(popupRectValid&&RectsOverlap(candidate,popupRect))
+                ||(assignmentWarningRectValid&&RectsOverlap(candidate,assignmentWarningRect)))continue;
+            if(NativeUiAreaOccludes(x,y,width,height,cursor.x,cursor.y))continue;
+            *output={x,y};
+            return true;
+        }
+    }
+    return false;
+}
 bool CursorOverEarthworksUi(LPARAM point)
 {
     return Hit(buttonRect,point)
@@ -803,19 +830,24 @@ void DrawInterface(const Snapshot& s)
     const auto display=ImGui::GetIO().DisplaySize;
     buttonRect={};
     if(s.ready) {
-        ImGui::SetNextWindowPos({70.0f,std::max(8.0f,display.y-132.0f)},ImGuiCond_Always);
-        ImGui::SetNextWindowSize({150,42});
-        ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
-        ImGui::Begin("Earthworks launcher",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
-        ImGui::PopStyleVar(2);
-        ImGui::PopStyleColor();
-        if (ImGui::Button("Earthworks",{150,42})) {
-            panelOpen=!panelOpen.load(); leftRelease=true;
-            host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");
+        ImVec2 launcherPosition{};
+        const bool launcherPositionFound=FindLauncherPosition(display,&launcherPosition);
+        if(launcherPositionFound) {
+            ImGui::SetNextWindowPos(launcherPosition,ImGuiCond_Always);
+            ImGui::SetNextWindowSize({150,42},ImGuiCond_Always);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
+            ImGui::Begin("Earthworks launcher",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings);
+            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor();
+            if (ImGui::Button("Earthworks",{150,42})) {
+                panelOpen=!panelOpen.load(); leftRelease=true;
+                host->log("earthworks  planning panel %s",panelOpen ? "opened":"closed");
+            }
+            RememberRect(&buttonRect);
         }
-        RememberRect(&buttonRect); ImGui::End();
+        ImGui::End();
     }
     if (!s.ready) {panelRectValid=false;settingsRectValid=false;popupRectValid=false;editorRectValid=false;return;}
     if (!panelOpen) {panelRectValid=false;settingsRectValid=false;settingsOpen=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}

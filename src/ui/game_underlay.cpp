@@ -489,6 +489,29 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
     return false;
 }
 
+bool NativeUiAreaOccludes(float x,float y,float width,float height,float cursorX,float cursorY)
+{
+    if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(width)||!std::isfinite(height)
+        ||width<=0.0f||height<=0.0f)return true;
+    if(!nativeUiCaptureInstalled.load(std::memory_order_acquire)) {
+        if(!boundHost||!boundHost->exeBase)return false;
+        const float screenWidth=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenWidthRva));
+        const float screenHeight=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenHeightRva));
+        return x<65.0f||y<85.0f||x+width>screenWidth-300.0f||y+height>screenHeight-150.0f;
+    }
+    const float right=x+width,bottom=y+height;
+    std::shared_lock lock(nativeUiMutex);
+    for(size_t i=0;i<nativeUiRectCount;++i) {
+        const auto& rect=nativeUiRects[i];
+        const float rectWidth=rect.right-rect.left,rectHeight=rect.bottom-rect.top;
+        const bool cursorSprite=std::abs(rectWidth-32.0f)<=1.0f&&std::abs(rectHeight-32.0f)<=1.0f
+            &&std::abs(rect.left-cursorX)<=2.0f&&std::abs(rect.top-cursorY)<=2.0f;
+        if(cursorSprite)continue;
+        if(x<rect.right&&right>rect.left&&y<rect.bottom&&bottom>rect.top)return true;
+    }
+    return false;
+}
+
 void SetInteractiveSitePreview(uint64_t siteId,const Plan* plan)
 {
     std::lock_guard<std::mutex> lock(interactivePreviewMutex);

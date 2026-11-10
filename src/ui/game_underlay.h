@@ -10,6 +10,8 @@ bool InstallGameUnderlay(const TsmHost* host);
 // in the most recent interface pass. Used to keep map tools from claiming UI clicks.
 struct NativeUiOcclusionInfo { unsigned rectCount=0; int hitIndex=-1; bool cursorRectIgnored=false; float left=0,top=0,right=0,bottom=0; };
 bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info=nullptr);
+// True when a proposed overlay rectangle intersects captured native UI.
+bool NativeUiAreaOccludes(float x,float y,float width,float height,float cursorX,float cursorY);
 // Supplies a frame-to-frame Site geometry preview while the user drags a point.
 // A null Plan clears the temporary override; it never changes runtime state.
 void SetInteractiveSitePreview(uint64_t siteId, const Plan* plan);
