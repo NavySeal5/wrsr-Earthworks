@@ -1165,7 +1165,12 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const double siteRateM3PerDay=siteRateUnits*ratePerUnitPerDay;
     if(!assignedCapacityKnown)ImGui::Text("Assigned capacity: reading unavailable");
     else if(!s.assignedEligibleMachines)ImGui::Text("Assigned capacity: 0 m3/day (no eligible machines)");
-    else ImGui::Text("Assigned capacity: ~%.0f m3/day (%u machines)",
+    else if(useCurrentAllocation) {
+        ImGui::Text("Project capacity: ~%.0f m3/day (%u machines)",
+            s.assignedMachineRateUnits*ratePerUnitPerDay,s.assignedEligibleMachines);
+        ImGui::Text("This Site allocation: ~%.0f m3/day (%u machines)",
+            siteRateM3PerDay,s.editorAllocatedMachines);
+    } else ImGui::Text("Assigned capacity: ~%.0f m3/day (%u machines)",
         s.assignedMachineRateUnits*ratePerUnitPerDay,s.assignedEligibleMachines);
     if(!s.creatingSite&&s.projectStatus==ProjectStatus::Completed) {
         ImGui::Text("Estimated time: complete");

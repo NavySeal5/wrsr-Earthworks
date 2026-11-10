@@ -81,6 +81,7 @@ HeightFn heightQuery = nullptr;
 RaiseFn raiseLower = nullptr;
 TextureFn openHeightmap = nullptr, closeHeightmap = nullptr;
 double lastSimulationHour = -1;
+bool projectSchedulerDirty = true;
 ULONGLONG lastCompletionCheck = 0;
 double SimulationHourClock(const Snapshot& snapshot)
 {
@@ -484,7 +485,7 @@ void ResetWorld()
     current = Snapshot{}; current.generation = generation;
     siteActionErrors.clear();
     SelectSingleSitePoint(0);
-    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;facilityAssignmentWarningPending=false;facilityIdentityCheckAfterLoad=false;unresolvedFacilityAssignments.clear();lastSimulationHour=-1;
+    durableState = DurableState{}; selectedProjectId=0;editingSiteId=0;siteEditorOpen=false;creatingSite=false;shapeMode=SiteShapeMode::FreeDraw;siteDraftLockToGrid=false; savePending = false; loadMessagePending = false;facilityAssignmentWarningPending=false;facilityIdentityCheckAfterLoad=false;unresolvedFacilityAssignments.clear();lastSimulationHour=-1;projectSchedulerDirty=true;
     lastEditorVolumeEstimate=0;editorVolumeSiteId=0;cachedEditorVolumes={};cachedEditorVolumesValid=false;
     lastWorldFacilityScan=0;lastFacilityIdentityReconcile=0;lastUnresolvedFacilityIdentityCount=static_cast<size_t>(-1);
     durableState.projects.push_back({1,"Project 1",{}});
@@ -681,6 +682,23 @@ void Process(const Command& command)
 {
     if (command.generation != current.generation || !current.ready) return;
     switch(command.action) {
+    case Action::AddProjectFacility:
+    case Action::RemoveProjectFacility:
+    case Action::MoveProjectUp:
+    case Action::MoveProjectDown:
+    case Action::AssignProject:
+    case Action::ClearProjectAssignment:
+    case Action::StartProject:
+    case Action::PauseProject:
+    case Action::ResumeProject:
+    case Action::ReviewResumeProject:
+    case Action::CancelProject:
+        projectSchedulerDirty=true;
+        break;
+    default:
+        break;
+    }
+    switch(command.action) {
     case Action::NewSite:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Click vertices to draw the Site boundary, then finish the shape.");break;}
@@ -738,7 +756,7 @@ void Process(const Command& command)
             &&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled
             ) {
             const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
-            if(pausedForEdit)site->status=ProjectStatus::Paused;
+            if(pausedForEdit){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
             if(site->plan.pointCount)current.mode=PickMode::SampleSitePointTarget;
             if(pausedForEdit)RefreshProjectStatus();
         }
@@ -793,7 +811,7 @@ void Process(const Command& command)
                 }
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,site->plan.pointCount);
                 if(selectedSitePointIndex>=site->plan.pointCount||!mask) {current.mode=PickMode::None;SiteActionError(site->id,"Select at least one Site point before sampling its height.");break;}
-                if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
+                if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
                 if(site->status==ProjectStatus::Paused)site->needsReview=true;
                 for(unsigned i=0;i<site->plan.pointCount;++i)if(mask&PointMask(i))site->plan.points[i].y=p.y;
                 site->plan.RefreshBounds();current.mode=PickMode::None;selectedProjectId=site->id;siteEditorOpen=true;++current.revision;
@@ -852,7 +870,7 @@ pick_done:
         }
         if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
         const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
-        if(pausedForEdit)site->status=ProjectStatus::Paused;
+        if(pausedForEdit){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
         if(site->status==ProjectStatus::Paused)site->needsReview=true;
         site->plan.target=command.value;
         for(unsigned i=0;i<site->plan.pointCount;++i)site->plan.points[i].y=command.value;
@@ -896,7 +914,7 @@ pick_done:
         if(!valid){SiteActionError(site?site->id:0,"The adjusted height is outside the allowed range.");break;}
         if(site) {
             const bool active=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
-            if(active)site->status=ProjectStatus::Paused;
+            if(active){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
         }
         for(unsigned i=0;i<plan->pointCount;++i)if(mask&PointMask(i))
@@ -958,7 +976,7 @@ pick_done:
             if(tooClose){SiteActionError(site?site->id:0,"Site points must be at least 5 m apart.");break;}
         }
         if(site) {
-            if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting)site->status=ProjectStatus::Paused;
+            if(site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
             if(site->status==ProjectStatus::Paused)site->needsReview=true;
         }
         *plan=std::move(edited);selectedSitePointsMask=PointMask(selectedSitePointIndex);
@@ -1231,7 +1249,7 @@ pick_done:
         break;
     case Action::PauseProject:
         for(auto& project:durableState.earthworks)if(project.id==command.projectId && (project.status==ProjectStatus::Running||project.status==ProjectStatus::Waiting)) {
-            project.status=ProjectStatus::Paused;RefreshProjectStatus();Message("Site paused. Current terrain and progress are kept.");break;
+            project.status=ProjectStatus::Paused;project.allocatedRateUnits=0;project.allocatedMachines=0;project.allocatedWorkers=0;RefreshProjectStatus();Message("Site paused. Current terrain and progress are kept.");break;
         }
         break;
     case Action::ResumeProject:
@@ -1375,6 +1393,7 @@ void NotifyNativeTerrainEditImpl(float x,float z,float brushRadius) noexcept
         }
         if(overlaps) {
             project.status=ProjectStatus::Paused;project.needsReview=true;
+            project.allocatedRateUnits=0;project.allocatedMachines=0;project.allocatedWorkers=0;projectSchedulerDirty=true;
             RefreshProjectStatus();
             SiteActionError(project.id,"Native terrain edit overlapped this Site. It is paused; review the footprint before resuming.");
             host->log("earthworks  project=%llu paused for overlapping native terrain edit at (%.2f,%.2f), radius=%.2f",
@@ -1389,7 +1408,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
     TerrainGrid grid{};GridRect rect{};const auto areaError=CheckProjectArea(project->plan,&grid,&rect);
     if(areaError==ProjectAreaError::TerrainMissing)return;
     if(areaError!=ProjectAreaError::None) {
-        project->status=ProjectStatus::Paused;project->needsReview=false;RefreshProjectStatus();
+        project->status=ProjectStatus::Paused;project->needsReview=false;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();
         host->log("earthworks  project=%llu paused by area check: %s grid=%dx%d origin=(%.3f,%.3f) step=(%.3f,%.3f) plan=(%.3f,%.3f)..(%.3f,%.3f)",
             static_cast<unsigned long long>(project->id),ProjectAreaErrorText(areaError),grid.width,grid.depth,
             grid.originX,grid.originZ,grid.stepX,grid.stepZ,project->plan.a.x,project->plan.a.z,project->plan.b.x,project->plan.b.z);
@@ -1414,13 +1433,13 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         host->log("earthworks  site=%llu paused for review: terrain writer unavailable open=%d close=%d edit=%d read=%d",
             static_cast<unsigned long long>(project->id),openHeightmap!=nullptr,closeHeightmap!=nullptr,
             raiseLower!=nullptr,heightQuery!=nullptr);
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        project->status=ProjectStatus::Paused;project->needsReview=true;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();
         SiteActionError(project->id,"Native terrain writer became unavailable. The Site paused for review.");return;
     }
     __try { openHeightmap(terrain); } __except(EXCEPTION_EXECUTE_HANDLER) {
         host->log("earthworks  site=%llu paused for review: opening terrain writer raised exception=0x%08lX",
             static_cast<unsigned long long>(project->id),GetExceptionCode());
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();SiteActionError(project->id,"Terrain writer failed to open. The Site paused for review.");return;
+        project->status=ProjectStatus::Paused;project->needsReview=true;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();SiteActionError(project->id,"Terrain writer failed to open. The Site paused for review.");return;
     }
     double usedVolume=0;int edited=0;bool failed=false;const char* failureStage="";Point failurePoint{};
     for(uint32_t scan=0;scan<static_cast<uint32_t>(count)&&edited<batch;++scan) {
@@ -1445,7 +1464,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
     if(failed) {
         host->log("earthworks  site=%llu paused for review: terrain operation=%s at (%.3f,%.3f)",
             static_cast<unsigned long long>(project->id),failureStage,failurePoint.x,failurePoint.z);
-        project->status=ProjectStatus::Paused;project->needsReview=true;RefreshProjectStatus();
+        project->status=ProjectStatus::Paused;project->needsReview=true;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();
         SiteActionError(project->id,"Terrain edit/readback failed. The Site paused for review; inspect the area before resuming.");return;
     }
     project->workRemainderM3=static_cast<float>(std::max(0.0,static_cast<double>(project->workRemainderM3)-usedVolume));
@@ -1468,7 +1487,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
             if(!project->plan.Contains(point.x,point.z)||!project->plan.BlendedTargetAt(point.x,point.z,std::min(grid.stepX,grid.stepZ),&targetHeight))continue;
             if(!ReadHeight(point.x,point.z,&value) || std::abs(targetHeight-value)>precision*1.1) {complete=false;break;}
         }
-        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;RefreshProjectStatus();Message("Earthworks Site completed.");}
+        if(complete) {project->progress=1;project->status=ProjectStatus::Completed;project->allocatedRateUnits=0;project->allocatedMachines=0;project->allocatedWorkers=0;projectSchedulerDirty=true;RefreshProjectStatus();Message("Earthworks Site completed.");}
         else if(edited)current.projectProgress=project->progress;
     } else if(edited)current.projectProgress=project->progress;
 }
@@ -1476,10 +1495,17 @@ void TickProjectRunner()
 {
     if(!current.ready)return;
     const double clockHour=SimulationHourClock(current);
-    if(lastSimulationHour<0){lastSimulationHour=clockHour;return;}
-    const double elapsed=clockHour-lastSimulationHour;lastSimulationHour=clockHour;
-    if(!std::isfinite(elapsed)||elapsed<=0)return;
-    const double simulationElapsed=std::min(elapsed,1.0);
+    double simulationElapsed=0;
+    if(lastSimulationHour<0)lastSimulationHour=clockHour;
+    else {
+        const double elapsed=clockHour-lastSimulationHour;
+        lastSimulationHour=clockHour;
+        if(std::isfinite(elapsed)&&elapsed>0)simulationElapsed=std::min(elapsed,1.0);
+    }
+    // Rebalance after scheduling changes even when the simulation is paused.
+    // Terrain work itself remains tied to positive simulation time.
+    if(simulationElapsed<=0&&!projectSchedulerDirty)return;
+    projectSchedulerDirty=false;
     struct Allocation { SavedEarthwork* project=nullptr;double rate=0;unsigned machines=0; };
     std::vector<uint64_t> processedProjects;
     std::vector<Allocation> allocations;
@@ -1568,12 +1594,12 @@ void TickProjectRunner()
         }
     }
     bool changed=false;
-    for(const auto& allocation:allocations)if(allocation.project&&allocation.project->status==ProjectStatus::Running&&allocation.rate>0) {
+    for(const auto& allocation:allocations)if(simulationElapsed>0&&allocation.project&&allocation.project->status==ProjectStatus::Running&&allocation.rate>0) {
         const auto before=allocation.project->status;
         ExecuteProjectSlice(allocation.project,allocation.rate,simulationElapsed);
         if(before!=allocation.project->status)changed=true;
     }
-    if(changed||schedulerStateChanged||!allocations.empty())RefreshProjectStatus();
+    if(changed||schedulerStateChanged||!allocations.empty()||projectSchedulerDirty)RefreshProjectStatus();
 }
 void Tick()
 {
