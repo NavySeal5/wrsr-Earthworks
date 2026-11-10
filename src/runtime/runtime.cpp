@@ -9,6 +9,7 @@
 #include "native_terrain_edit_hook.h"
 #include "../core/terrain_grid.h"
 #include "../core/productivity.h"
+#include "../core/user_settings.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -1476,7 +1477,7 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
     // Provisional Stage 8 conversion: one relative manual-rate unit completes
     // 10 m3 per simulation hour. Balancing remains open under D10/D14.
     project->workRemainderM3=static_cast<float>(std::min(1.0e9,
-        static_cast<double>(project->workRemainderM3)+relativeRate*VolumePerRateUnitPerSimulationHour*std::min(elapsed,1.0)));
+        static_cast<double>(project->workRemainderM3)+relativeRate*ConstructionSpeedMultiplier()*VolumePerRateUnitPerSimulationHour*std::min(elapsed,1.0)));
     const int count=rect.Count();
     const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
     const double precision=static_cast<double>(grid.heightScale)/60000.0;

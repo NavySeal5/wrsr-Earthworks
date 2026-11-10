@@ -2,6 +2,7 @@
 #include <cstddef>
 #include "tesmio_api.h"
 #include "../runtime/runtime.h"
+#include "../core/user_settings.h"
 
 namespace {
 const TsmHost* g_host = nullptr;
@@ -68,7 +69,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.57-site-table-space-reclaim";
+    info->version = "0.16.58-global-settings-site-speed";
 
     if (!IsSupportedImage(*host)) {
         host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");
@@ -86,6 +87,7 @@ extern "C" __declspec(dllexport) int TsmPluginStart(void)
         return 1;
     }
     ew::host = g_host;
+    ew::LoadGlobalSettings();
 #if defined(EARTHWORKS_TRACE_FAULT)
     AddVectoredExceptionHandler(0,TraceFault);
 #endif

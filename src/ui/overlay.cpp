@@ -12,6 +12,7 @@
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "../core/productivity.h"
+#include "../core/user_settings.h"
 #include "../core/terrain_grid.h"
 #include "imgui_impl_dx11.h"
 #include <algorithm>
@@ -49,6 +50,7 @@ ID3D11ShaderResourceView* siteMoveDownIcon = nullptr;
 ID3D11ShaderResourceView* projectNewIcon = nullptr;
 ID3D11ShaderResourceView* projectDeleteIcon = nullptr;
 ID3D11ShaderResourceView* targetHeightInfoIcon = nullptr;
+ID3D11ShaderResourceView* settingsIcon = nullptr;
 HCURSOR cursorToRestore = nullptr;
 bool systemCursorHiddenForPanel = false;
 IDXGISwapChain* gameChain = nullptr;
@@ -56,9 +58,10 @@ ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
 WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
-RECT buttonRect{}, panelRect{}, popupRect{}, assignmentWarningRect{};
+RECT buttonRect{}, panelRect{}, settingsRect{}, popupRect{}, assignmentWarningRect{};
 RECT editorRect{};
 bool panelRectValid = false;
+bool settingsRectValid = false;
 bool popupRectValid = false;
 bool assignmentWarningRectValid = false;
 bool editorRectValid = false;
@@ -72,7 +75,7 @@ bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
 bool showAllFacilities = false;
-bool winterMode = false;
+bool settingsOpen = false;
 std::atomic<bool> areaPickCapture{false};
 RECT siteHandleRects[MaxSitePoints]{};
 unsigned siteHandlePointIndices[MaxSitePoints]{};
@@ -100,8 +103,8 @@ constexpr float SitePointHitRadiusPixels=20.0f;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
 thread_local int presentDepth = 0;
-ImU32 CutWireColor() { return winterMode?IM_COL32(255,105,0,255):IM_COL32(255,159,67,255); }
-ImU32 FillWireColor() { return winterMode?IM_COL32(255,211,0,255):IM_COL32(62,221,166,255); }
+ImU32 CutWireColor() { return HighContrastColors()?IM_COL32(255,105,0,255):IM_COL32(255,159,67,255); }
+ImU32 FillWireColor() { return HighContrastColors()?IM_COL32(255,211,0,255):IM_COL32(62,221,166,255); }
 bool Project(const Snapshot& s,Point p,ImVec2* out);
 void Send(Action action, float value = 0)
 {
@@ -238,6 +241,7 @@ bool CursorOverEarthworksUi(LPARAM point)
 {
     return Hit(buttonRect,point)
         ||(panelOpen&&panelRectValid&&Hit(panelRect,point))
+        ||(panelOpen&&settingsRectValid&&Hit(settingsRect,point))
         ||(panelOpen&&popupRectValid&&Hit(popupRect,point))
         ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,point))
         ||(editorRectValid&&Hit(editorRect,point));
@@ -318,7 +322,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const auto& snapshot=inputSnapshot;
         const bool editable=snapshot.siteEditorOpen&&snapshot.mode==PickMode::None&&snapshot.editorPlan.complete
             &&(snapshot.creatingSite||(CursorSiteVisible(snapshot,snapshot.editingSiteId)&&snapshot.projectStatus!=ProjectStatus::Completed));
-        const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
+        const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
             ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam));
         if(editable&&!uiHit&&WorldHit(lParam)&&snapshot.cursorValid
             &&(snapshot.editorPlan.Contains(snapshot.cursor.x,snapshot.cursor.z)||clickedSiteEdge)) {
@@ -327,7 +331,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             dragWholeSiteCursor=snapshot.cursor;dragWholeSiteDelta={};startedWholeSiteDrag=true;
         }
     }
-    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled||draggingWholeSiteButtonHeld||startedWholeSiteDrag;
+    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled||draggingWholeSiteButtonHeld||startedWholeSiteDrag;
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; draggingWholeSiteButtonHeld=false;draggingWholeSiteMoved=false;dragWholeSiteCommitPending=false;escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -337,7 +341,8 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
                 escapeOwned=true;
                 escapeCapture=true;
                 if(areaPickCapture) { mapPickCapture=false;areaPickCapture=false;pickCancelledByEscape=true; Send(Action::CancelPick); }
-                else { panelOpen=false; panelRectValid=false; keyboardCapture=false; pickCancelledByEscape=false;Send(Action::CloseSiteEditor);host->log("earthworks  planning panel closed with Escape"); }
+                else if(settingsOpen) { settingsOpen=false;settingsRectValid=false; }
+                else { panelOpen=false; panelRectValid=false;settingsRectValid=false; keyboardCapture=false; pickCancelledByEscape=false;Send(Action::CloseSiteEditor);host->log("earthworks  planning panel closed with Escape"); }
             }
         }
         escapeMessage=escapeOwned;
@@ -421,7 +426,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();
         if(snapshot.siteEditorOpen&&!snapshot.creatingSite&&snapshot.mode==PickMode::None) {
-            const bool insidePanel=(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam));
+            const bool insidePanel=(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam));
             const bool insideEditor=Hit(editorRect,lParam);
             if(!insidePanel&&!insideEditor&&!CursorOnEditingSite(snapshot))Send(Action::CloseSiteEditor);
         }
@@ -512,7 +517,7 @@ void Shade(const Snapshot& s,const Point* triangle,const float* depth,float sign
 void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
 {
     if(p.pointCount<2) return;
-    const ImU32 gray=winterMode?IM_COL32(255,174,0,230):IM_COL32(175,180,190,210);
+    const ImU32 gray=HighContrastColors()?IM_COL32(255,174,0,230):IM_COL32(175,180,190,210);
     if(p.complete)for(int z=0;z<GridSide;++z) for(int x=0;x<GridSide;++x) {
         const auto a=p.Vertex(x,z,true,s.terrainCellSize);
         if(x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,gray,1.5f);}
@@ -521,7 +526,7 @@ void DrawQueuedWireframe(const Snapshot& s,const Plan& p)
     const unsigned edgeCount=p.complete?p.pointCount:p.pointCount-1;
     for(unsigned i=0;i<edgeCount;++i) {
         const auto& a=p.points[i];const auto& b=p.points[(i+1)%p.pointCount];
-        Line(s,a,b,winterMode?IM_COL32(194,75,0,245):IM_COL32(205,210,220,235),2.5f);
+        Line(s,a,b,HighContrastColors()?IM_COL32(194,75,0,245):IM_COL32(205,210,220,235),2.5f);
     }
 }
 template<class Shape>
@@ -549,10 +554,10 @@ void DrawSiteEdgeInsertionPreview(const Snapshot& s)
     SiteEdgePreview edge{};
     if(!FindSiteEdgeAtScreen(s,mouse.x,mouse.y,&edge))return;
     auto* draw=ImGui::GetForegroundDrawList();
-    draw->AddCircleFilled(edge.screen,9.0f,winterMode?IM_COL32(255,225,90,235):IM_COL32(115,120,125,150),16);
-    draw->AddCircle(edge.screen,9.0f,winterMode?IM_COL32(190,70,0,255):IM_COL32(60,65,70,190),16,1.5f);
-    draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},winterMode?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
-    draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},winterMode?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
+    draw->AddCircleFilled(edge.screen,9.0f,HighContrastColors()?IM_COL32(255,225,90,235):IM_COL32(115,120,125,150),16);
+    draw->AddCircle(edge.screen,9.0f,HighContrastColors()?IM_COL32(190,70,0,255):IM_COL32(60,65,70,190),16,1.5f);
+    draw->AddLine({edge.screen.x-3.5f,edge.screen.y},{edge.screen.x+3.5f,edge.screen.y},HighContrastColors()?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
+    draw->AddLine({edge.screen.x,edge.screen.y-3.5f},{edge.screen.x,edge.screen.y+3.5f},HighContrastColors()?IM_COL32(190,70,0,255):IM_COL32(45,50,55,210),1.5f);
 }
 bool BuildDraggedSitePlan(const Plan& source,unsigned pointIndex,Point cursor,Plan* output)
 {
@@ -632,9 +637,9 @@ void DrawPreview(const Snapshot& s)
         if(project.status==ProjectStatus::Queued||project.status==ProjectStatus::Running
             ||project.status==ProjectStatus::Waiting||project.status==ProjectStatus::Paused) {
             if(project.id==s.editingSiteId)DrawQueuedWireframe(s,livePlan&&liveSiteId==project.id?*livePlan:s.queuedPlan);
-            else DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,174,0,230):IM_COL32(175,180,190,205));
+            else DrawQueuedOutline(s,project.outline,HighContrastColors()?IM_COL32(255,174,0,230):IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
-            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,220,40,245):IM_COL32(100,190,155,190));
+            DrawQueuedOutline(s,project.outline,HighContrastColors()?IM_COL32(255,220,40,245):IM_COL32(100,190,155,190));
     }
     if(editorTerrainVisible) {
         const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
@@ -646,7 +651,7 @@ void DrawPreview(const Snapshot& s)
     if (!p.complete) {
         ImVec2 first;
         for(unsigned i=0;i<p.pointCount;++i) {
-            ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,winterMode?IM_COL32(255,105,0,255):IM_COL32(255,235,135,235),12);
+            ImVec2 screen{};if(Project(s,p.points[i],&screen))ImGui::GetBackgroundDrawList()->AddCircleFilled(screen,4.5f,HighContrastColors()?IM_COL32(255,105,0,255):IM_COL32(255,235,135,235),12);
             if(i+1<p.pointCount)Line(s,p.points[i],p.points[i+1],FillWireColor(),2.0f);
         }
         if(panelOpen&&s.cursorValid&&s.mode==PickMode::DrawSite&&p.pointCount) {
@@ -677,7 +682,7 @@ void DrawPreview(const Snapshot& s)
         if (x<GridCells) {const auto b=p.Vertex(x+1,z,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
         if (z<GridCells) {const auto b=p.Vertex(x,z+1,true,s.terrainCellSize);if(p.Contains((a.x+b.x)*0.5f,(a.z+b.z)*0.5f))Line(s,a,b,color);}
     }
-    DrawQueuedOutline(s,p,winterMode?IM_COL32(255,245,120,255):IM_COL32(245,250,255,255));
+    DrawQueuedOutline(s,p,HighContrastColors()?IM_COL32(255,245,120,255):IM_COL32(245,250,255,255));
 }
 bool CursorOnVisibleSite(const Snapshot& s)
 {
@@ -737,6 +742,48 @@ void DrawFacilityAssignmentWarning(const Snapshot& s,ImVec2 display)
     RememberRect(&assignmentWarningRect);assignmentWarningRectValid=true;
     ImGui::End();
 }
+void DrawSettingsPanel(ImVec2 display)
+{
+    if(!panelOpen||!settingsOpen||!panelRectValid) {settingsRectValid=false;return;}
+    constexpr float width=330.0f,height=210.0f,headerHeight=54.0f;
+    float x=static_cast<float>(panelRect.left)-width-10.0f;
+    if(x<10.0f)x=static_cast<float>(panelRect.right)+10.0f;
+    x=std::clamp(x,10.0f,std::max(10.0f,display.x-width-10.0f));
+    const float y=std::clamp(static_cast<float>(panelRect.top),10.0f,std::max(10.0f,display.y-height-10.0f));
+    ImGui::SetNextWindowPos({x,y},ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({width,height},ImGuiCond_FirstUseEver);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,{0,0,0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+    bool open=true;
+    ImGui::Begin("##EarthworksSettings",&open,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar);
+    ImGui::PopStyleVar();ImGui::PopStyleColor();
+    const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
+    DrawPanelPaper(false);
+    ImGui::GetWindowDrawList()->AddText({pos.x+11.0f,pos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Settings");
+    ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
+    ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+    ImGui::SetCursorScreenPos({pos.x+size.x-36.0f,pos.y+14.5f});
+    if(ImGui::Button("X",{30.0f,30.0f}))open=false;
+    ImGui::PopStyleVar(2);ImGui::PopStyleColor(4);
+    ImGui::SetCursorScreenPos({pos.x+12.0f,pos.y+headerHeight+12.0f});
+    ImGui::TextUnformatted("Site construction speed");
+    float multiplier=ConstructionSpeedMultiplier();
+    ImGui::SetNextItemWidth(width-36.0f);
+    if(ImGui::SliderFloat("##SiteSpeedMultiplier",&multiplier,0.1f,10.0f,"%.1fx"))SetConstructionSpeedMultiplier(multiplier);
+    if(ImGui::IsItemDeactivatedAfterEdit())SaveGlobalSettings();
+    bool highContrast=HighContrastColors();
+    if(ImGui::Checkbox("High contrast colors",&highContrast)) {
+        SetHighContrastColors(highContrast);SetWinterWireframeMode(highContrast);SaveGlobalSettings();
+    }
+    ImGui::TextWrapped("Scales Site work and capacity estimates.");
+    RememberRect(&settingsRect);settingsRectValid=true;
+    ImGui::End();
+    if(!open)settingsOpen=false;
+}
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
@@ -744,8 +791,8 @@ void DrawInterface(const Snapshot& s)
     popupRectValid=false;
     assignmentWarningRectValid=false;
     frameGeneration=s.generation;
-    SetWinterWireframeMode(winterMode);
-    if (!s.ready) { panelOpen=false; panelRectValid=false; popupRectValid=false; assignmentWarningRectValid=false;editorRectValid=false; }
+    SetWinterWireframeMode(HighContrastColors());
+    if (!s.ready) { panelOpen=false; panelRectValid=false;settingsRectValid=false; popupRectValid=false; assignmentWarningRectValid=false;editorRectValid=false; }
     if(panelOpen && s.cameraValid && s.workforce.buildingValid) {
         const auto p=s.workforce.building.position;
         const auto colour=IM_COL32(255,100,255,255);
@@ -770,8 +817,8 @@ void DrawInterface(const Snapshot& s)
         }
         RememberRect(&buttonRect); ImGui::End();
     }
-    if (!s.ready) {panelRectValid=false;popupRectValid=false;editorRectValid=false;return;}
-    if (!panelOpen) {panelRectValid=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}
+    if (!s.ready) {panelRectValid=false;settingsRectValid=false;popupRectValid=false;editorRectValid=false;return;}
+    if (!panelOpen) {panelRectValid=false;settingsRectValid=false;settingsOpen=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
     constexpr float listHeightReduction=122.5f;
     const float availablePanelHeight=std::max(360.0f,display.y-180.0f-listHeightReduction);
@@ -799,6 +846,9 @@ void DrawInterface(const Snapshot& s)
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0.42f,0.14f,0.13f,1});
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+    ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-104.0f,panelPos.y+14.5f});
+    if(GameIconButton("##EarthworksSettingsButton",settingsIcon,"S",nullptr,{30.0f,30.0f}))settingsOpen=!settingsOpen;
+    ImGui::SameLine(0,4.0f);
     ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-70.0f,panelPos.y+14.5f});
     if(ImGui::Button("-",{30.0f,30.0f})) { panelMinimized=!panelMinimized; restorePanelSize=!panelMinimized; }
     ImGui::SameLine(0,4.0f);
@@ -807,13 +857,13 @@ void DrawInterface(const Snapshot& s)
     ImGui::PopStyleColor(4);
     if(!panelMinimized && !collapsedThisFrame) expandedPanelHeight=panelSize.y;
     if(!open) {
-        panelOpen=false; mapPickCapture=false;areaPickCapture=false;leftRelease=true; panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
+        panelOpen=false;settingsOpen=false; mapPickCapture=false;areaPickCapture=false;leftRelease=true; panelRectValid=false;settingsRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
         ImGui::End();
         host->log("earthworks  planning panel closed; native left clicks released after button up");
         return;
     }
     if(collapsedThisFrame || panelMinimized) {
-        RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);return;
+        RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSettingsPanel(display);DrawSiteEditor(s,display);return;
     }
     ImGui::SetCursorScreenPos({panelPos.x+ImGui::GetStyle().WindowPadding.x,panelPos.y+headerHeight+ImGui::GetStyle().WindowPadding.y});
     static char nameBuffer[MaxSavedNameBytes+1]{};
@@ -823,7 +873,6 @@ void DrawInterface(const Snapshot& s)
     static uint64_t deleteSiteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
         if(ImGui::BeginTabItem("Projects and Sites")) {
-            if(ImGui::Checkbox("Winter Mode",&winterMode))SetWinterWireframeMode(winterMode);
             ImGui::AlignTextToFramePadding();ImGui::Text("Project");ImGui::SameLine();
             ImGui::SetNextItemWidth(225);
             const char* selectedProject=s.projectContainerName[0]?s.projectContainerName:"No Project selected";
@@ -1173,7 +1222,7 @@ void DrawInterface(const Snapshot& s)
     if (ImGui::Button("Close planning",{ImGui::GetContentRegionAvail().x,32})) {
         panelOpen=false;mapPickCapture=false;areaPickCapture=false;leftRelease=true;panelRectValid=false;editorRectValid=false;Send(Action::CloseSiteEditor);
     }
-    RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSiteEditor(s,display);
+    RememberRect(&panelRect); panelRectValid=true; ImGui::End();DrawSettingsPanel(display);DrawSiteEditor(s,display);
     DrawFacilityAssignmentWarning(s,display);
 }
 void DrawSiteEditor(const Snapshot& s,ImVec2 display)
@@ -1376,7 +1425,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const bool assignedCapacityKnown=s.assignedMachineReadingsValid;
     const bool useCurrentAllocation=!s.creatingSite&&s.projectStatus==ProjectStatus::Running&&s.editorAllocatedMachines>0;
     const unsigned siteRateUnits=useCurrentAllocation?s.editorAllocatedRateUnits:s.assignedMachineRateUnits;
-    const double ratePerUnitPerDay=VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay;
+    const double ratePerUnitPerDay=VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay*ConstructionSpeedMultiplier();
     const double siteRateM3PerDay=siteRateUnits*ratePerUnitPerDay;
     if(!assignedCapacityKnown)ImGui::Text("Assigned capacity: reading unavailable");
     else if(!s.assignedEligibleMachines)ImGui::Text("Assigned capacity: 0 m3/day (no eligible machines)");
@@ -1651,6 +1700,7 @@ void LoadSiteRowIcons()
     LoadGameUiIcon(L"button_plus.png",&projectNewIcon);
     LoadGameUiIcon(L"trash.png",&projectDeleteIcon);
     LoadGameUiIcon(L"infoicon.png",&targetHeightInfoIcon);
+    LoadGameUiIcon(L"icon_gears.png",&settingsIcon);
 }
 void LoadGameCursorArt()
 {
