@@ -871,11 +871,13 @@ void DrawInterface(const Snapshot& s)
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",7,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                    const float priorityWidth=ImGui::CalcTextSize("Priority").x+ImGui::GetStyle().CellPadding.x*2.0f;
+                    const float visibilityWidth=siteHideIcon&&siteShowIcon?36.0f:52.0f;
                     ImGui::TableSetupColumn("Site",ImGuiTableColumnFlags_WidthStretch,2.3f);
                     ImGui::TableSetupColumn("Progress",ImGuiTableColumnFlags_WidthStretch,1.05f);
-                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthStretch,0.95f);
-                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.0f);
-                    ImGui::TableSetupColumn("##VisibilityHeader",ImGuiTableColumnFlags_WidthFixed,52.0f);
+                    ImGui::TableSetupColumn("Priority",ImGuiTableColumnFlags_WidthFixed,priorityWidth);
+                    ImGui::TableSetupColumn("Work",ImGuiTableColumnFlags_WidthStretch,1.35f);
+                    ImGui::TableSetupColumn("##VisibilityHeader",ImGuiTableColumnFlags_WidthFixed,visibilityWidth);
                     ImGui::TableSetupColumn("##CancelHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
                     ImGui::TableSetupColumn("##RenameHeader",ImGuiTableColumnFlags_WidthFixed,36.0f);
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers,32.0f);
@@ -930,9 +932,9 @@ void DrawInterface(const Snapshot& s)
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
                         ImGui::BeginDisabled(!movable);
                         if(siteMoveUpIcon&&siteMoveDownIcon) {
-                            if(drawIconButton("##MoveSiteUp",siteMoveUpIcon,nullptr,26.0f,false))SendProject(Action::MoveProjectUp,site.id);
+                            if(drawIconButton("##MoveSiteUp",siteMoveUpIcon,nullptr,20.0f,false))SendProject(Action::MoveProjectUp,site.id);
                             ImGui::SameLine();
-                            if(drawIconButton("##MoveSiteDown",siteMoveDownIcon,nullptr,26.0f,false))SendProject(Action::MoveProjectDown,site.id);
+                            if(drawIconButton("##MoveSiteDown",siteMoveDownIcon,nullptr,20.0f,false))SendProject(Action::MoveProjectDown,site.id);
                         } else {
                             if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);
                             ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);

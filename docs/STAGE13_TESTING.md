@@ -216,6 +216,13 @@ The denominator is an estimate derived from terrain height differences on the na
 5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
 6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
 
+## Site table column sizing — build 0.16.51-site-table-column-sizing
+
+1. Open **Earthworks → Projects and Sites** with a Project containing several Sites.
+2. Confirm **Priority** fits its header closely, its two sort icons remain usable, and the Work button text fits without clipping.
+3. Confirm the visibility, delete, and rename icon columns are compact and the icons remain clickable.
+4. Check the table at your normal game resolution and verify Site names and progress remain readable.
+
 ## Native Site row icons — build 0.16.50-site-row-native-icons
 
 1. Open **Earthworks → Projects and Sites** with a Project that has several Sites.
