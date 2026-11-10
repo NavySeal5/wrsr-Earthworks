@@ -215,3 +215,11 @@ The denominator is an estimate derived from terrain height differences on the na
 4. Start or restart a Site whose target is already satisfied. Confirm it completes immediately and moves to the bottom.
 5. Save and reload. Confirm the completed Sites remain at the bottom and the unfinished FIFO order remains unchanged.
 6. Restart a completed Site. Confirm it remains at the bottom while active; verify FIFO gives capacity to the top eligible unfinished Site first.
+
+## Native Site row icons — build 0.16.50-site-row-native-icons
+
+1. Open **Earthworks → Projects and Sites** with a Project that has several Sites.
+2. Confirm each Site row uses an eye-view icon for Hide/Show and the native up/down sort icons for priority.
+3. Confirm the current eye icon reflects the action: eye with an X hides a visible Site; open eye shows a hidden Site. No tooltip is expected.
+4. Hide and show a Site. Confirm its terrain overlay and map selection behave as before.
+5. Move an eligible Site up and down. Confirm its list order and FIFO priority change as before.

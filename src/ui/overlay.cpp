@@ -39,6 +39,10 @@ ID3D11ShaderResourceView* gameCursorArt = nullptr;
 UINT gameCursorArtWidth = 0, gameCursorArtHeight = 0;
 ID3D11ShaderResourceView* siteCancelIcon = nullptr;
 ID3D11ShaderResourceView* siteRenameIcon = nullptr;
+ID3D11ShaderResourceView* siteHideIcon = nullptr;
+ID3D11ShaderResourceView* siteShowIcon = nullptr;
+ID3D11ShaderResourceView* siteMoveUpIcon = nullptr;
+ID3D11ShaderResourceView* siteMoveDownIcon = nullptr;
 ID3D11ShaderResourceView* projectNewIcon = nullptr;
 ID3D11ShaderResourceView* projectDeleteIcon = nullptr;
 ID3D11ShaderResourceView* targetHeightInfoIcon = nullptr;
@@ -880,17 +884,17 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Priority");
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
                     ImGui::TableNextColumn();
-                    ImGui::Dummy({44,24});
+                    if(!siteHideIcon||!siteShowIcon)ImGui::TextUnformatted("Hide");
+                    else ImGui::Dummy({44,24});
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Delete Site");
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Rename");
-                    auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture,const char* tooltip) {
+                    auto drawIconButton=[](const char* id,ID3D11ShaderResourceView* texture,const char* tooltip,float iconSize=30.0f,bool center=true) {
                         if(!texture)return false;
-                        constexpr float iconSize=30.0f;
-                        ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.0f,(ImGui::GetContentRegionAvail().x-iconSize)*0.5f));
+                        if(center)ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.0f,(ImGui::GetContentRegionAvail().x-iconSize)*0.5f));
                         const auto pos=ImGui::GetCursorScreenPos();
                         const bool hovered=ImGui::IsMouseHoveringRect(pos,{pos.x+iconSize,pos.y+iconSize},true);
                         const ImTextureRef image(static_cast<ImTextureID>(reinterpret_cast<intptr_t>(texture)));
@@ -924,15 +928,30 @@ void DrawInterface(const Snapshot& s)
                         ImGui::TableNextColumn();
                         centerCellItem(32.0f);
                         const bool movable=ProjectCanMove(site.status);const float moveWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.5f;
-                        ImGui::BeginDisabled(!movable);if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);ImGui::EndDisabled();
+                        ImGui::BeginDisabled(!movable);
+                        if(siteMoveUpIcon&&siteMoveDownIcon) {
+                            if(drawIconButton("##MoveSiteUp",siteMoveUpIcon,nullptr,26.0f,false))SendProject(Action::MoveProjectUp,site.id);
+                            ImGui::SameLine();
+                            if(drawIconButton("##MoveSiteDown",siteMoveDownIcon,nullptr,26.0f,false))SendProject(Action::MoveProjectDown,site.id);
+                        } else {
+                            if(ImGui::Button("↑",{moveWidth,32}))SendProject(Action::MoveProjectUp,site.id);
+                            ImGui::SameLine();if(ImGui::Button("↓",{moveWidth,32}))SendProject(Action::MoveProjectDown,site.id);
+                        }
+                        ImGui::EndDisabled();
                         ImGui::TableNextColumn();Action workAction=Action::StartProject;const char* workLabel="Done";bool workEnabled=false;
                         if(site.status==ProjectStatus::Queued){workAction=Action::StartProject;workLabel="Start";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Completed){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
-                        ImGui::TableNextColumn();centerCellItem(24.0f);
-                        if(ImGui::SmallButton(site.visible?"Hide":"Show"))SendProjectValue(Action::SetSiteVisibility,site.id,site.visible?0.0f:1.0f);
+                        ImGui::TableNextColumn();centerCellItem(30.0f);
+                        if(siteHideIcon&&siteShowIcon) {
+                            if(drawIconButton("##ToggleSiteVisibility",site.visible?siteHideIcon:siteShowIcon,nullptr))
+                                SendProjectValue(Action::SetSiteVisibility,site.id,site.visible?0.0f:1.0f);
+                        } else {
+                            bool visible=site.visible;
+                            if(ImGui::Checkbox("##ToggleSiteVisibility",&visible))SendProjectValue(Action::SetSiteVisibility,site.id,visible?1.0f:0.0f);
+                        }
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
                         if(siteCancelIcon) {
@@ -1547,6 +1566,10 @@ void LoadSiteRowIcons()
 {
     LoadGameUiIcon(L"button_cancel.png",&siteCancelIcon);
     LoadGameUiIcon(L"button_rename.png",&siteRenameIcon);
+    LoadGameUiIcon(L"button_view_cancel.png",&siteHideIcon);
+    LoadGameUiIcon(L"button_view.png",&siteShowIcon);
+    LoadGameUiIcon(L"sort_up.png",&siteMoveUpIcon);
+    LoadGameUiIcon(L"sort_down.png",&siteMoveDownIcon);
     LoadGameUiIcon(L"button_plus.png",&projectNewIcon);
     LoadGameUiIcon(L"trash.png",&projectDeleteIcon);
     LoadGameUiIcon(L"infoicon.png",&targetHeightInfoIcon);
