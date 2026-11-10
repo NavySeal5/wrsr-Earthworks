@@ -43,6 +43,10 @@ constexpr size_t MaxSegments = 4096;
 constexpr size_t GroupCount = 14;
 constexpr float ShadeRowPixels = 5.0f;
 constexpr size_t MaxNativeUiRects = 8192;
+constexpr float LauncherX = 70.0f;
+constexpr float LauncherYFromBottom = 132.0f;
+constexpr float LauncherWidth = 150.0f;
+constexpr float LauncherHeight = 42.0f;
 
 using BeginFn = void (*)(void*, const char*, bool);
 using EndFn = void (*)(void*);
@@ -310,6 +314,75 @@ void DrawGroup(unsigned char* base, const SegmentGroup& group)
     } __finally { std::memcpy(panel+PanelSize,saved,sizeof(saved)); }
 }
 
+uint8_t LauncherGlyphRow(char ch,unsigned row)
+{
+    static constexpr uint8_t glyphs[][5]={
+        {0x07,0x04,0x06,0x04,0x07}, // E
+        {0x00,0x03,0x01,0x07,0x05}, // a
+        {0x00,0x06,0x04,0x04,0x04}, // r
+        {0x02,0x07,0x02,0x02,0x01}, // t
+        {0x04,0x04,0x06,0x05,0x05}, // h
+        {0x00,0x05,0x07,0x07,0x05}, // w
+        {0x00,0x02,0x05,0x05,0x02}, // o
+        {0x04,0x05,0x06,0x05,0x05}, // k
+        {0x00,0x03,0x04,0x02,0x06}  // s
+    };
+    unsigned glyph=0;
+    switch(ch) { case 'E':glyph=0;break;case 'a':glyph=1;break;case 'r':glyph=2;break;case 't':glyph=3;break;
+        case 'h':glyph=4;break;case 'w':glyph=5;break;case 'o':glyph=6;break;case 'k':glyph=7;break;case 's':glyph=8;break;default:return 0; }
+    return row<5?glyphs[glyph][row]:0;
+}
+
+void DrawLauncher(unsigned char* base,float screenHeight)
+{
+    if(!BindWhiteTexture(base))return;
+    auto* panel=base+PanelRva;
+    unsigned char saved[PanelFieldsBytes];
+    std::memcpy(saved,panel+PanelSize,sizeof(saved));
+    __try {
+        const auto draw=reinterpret_cast<DrawFn>(*reinterpret_cast<void**>(base+PanelDrawIat));
+        const auto rotation=reinterpret_cast<RotationFn>(*reinterpret_cast<void**>(base+RotationIat));
+        float zoom=*reinterpret_cast<float*>(panel+PanelZoom);if(!(zoom>1.0f))zoom=1.0f;
+        const float zx=*reinterpret_cast<float*>(panel+PanelZoomCentre),zy=*reinterpret_cast<float*>(panel+PanelZoomCentre+4);
+        auto setColor=[&](ImU32 color) { const float rgba[4]={((color>>IM_COL32_R_SHIFT)&255)/255.0f,((color>>IM_COL32_G_SHIFT)&255)/255.0f,((color>>IM_COL32_B_SHIFT)&255)/255.0f,((color>>IM_COL32_A_SHIFT)&255)/255.0f};std::memcpy(panel+PanelColor,rgba,sizeof(rgba)); };
+        auto drawRun=[&](float x1,float y1,float x2,float y2,float thickness) {
+            if(zoom>1.0f){x1=zx+(x1-zx)/zoom;y1=zy+(y1-zy)/zoom;x2=zx+(x2-zx)/zoom;y2=zy+(y2-zy)/zoom;}
+            const float dx=x2-x1,dy=y2-y1,len=std::sqrt(dx*dx+dy*dy);if(len<0.5f)return;
+            auto* pos=reinterpret_cast<float*>(panel+PanelPos);pos[0]=(x1+x2)*0.5f;pos[1]=(y1+y2)*0.5f;pos[2]=0;
+            auto* size=reinterpret_cast<float*>(panel+PanelSize);size[0]=thickness/zoom;size[1]=len+thickness/zoom;
+            float v[3]={dx/len,0,-dy/len};rotation(v,v);*reinterpret_cast<float*>(panel+PanelRotation)=v[1];
+            draw(panel,0,0,1,1,0,true);
+        };
+        const float x=LauncherX,y=screenHeight-LauncherYFromBottom;
+        setColor(IM_COL32(215,177,126,255));drawRun(x+21,y+LauncherHeight*0.5f,x+LauncherWidth-21,y+LauncherHeight*0.5f,LauncherHeight);
+        setColor(IM_COL32(112,78,48,255));
+        drawRun(x+1.5f,y+1.5f,x+LauncherWidth-1.5f,y+1.5f,1.5f);
+        drawRun(x+1.5f,y+LauncherHeight-1.5f,x+LauncherWidth-1.5f,y+LauncherHeight-1.5f,1.5f);
+        drawRun(x+1.5f,y+1.5f,x+1.5f,y+LauncherHeight-1.5f,1.5f);
+        drawRun(x+LauncherWidth-1.5f,y+1.5f,x+LauncherWidth-1.5f,y+LauncherHeight-1.5f,1.5f);
+
+        // Draw a compact game-colored bitmap label in the same native UI
+        // layer. The game's native windows draw after this hook and therefore
+        // cover the launcher whenever they overlap it.
+        constexpr float pixel=2.0f;
+        constexpr char label[]="Earthworks";
+        constexpr float advance=8.0f;
+        const float textWidth=advance*10.0f-pixel;
+        const float textX=x+(LauncherWidth-textWidth)*0.5f;
+        const float textY=y+(LauncherHeight-5.0f*pixel)*0.5f;
+        setColor(IM_COL32(66,48,34,255));
+        for(unsigned c=0;c<10;++c)for(unsigned row=0;row<5;++row) {
+            const uint8_t bits=LauncherGlyphRow(label[c],row);
+            for(unsigned col=0;col<3;) {
+                if(!(bits&(1u<<(2-col)))){++col;continue;}
+                const unsigned first=col;while(col<3&&(bits&(1u<<(2-col))))++col;
+                drawRun(textX+c*advance+first*pixel,textY+row*pixel,
+                    textX+c*advance+col*pixel,textY+row*pixel,pixel);
+            }
+        }
+    } __finally { std::memcpy(panel+PanelSize,saved,sizeof(saved)); }
+}
+
 bool FindExportNameForAddress(HMODULE module,const void* address,std::string* name)
 {
     if(!module||!address||!name)return false;
@@ -409,6 +482,7 @@ void DrawUnderUi()
             for(int i=7;i<=9;++i)DrawGroup(base,groups[i]);
             DrawGroup(base,groups[10]);
             for(int i=11;i<GroupCount;++i)DrawGroup(base,groups[i]);
+            DrawLauncher(base,height);
             drawingEarthworksUnderlay=false;
         } __finally {
             drawingEarthworksUnderlay=false;

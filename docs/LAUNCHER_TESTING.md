@@ -1,10 +1,10 @@
-# Earthworks launcher placement check
+# Earthworks launcher position and overlap check
 
-Build `0.16.59-launcher-avoids-native-ui` and launch the game with the prototype launcher.
+Build `0.16.60-fixed-launcher-under-native-ui` and launch the game with the prototype launcher.
 
-1. Open Earthworks in the normal map view. Confirm its launcher stays in a clear area.
-2. Open native panels and switch build categories. Confirm the launcher moves when needed and does not cover their controls.
-3. Move the mouse over and around the launcher. Confirm the in-game cursor remains visible and the button opens the Earthworks panel.
-4. If a screen layout leaves no clear area, confirm no launcher is drawn over native UI. Close the native panels and check that the launcher returns.
+1. Open a world. Confirm the Earthworks button stays at the lower-left position, to the right of the game menu and above the bottom toolbar.
+2. Open or move a vanilla panel over the button. Confirm the vanilla panel appears in front and covers the overlapping part of the button. Confirm the button does not move.
+3. Click the covered area. Confirm the vanilla panel receives the click. Close the vanilla panel and confirm the Earthworks button is visible in its original position.
+4. Click the visible Earthworks button. Confirm it opens and closes the Earthworks panel. Confirm the in-game cursor remains visible over the button.
 
-The launcher placement uses the game's captured UI rectangles when available. The game was not launched for this check by the developer.
+The button is drawn before the native interface, so vanilla panels cover it by draw order. The game was not launched for this check by the developer.
