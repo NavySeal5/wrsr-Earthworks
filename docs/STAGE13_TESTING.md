@@ -155,3 +155,12 @@ The denominator is an estimate derived from terrain height differences on the na
 4. Correct the issue or retry successfully. Confirm the message clears after the successful action. Reopening an unchanged draft must not clear its error.
 5. Trigger a draft validation error, such as an invalid or overlapping shape. Confirm its message wraps inside the draft editor and remains visible until the draft is corrected or discarded.
 6. Start, pause, or cancel a Site from the list. Confirm those controls do not open the Site editor automatically. Open the affected Site to read any stored error.
+# Shift-drag Site repositioning
+
+1. Open a saved Site in the Site editor. Use a Site with different point heights to check that the move keeps its slope.
+2. Hold **Shift**, click inside the Site wireframe away from a point handle, then keep the mouse button down and drag.
+3. Confirm the full wireframe follows the cursor and every vertex moves by the same horizontal offset. Confirm the point heights do not change.
+4. Release the mouse. Confirm the Site editor remains open and the Site keeps the moved shape.
+5. Try a normal click near an edge. Confirm it still adds a point. Try Shift-click on a point handle. Confirm it still toggles that point's selection without moving the whole Site.
+6. Try to move the Site so it overlaps another unfinished Site or leaves the terrain. Confirm the editor reports an error and keeps the old footprint.
+7. If the Site was Running, confirm the move pauses it and requires terrain review before it can resume.

@@ -78,8 +78,17 @@ bool draggingSitePointButtonHeld=false;
 ULONGLONG dragSitePointArmedAt=0;
 bool dragSitePointCommitPending=false;
 ULONGLONG dragSitePointReleasedAt=0;
+Point dragWholeSiteStart{};
+Point dragWholeSiteFirstPoint{};
+Point dragWholeSiteCursor{};
+Point dragWholeSiteDelta{};
+bool draggingWholeSiteMoved=false;
+bool draggingWholeSiteButtonHeld=false;
+bool dragWholeSiteCommitPending=false;
+ULONGLONG dragWholeSiteReleasedAt=0;
 constexpr ULONGLONG SitePointSelectDebounceMs=250;
 constexpr ULONGLONG SitePointPreviewCommitGraceMs=1000;
+constexpr float WholeSiteDragThresholdMeters=0.5f;
 constexpr float SitePointHitRadiusPixels=20.0f;
 struct SiteEdgePreview { unsigned edge=MaxSitePoints; float t=0.0f; ImVec2 screen{}; Point point{}; float distanceSquared=0.0f; };
 uint64_t frameGeneration = 0;
@@ -106,6 +115,10 @@ void SendSitePointCommand(Action action,uint64_t projectId,unsigned pointIndex,P
 {
     Command command{};command.action=action;command.projectId=projectId;command.pointIndex=pointIndex;
     command.point=point;command.value=additive?1.0f:0.0f;command.generation=frameGeneration;Enqueue(command);
+}
+void SendWholeSiteMove(uint64_t projectId,Point delta)
+{
+    Command command{};command.action=Action::MoveSiteShape;command.projectId=projectId;command.point=delta;command.generation=frameGeneration;Enqueue(command);
 }
 void SendProjectText(Action action,uint64_t projectId,const char* text)
 {
@@ -275,16 +288,34 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             }
         }
     }
-    bool edgeInsertHandled=false;
+    const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
+    bool edgeInsertHandled=false,clickedSiteEdge=false;
+    SiteEdgePreview clickedEdge{};
     if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&!drawingNewSite&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
-        const auto& snapshot=inputSnapshot;SiteEdgePreview edge{};
-        if(FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&edge)) {
-            SendSitePointCommand(Action::AddSitePoint,snapshot.editingSiteId,edge.edge,edge.point,true);
+        const auto& snapshot=inputSnapshot;
+        clickedSiteEdge=FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&clickedEdge);
+        if(clickedSiteEdge&&!shiftDown) {
+            SendSitePointCommand(Action::AddSitePoint,snapshot.editingSiteId,clickedEdge.edge,clickedEdge.point,true);
             edgeInsertHandled=true;
         }
     }
-    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled;
-    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
+    bool startedWholeSiteDrag=false;
+    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&!drawingNewSite&&!edgeInsertHandled&&handleIndex>=MaxSitePoints
+        &&GetForegroundWindow()==gameWindow&&shiftDown) {
+        const auto& snapshot=inputSnapshot;
+        const bool editable=snapshot.siteEditorOpen&&snapshot.mode==PickMode::None&&snapshot.editorPlan.complete
+            &&(snapshot.creatingSite||(snapshot.projectStatus!=ProjectStatus::Completed&&snapshot.projectStatus!=ProjectStatus::Cancelled));
+        const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
+            ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam));
+        if(editable&&!uiHit&&WorldHit(lParam)&&snapshot.cursorValid
+            &&(snapshot.editorPlan.Contains(snapshot.cursor.x,snapshot.cursor.z)||clickedSiteEdge)) {
+            draggingWholeSiteButtonHeld=true;draggingWholeSiteMoved=false;dragWholeSiteCommitPending=false;
+            dragWholeSiteStart=snapshot.cursor;dragWholeSiteFirstPoint=snapshot.editorPlan.points[0];
+            dragWholeSiteCursor=snapshot.cursor;dragWholeSiteDelta={};startedWholeSiteDrag=true;
+        }
+    }
+    bool over=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled||draggingWholeSiteButtonHeld||startedWholeSiteDrag;
+    if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; draggingWholeSiteButtonHeld=false;draggingWholeSiteMoved=false;dragWholeSiteCommitPending=false;escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
         if(!escapeKeyDown) {
@@ -314,7 +345,6 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             draggingSitePointButtonHeld=false;
             Send(Action::Pick);
         } else {
-        const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
         const uint32_t pointBit=1u<<handleIndex;
         const bool wasSoleSelected=!shiftDown&&snapshot.selectedSitePoint==handleIndex&&snapshot.selectedSitePointsMask==pointBit;
         draggingSitePoint=!shiftDown?handleIndex:static_cast<unsigned>(MaxSitePoints);
@@ -331,6 +361,27 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             const float dx=dragSitePoint.x-dragSitePointStart.x,dz=dragSitePoint.z-dragSitePointStart.z;
             if(GetTickCount64()>=dragSitePointArmedAt&&dx*dx+dz*dz>0.25f)draggingSitePointMoved=true;
         }
+    }
+    if(message==WM_MOUSEMOVE&&!nativeUiOccluded&&draggingWholeSiteButtonHeld&&(wParam&MK_LBUTTON)) {
+        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
+            dragWholeSiteCursor=snapshot.cursor;
+            dragWholeSiteDelta={dragWholeSiteCursor.x-dragWholeSiteStart.x,0.0f,dragWholeSiteCursor.z-dragWholeSiteStart.z};
+            draggingWholeSiteMoved=dragWholeSiteDelta.x*dragWholeSiteDelta.x+dragWholeSiteDelta.z*dragWholeSiteDelta.z
+                >WholeSiteDragThresholdMeters*WholeSiteDragThresholdMeters;
+        }
+    }
+    if(message==WM_LBUTTONUP&&draggingWholeSiteButtonHeld) {
+        draggingWholeSiteButtonHeld=false;
+        const auto& snapshot=ReadSnapshot();if(snapshot.cursorValid) {
+            dragWholeSiteCursor=snapshot.cursor;
+            dragWholeSiteDelta={dragWholeSiteCursor.x-dragWholeSiteStart.x,0.0f,dragWholeSiteCursor.z-dragWholeSiteStart.z};
+            draggingWholeSiteMoved=dragWholeSiteDelta.x*dragWholeSiteDelta.x+dragWholeSiteDelta.z*dragWholeSiteDelta.z
+                >WholeSiteDragThresholdMeters*WholeSiteDragThresholdMeters;
+        }
+        if(draggingWholeSiteMoved&&snapshot.siteEditorOpen&&(snapshot.creatingSite||snapshot.editingSiteId)) {
+            SendWholeSiteMove(snapshot.creatingSite?0:snapshot.editingSiteId,dragWholeSiteDelta);
+            dragWholeSiteCommitPending=true;dragWholeSiteReleasedAt=GetTickCount64();
+        } else {draggingWholeSiteMoved=false;dragWholeSiteCommitPending=false;}
     }
     if(message==WM_LBUTTONUP&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints) {
         draggingSitePointButtonHeld=false;
@@ -497,16 +548,48 @@ bool BuildDraggedSitePlan(const Plan& source,unsigned pointIndex,Point cursor,Pl
     }
     return true;
 }
+bool BuildTranslatedSitePlan(const Plan& source,Point delta,Plan* output)
+{
+    if(!output||!source.complete||!source.pointCount)return false;
+    *output=source;
+    for(unsigned i=0;i<output->pointCount;++i){output->points[i].x+=delta.x;output->points[i].z+=delta.z;}
+    output->RefreshBounds();
+    // Shift the sampled ground grid with the footprint for a stable live
+    // preview. Runtime validation resamples the destination terrain on release.
+    const Plan original=source;
+    for(int z=0;z<GridSide;++z)for(int x=0;x<GridSide;++x) {
+        const float worldX=output->MinX()+output->Width()*static_cast<float>(x)/GridCells;
+        const float worldZ=output->MinZ()+output->Depth()*static_cast<float>(z)/GridCells;
+        float ground=0;
+        if(original.GroundAt(worldX-delta.x,worldZ-delta.z,&ground))output->ground[static_cast<size_t>(z*GridSide+x)]=ground;
+    }
+    output->RefreshBounds();
+    return true;
+}
 void DrawPreview(const Snapshot& s)
 {
     siteHandleRectCount=0;
     if (!s.ready || !s.cameraValid) {SetInteractiveSitePreview(0,nullptr);return;}
     Plan liveSitePlan{};const Plan* livePlan=nullptr;uint64_t liveSiteId=0;
-    if(s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
+    if(s.siteEditorOpen&&draggingWholeSiteButtonHeld&&draggingWholeSiteMoved) {
+        liveSiteId=s.creatingSite?0:s.editingSiteId;
+        if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
+    } else if(dragWholeSiteCommitPending&&s.siteEditorOpen) {
+        const auto& first=s.editorPlan.points[0];
+        const float expectedX=dragWholeSiteFirstPoint.x+dragWholeSiteDelta.x,expectedZ=dragWholeSiteFirstPoint.z+dragWholeSiteDelta.z;
+        if(std::abs(first.x-expectedX)<=0.5f&&std::abs(first.z-expectedZ)<=0.5f
+            ||GetTickCount64()-dragWholeSiteReleasedAt>=SitePointPreviewCommitGraceMs) {
+            dragWholeSiteCommitPending=false;draggingWholeSiteMoved=false;dragWholeSiteDelta={};
+        } else {
+            liveSiteId=s.creatingSite?0:s.editingSiteId;
+            if(BuildTranslatedSitePlan(s.editorPlan,dragWholeSiteDelta,&liveSitePlan))livePlan=&liveSitePlan;
+        }
+    }
+    if(!livePlan&&s.siteEditorOpen&&draggingSitePointButtonHeld&&draggingSitePoint<MaxSitePoints&&draggingSitePointMoved
         &&draggingSitePoint<s.editorPlan.pointCount) {
         liveSiteId=s.creatingSite?0:s.editingSiteId;
         if(BuildDraggedSitePlan(s.editorPlan,draggingSitePoint,dragSitePoint,&liveSitePlan))livePlan=&liveSitePlan;
-    } else if(dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
+    } else if(!livePlan&&dragSitePointCommitPending&&s.siteEditorOpen&&draggingSitePoint<s.editorPlan.pointCount) {
         const auto& point=s.editorPlan.points[draggingSitePoint];
         const float dx=point.x-dragSitePoint.x,dz=point.z-dragSitePoint.z;
         if(dx*dx+dz*dz<=0.25f||GetTickCount64()-dragSitePointReleasedAt>=SitePointPreviewCommitGraceMs) {

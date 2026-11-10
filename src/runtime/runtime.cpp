@@ -926,7 +926,8 @@ pick_done:
     }
     case Action::AddSitePoint:
     case Action::RemoveSitePoint:
-    case Action::MoveSitePoint: {
+    case Action::MoveSitePoint:
+    case Action::MoveSiteShape: {
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||(!plan->complete&&!(creatingSite&&command.action==Action::MoveSitePoint))
@@ -956,9 +957,13 @@ pick_done:
             if(edited.pointCount<=3||index>=edited.pointCount){SiteActionError(site?site->id:0,"A Site needs at least three points.");break;}
             for(unsigned i=index;i+1<edited.pointCount;++i)edited.points[i]=edited.points[i+1];
             --edited.pointCount;selectedSitePointIndex=std::min<unsigned>(index,edited.pointCount-1);
-        } else {
+        } else if(command.action==Action::MoveSitePoint) {
             if(index>=edited.pointCount||!std::isfinite(command.point.x)||!std::isfinite(command.point.z)){SiteActionError(site?site->id:0,"Select a valid point to move.");break;}
             edited.points[index].x=command.point.x;edited.points[index].z=command.point.z;selectedSitePointIndex=index;
+        } else {
+            if(!edited.complete||!std::isfinite(command.point.x)||!std::isfinite(command.point.z)
+                ||(std::abs(command.point.x)<0.5f&&std::abs(command.point.z)<0.5f)) {SiteActionError(site?site->id:0,"Drag the Site at least 0.5 m to move it.");break;}
+            for(unsigned i=0;i<edited.pointCount;++i){edited.points[i].x+=command.point.x;edited.points[i].z+=command.point.z;}
         }
         edited.RefreshBounds();
         if(edited.complete) {
