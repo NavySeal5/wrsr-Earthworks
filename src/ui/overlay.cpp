@@ -129,7 +129,7 @@ void SendProjectText(Action action,uint64_t projectId,const char* text)
 bool FindSiteEdgeAtScreen(const Snapshot& s,float x,float y,SiteEdgePreview* result)
 {
     if(!result||!s.siteEditorOpen||s.mode!=PickMode::None||!s.editorPlan.complete||s.editorPlan.pointCount<3
-        ||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled)))return false;
+        ||(!s.creatingSite&&s.projectStatus==ProjectStatus::Completed))return false;
     constexpr float hitRadius=12.0f;
     const float maxDistanceSquared=hitRadius*hitRadius;
     SiteEdgePreview best{};best.distanceSquared=maxDistanceSquared;
@@ -179,7 +179,6 @@ const char* ProjectStatusName(ProjectStatus status)
     case ProjectStatus::Paused:return "Paused";
     case ProjectStatus::Waiting:return "Waiting";
     case ProjectStatus::Completed:return "Completed";
-    case ProjectStatus::Cancelled:return "Cancelled";
     default:return "Draft";
     }
 }
@@ -305,7 +304,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         &&GetForegroundWindow()==gameWindow&&shiftDown) {
         const auto& snapshot=inputSnapshot;
         const bool editable=snapshot.siteEditorOpen&&snapshot.mode==PickMode::None&&snapshot.editorPlan.complete
-            &&(snapshot.creatingSite||(snapshot.projectStatus!=ProjectStatus::Completed&&snapshot.projectStatus!=ProjectStatus::Cancelled));
+            &&(snapshot.creatingSite||snapshot.projectStatus!=ProjectStatus::Completed);
         const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
             ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam));
         if(editable&&!uiHit&&WorldHit(lParam)&&snapshot.cursorValid
@@ -621,8 +620,6 @@ void DrawPreview(const Snapshot& s)
             else DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,174,0,230):IM_COL32(175,180,190,205));
         } else if(project.status==ProjectStatus::Completed)
             DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,220,40,245):IM_COL32(100,190,155,190));
-        else if(project.status==ProjectStatus::Cancelled)
-            DrawQueuedOutline(s,project.outline,winterMode?IM_COL32(255,105,0,235):IM_COL32(170,135,135,170));
     }
     if(s.siteEditorOpen) {
         const auto& editorPlan=livePlan?*livePlan:s.editorPlan;
@@ -808,6 +805,7 @@ void DrawInterface(const Snapshot& s)
     static Action renameAction=Action::RenameNamedProject;
     static uint64_t renameTarget=0;
     static uint64_t deleteTarget=0;
+    static uint64_t deleteSiteTarget=0;
     if(ImGui::BeginTabBar("Earthworks tabs")) {
         if(ImGui::BeginTabItem("Projects and Sites")) {
             if(ImGui::Checkbox("Winter Mode",&winterMode))SetWinterWireframeMode(winterMode);
@@ -857,7 +855,7 @@ void DrawInterface(const Snapshot& s)
             {
                 if(!s.selectedNamedProjectId)ImGui::TextDisabled("Create a Project to manage Sites.");
                 else if(!s.projectCount)ImGui::TextDisabled("No Sites in this Project yet.");
-                bool openSiteRenamePopup=false;
+                bool openSiteRenamePopup=false,openSiteDeletePopup=false;
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{6.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",6,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
@@ -874,7 +872,7 @@ void DrawInterface(const Snapshot& s)
                     ImGui::TableNextColumn();ImGui::TextUnformatted("Work");
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
-                    if(ImGui::IsItemHovered()) NativeTooltip("Cancel or delete Site");
+                    if(ImGui::IsItemHovered()) NativeTooltip("Delete Site");
                     ImGui::TableNextColumn();
                     ImGui::Dummy({32,24});
                     if(ImGui::IsItemHovered()) NativeTooltip("Rename");
@@ -920,18 +918,17 @@ void DrawInterface(const Snapshot& s)
                         if(site.status==ProjectStatus::Queued){workAction=Action::StartProject;workLabel="Start";workEnabled=s.assignedFacilityCount!=0;}
                         else if(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting){workAction=Action::PauseProject;workLabel="Pause";workEnabled=true;}
                         else if(site.status==ProjectStatus::Paused){workAction=site.needsReview?Action::ReviewResumeProject:Action::ResumeProject;workLabel=site.needsReview?"Review":"Resume";workEnabled=s.assignedFacilityCount!=0;}
-                        else if(site.status==ProjectStatus::Completed||site.status==ProjectStatus::Cancelled){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
+                        else if(site.status==ProjectStatus::Completed){workAction=Action::RestartProject;workLabel="Restart";workEnabled=s.assignedFacilityCount!=0;}
                         centerCellItem(32.0f);ImGui::BeginDisabled(!workEnabled);if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32}))SendProjectAction(workAction,site.id);ImGui::EndDisabled();
-                        ImGui::TableNextColumn();const bool cancellable=site.status==ProjectStatus::Queued||site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting||site.status==ProjectStatus::Paused;
-                        const bool removable=site.status==ProjectStatus::Completed||site.status==ProjectStatus::Cancelled;
+                        ImGui::TableNextColumn();
                         centerCellItem(30.0f);
-                        ImGui::BeginDisabled(!cancellable&&!removable);
                         if(siteCancelIcon) {
-                            if(drawIconButton("##CancelSite",siteCancelIcon,removable?"Delete Site":"Cancel Site"))
-                                SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
-                        } else if(ImGui::Button("×",{32,32}))
-                            SendProjectAction(removable?Action::RemoveProject:Action::CancelProject,site.id);
-                        ImGui::EndDisabled();
+                            if(drawIconButton("##DeleteSite",siteCancelIcon,"Delete Site")) {
+                                deleteSiteTarget=site.id;openSiteDeletePopup=true;
+                            }
+                        } else if(ImGui::Button("×",{32,32})) {
+                            deleteSiteTarget=site.id;openSiteDeletePopup=true;
+                        }
                         ImGui::TableNextColumn();
                         centerCellItem(30.0f);
                         if(siteRenameIcon) {
@@ -944,6 +941,14 @@ void DrawInterface(const Snapshot& s)
                 ImGui::PopStyleVar();
                 ImGui::EndChild();
                 if(openSiteRenamePopup)ImGui::OpenPopup("Site name");
+                if(openSiteDeletePopup)ImGui::OpenPopup("Delete Site");
+                if(ImGui::BeginPopupModal("Delete Site",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
+                    RememberRect(&popupRect);popupRectValid=true;
+                    ImGui::TextWrapped("Delete this Site? Terrain changes already made will be kept.");
+                    if(ImGui::Button("Delete Site")) {SendProject(Action::RemoveProject,deleteSiteTarget);deleteSiteTarget=0;ImGui::CloseCurrentPopup();}
+                    ImGui::SameLine();if(ImGui::Button("Keep Site")) {deleteSiteTarget=0;ImGui::CloseCurrentPopup();}
+                    ImGui::EndPopup();
+                }
                 ImGui::BeginDisabled(!s.selectedNamedProjectId);
                 const char* draftAction=(s.creatingSite||s.plan.first)?"Continue draft":"New Site";
                 if(ImGui::Button(draftAction,{ImGui::GetContentRegionAvail().x,36}))Send(Action::NewSite);
@@ -1073,7 +1078,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     const Plan& plan=s.editorPlan;
     const bool showActionError=s.siteActionError[0]
         &&(!s.creatingSite||!s.siteDraftError[0]||strcmp(s.siteActionError,s.siteDraftError)!=0);
-    const bool finishedSite=s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled;
+    const bool finishedSite=s.projectStatus==ProjectStatus::Completed;
     const bool activeSite=s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting;
     const bool showFacilityBlock=!s.creatingSite&&!finishedSite&&!activeSite
         &&s.assignedFacilityCount==0&&!showActionError;
@@ -1359,7 +1364,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         ImGui::EndDisabled();
         if(ImGui::Button("Discard draft",{ImGui::GetContentRegionAvail().x,30}))Send(Action::CancelSiteDraft);
     } else {
-        const bool finished=s.projectStatus==ProjectStatus::Completed||s.projectStatus==ProjectStatus::Cancelled;
+        const bool finished=s.projectStatus==ProjectStatus::Completed;
         if(finished)ImGui::TextDisabled("Finished Sites cannot be edited.");
         else if(s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting)ImGui::TextDisabled("Editing the target will pause this Site; review terrain before resuming.");
         else if(s.projectStatus==ProjectStatus::Paused&&s.projectNeedsReview)ImGui::TextWrapped("This Site needs terrain review before work can resume.");
@@ -1385,15 +1390,8 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
                     :"Assign an Earthworks facility to this Project before starting or resuming this Site.");
                 ImGui::PopStyleColor();
             }
-            const float workWidth=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)*0.68f;
             ImGui::BeginDisabled(!workEnabled);
-            if(ImGui::Button(workLabel,{workWidth,32.0f}))SendProjectAction(workAction,s.editingSiteId);
-            ImGui::EndDisabled();
-            ImGui::SameLine();
-            const float cancelWidth=ImGui::GetContentRegionAvail().x;
-            ImGui::BeginDisabled(!(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running
-                ||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
-            if(ImGui::Button("Cancel##CancelSiteWork",{cancelWidth,32.0f}))SendProjectAction(Action::CancelProject,s.editingSiteId);
+            if(ImGui::Button(workLabel,{ImGui::GetContentRegionAvail().x,32.0f}))SendProjectAction(workAction,s.editingSiteId);
             ImGui::EndDisabled();
         }
         if(ImGui::Button("Close editor",{ImGui::GetContentRegionAvail().x,32}))Send(Action::CloseSiteEditor);

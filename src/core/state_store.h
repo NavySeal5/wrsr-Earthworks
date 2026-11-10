@@ -8,14 +8,14 @@
 
 namespace ew {
 
-constexpr uint32_t StateSchemaVersion = 11;
+constexpr uint32_t StateSchemaVersion = 12;
 constexpr size_t MaxSavedProjects = 32;
 constexpr size_t MaxSavedEarthworks = 128;
 constexpr size_t MaxVisibleProjects = MaxSavedEarthworks;
 constexpr size_t MaxProjectFacilities = 16;
 constexpr size_t MaxSavedNameBytes = 48;
 
-enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Cancelled = 5, Waiting = 6 };
+enum class ProjectStatus : uint8_t { Draft = 0, Queued = 1, Running = 2, Paused = 3, Completed = 4, Waiting = 5 };
 
 struct SavedProject {
     uint64_t id = 0;

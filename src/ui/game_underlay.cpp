@@ -209,7 +209,6 @@ void Collect(const Snapshot& s, float width, float height,const Plan* livePlan,u
                 DrawOutline(s,p,3,width,height);
             } else DrawOutline(s,project.outline,2,width,height);
         } else if(project.status==ProjectStatus::Completed) DrawOutline(s,project.outline,0,width,height);
-        else if(project.status==ProjectStatus::Cancelled) DrawOutline(s,project.outline,1,width,height);
     }
     if(s.siteEditorOpen) {
         const auto& editor=livePlan?*livePlan:s.editorPlan;

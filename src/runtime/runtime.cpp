@@ -693,7 +693,6 @@ void Process(const Command& command)
     case Action::PauseProject:
     case Action::ResumeProject:
     case Action::ReviewResumeProject:
-    case Action::CancelProject:
         projectSchedulerDirty=true;
         break;
     default:
@@ -731,7 +730,7 @@ void Process(const Command& command)
     case Action::SetSiteSafeAngles: {
         Plan* plan=creatingSite?&current.plan:nullptr;
         SavedEarthwork* site=creatingSite?nullptr:FindProject(editingSiteId);
-        if(!plan&&site&&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled)plan=&site->plan;
+        if(!plan&&site&&site->status!=ProjectStatus::Completed)plan=&site->plan;
         if(!plan)break;
         const auto mode=static_cast<unsigned>(command.value);
         if(mode>static_cast<unsigned>(SafeAnglesMode::Vanilla))break;
@@ -754,7 +753,7 @@ void Process(const Command& command)
     case Action::SampleSiteTarget:
         if(creatingSite&&current.plan.pointCount)current.mode=PickMode::SampleSitePointTarget;
         else if(auto* site=FindProject(editingSiteId);site&&site->projectId==durableState.selectedProjectId
-            &&site->status!=ProjectStatus::Completed&&site->status!=ProjectStatus::Cancelled
+            &&site->status!=ProjectStatus::Completed
             ) {
             const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
             if(pausedForEdit){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
@@ -807,7 +806,7 @@ void Process(const Command& command)
                 current.mode=PickMode::None;ClearSiteActionError(0);Changed();Message("Draft point height sampled; terrain remains unchanged.");
             } else {
                 auto* site=FindProject(editingSiteId);
-                if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {
+                if(!site||site->projectId!=durableState.selectedProjectId||site->status==ProjectStatus::Completed) {
                     current.mode=PickMode::None;SiteActionError(editingSiteId,"The selected Site can no longer be edited.");break;
                 }
                 const uint32_t mask=ValidPointMask(selectedSitePointsMask,site->plan.pointCount);
@@ -869,7 +868,7 @@ pick_done:
         if(!site||site->projectId!=durableState.selectedProjectId||!std::isfinite(command.value)||std::abs(command.value)>=100000) {
             SiteActionError(command.projectId,"That Site target could not be updated.");break;
         }
-        if(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled) {SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
+        if(site->status==ProjectStatus::Completed) {SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
         const bool pausedForEdit=site->status==ProjectStatus::Running||site->status==ProjectStatus::Waiting;
         if(pausedForEdit){site->status=ProjectStatus::Paused;projectSchedulerDirty=true;}
         if(site->status==ProjectStatus::Paused)site->needsReview=true;
@@ -901,7 +900,7 @@ pick_done:
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||command.pointIndex>=plan->pointCount||!std::isfinite(command.value)||std::abs(command.value)>=100000) {SiteActionError(site?site->id:0,"Select a valid Site point and height.");break;}
-        if(site&&(site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled)){SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
+        if(site&&site->status==ProjectStatus::Completed){SiteActionError(site->id,"Finished Sites cannot be edited.");break;}
         const bool relative=command.action==Action::AdjustSitePointTarget;
         const uint32_t selectedMask=ValidPointMask(selectedSitePointsMask,plan->pointCount);
         const uint32_t mask=command.allSitePoints&&relative
@@ -932,7 +931,7 @@ pick_done:
         auto* site=creatingSite?nullptr:FindProject(editingSiteId);
         Plan* plan=creatingSite?&current.plan:(site?&site->plan:nullptr);
         if(!plan||(!plan->complete&&!(creatingSite&&command.action==Action::MoveSitePoint))
-            ||(!creatingSite&&(!site||site->status==ProjectStatus::Completed||site->status==ProjectStatus::Cancelled))) {SiteActionError(site?site->id:0,"Select an editable Site first.");break;}
+            ||(!creatingSite&&(!site||site->status==ProjectStatus::Completed))) {SiteActionError(site?site->id:0,"Select an editable Site first.");break;}
         Plan edited=*plan;
         const unsigned index=command.pointIndex;
         if(command.action==Action::AddSitePoint) {
@@ -1139,16 +1138,17 @@ pick_done:
         break;
     case Action::RemoveProject: {
         const auto project=std::find_if(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& item) {
-            return item.id==command.projectId&&(item.status==ProjectStatus::Completed||item.status==ProjectStatus::Cancelled);
+            return item.id==command.projectId;
         });
         if(project==durableState.earthworks.end())break;
+        projectSchedulerDirty=true;
         if(selectedProjectId==project->id)selectedProjectId=0;
         const auto removedId=project->id;
         durableState.earthworks.erase(project);
         if(editingSiteId==removedId){editingSiteId=0;siteEditorOpen=false;}
         RefreshProjectStatus();
-        host->log("earthworks  finished site removed id=%llu",static_cast<unsigned long long>(removedId));
-        Message("Finished Site removed from the list.");
+        host->log("earthworks  site deleted id=%llu",static_cast<unsigned long long>(removedId));
+        Message("Site deleted. Terrain already changed is kept.");
         break;
     }
     case Action::MoveProjectUp:
@@ -1197,9 +1197,9 @@ pick_done:
         for(auto& project:durableState.earthworks) {
             const bool restarting=command.action==Action::RestartProject;
             const auto initialStatus=project.status;
-            const bool restartableStatus=initialStatus==ProjectStatus::Completed||initialStatus==ProjectStatus::Cancelled;
+            const bool restartableStatus=initialStatus==ProjectStatus::Completed;
             if(project.id!=command.projectId||(restarting?!restartableStatus:initialStatus!=ProjectStatus::Queued))continue;
-            const char* retainedStatus=restarting&&initialStatus==ProjectStatus::Cancelled?"The Site remains cancelled.":"The Site remains completed.";
+            const char* retainedStatus="The Site remains completed.";
             BuildingReading facility{};WorkforceView workforce{};uint32_t facilityId=0;
             ClearSiteActionError(project.id);
             if(!raiseLower || !heightQuery || !openHeightmap || !closeHeightmap) {
@@ -1314,13 +1314,6 @@ pick_done:
             project.needsReview=false;project.status=ProjectStatus::Running;
             lastSimulationHour=SimulationHourClock(current);
             ClearSiteActionError(project.id);RefreshProjectStatus();Message("Footprint reviewed. Progress was recalculated and the Site resumed toward its saved target.");break;
-        }
-        break;
-    case Action::CancelProject:
-        for(auto& project:durableState.earthworks)if(project.id==command.projectId &&
-            (project.status==ProjectStatus::Queued || project.status==ProjectStatus::Running || project.status==ProjectStatus::Waiting || project.status==ProjectStatus::Paused)) {
-            project.status=ProjectStatus::Cancelled;project.needsReview=false;RefreshProjectStatus();
-            Message("Site cancelled. Terrain already changed is kept.");break;
         }
         break;
     case Action::InspectBuilding:
@@ -1635,7 +1628,7 @@ void Tick()
     for (const auto& command:pending) {
         const Plan before=current.plan;
         Process(command);
-        if (before.complete && command.action<=Action::CancelProject) {
+        if (before.complete && command.action<=Action::ReviewResumeProject) {
             Plan check=before;
             if (SamplePlan(&check)) {
                 float difference=0;

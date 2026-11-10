@@ -182,12 +182,13 @@ The denominator is an estimate derived from terrain height differences on the na
 
 ## Completed Site restart and deletion
 
-1. Complete a disposable Site. Confirm its Work action reads **Restart**. Cancel another Site and confirm its Work action also reads **Restart**.
-2. Change the terrain inside each Site footprint with the native terrain tool. Click **Restart**. Confirm each Site keeps its saved shape and point target heights, samples the current terrain, resets progress, and starts.
+1. Complete a disposable Site. Confirm its Work action reads **Restart**.
+2. Change terrain inside the completed Site footprint with the native terrain tool. Click **Restart**. Confirm the Site keeps its saved shape and point target heights, samples the current terrain, resets progress, and starts.
 3. If the terrain already matches the saved target, confirm the Site becomes or remains Completed with a message that the target is already satisfied.
-4. Confirm the X button deletes Completed and Cancelled Sites.
-5. For an unfinished Site, confirm X still cancels it and retains terrain changes. Click X on the cancelled row again to delete it.
-6. Confirm the Work column has no deletion action. Try to delete a Project that still contains Sites; confirm it asks you to delete Sites with their X buttons first.
+4. Click X on a queued Site. Confirm a dialog appears. Choose **Keep Site** and confirm the Site remains unchanged.
+5. Click X again and choose **Delete Site**. Confirm the Site disappears and any terrain already changed remains as-is. Repeat with a paused or running disposable Site if desired; X always deletes after confirmation.
+6. Confirm **Pause** stops work while keeping the Site and its progress. There is no Cancelled status. Try to delete a Project that still contains Sites; confirm it asks you to delete Sites with their X buttons first.
+7. If an older save contains a Cancelled Site, load it and confirm it appears as Paused. Save again and reload to confirm the normalized status persists.
 
 ## Live point-drag preview
 
