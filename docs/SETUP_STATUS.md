@@ -6,7 +6,7 @@ The sections below record the initial setup as it stood on 1 November 2026. At t
 
 TesmioLoader is now the primary host. RML remains an optional fallback. The combined mod package must include the Tesmio plugin installer and the RML manifest. Workshop subscription does not install the Tesmio DLL into the loader's `plugins` directory.
 
-The project-local launcher uses TesmioLoader and stages the plugin into its isolated runtime. The game-root installer copies the plugin to TesmioLoader's `plugins` directory. The current game update is not yet verified: Earthworks supports PE timestamp `0x6A3EB6AD` for game 1.1.1.9. The strict guard remains enabled and declines initialization on a different timestamp. No in-game validation was performed for this host migration.
+The project-local launcher uses TesmioLoader and stages the plugin into its isolated runtime. The game-root installer copies and enables the plugin. Plugin loading has no executable timestamp or whole-file hash gate. Native hook signatures are checked before patching. No in-game validation was performed for this host migration.
 
 | Component | Verified local version/status |
 |---|---|

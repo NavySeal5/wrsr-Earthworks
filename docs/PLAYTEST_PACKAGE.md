@@ -22,8 +22,6 @@ The package includes `plugins/EarthworksPlanning.rml.json` for RML. Add the pack
 
 The packaging script preserves existing files and does not upload to Steam Workshop. It checks the package source and creates or refreshes the portable package and local WIP item.
 
-## Compatibility
-
-The current native hook baseline is game 1.1.1.9, PE timestamp `0x6A3EB6AD`. If the game has a different timestamp, Earthworks will decline initialization and install no hooks. Do not remove the guard. Re-verify hook addresses before supporting a newer executable.
+The plugin does not gate loading on the game executable timestamp or whole-file hash. Native hooks check their target signatures before patching.
 
 No in-game test was performed as part of preparing these instructions. Player-run checks are required before longer playtesting.

@@ -1,41 +1,26 @@
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
-    [string]$GameRoot,
-    [switch]$Force
-)
+param([Parameter(Mandatory=$true)][string]$GameRoot)
 
 $ErrorActionPreference = 'Stop'
-Set-StrictMode -Version Latest
-$gameRootResolved = [IO.Path]::GetFullPath($GameRoot)
-$loader = Join-Path $gameRootResolved 'tesmioloader.dll'
-$source = Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'
-$pluginDir = Join-Path $gameRootResolved 'plugins'
-$target = Join-Path $pluginDir 'EarthworksPlanning.dll'
+$game = (Resolve-Path -LiteralPath $GameRoot).Path
+$dll = Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'
+$plugins = Join-Path $game 'plugins'
+$ini = Join-Path $game 'tesmioloader.ini'
 
-if (-not (Test-Path -LiteralPath $loader -PathType Leaf)) {
-    throw "TesmioLoader is not installed at the selected game root: $gameRootResolved"
+if (-not (Test-Path (Join-Path $game 'tesmioloader.dll')) -or -not (Test-Path $ini)) {
+    throw 'Install TesmioLoader in the game folder first.'
 }
-if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-    throw "Earthworks plugin DLL is missing beside this installer: $source"
-}
-if (Test-Path -LiteralPath $target -PathType Leaf) {
-    $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
-    $targetHash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
-    if ($sourceHash -eq $targetHash) {
-        Write-Host 'The same Earthworks plugin build is already installed.'
-        exit 0
-    }
-    if (-not $Force) {
-        throw 'A different EarthworksPlanning.dll is already installed. Back it up, then rerun with -Force to replace it.'
-    }
-    $backup = "$target.$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
-    Copy-Item -LiteralPath $target -Destination $backup
-    Write-Host "Existing plugin backed up to: $backup"
-}
+New-Item -ItemType Directory -Path $plugins -Force | Out-Null
+Copy-Item -LiteralPath $dll -Destination (Join-Path $plugins 'EarthworksPlanning.dll') -Force
 
-New-Item -ItemType Directory -Path $pluginDir -Force | Out-Null
-Copy-Item -LiteralPath $source -Destination $target -Force
-Write-Host "Installed EarthworksPlanning.dll into TesmioLoader's plugin folder: $pluginDir"
-Write-Host 'Restart TesmioLoader to load the plugin. The loader and Earthworks must support the installed game version.'
+$lines = [Collections.Generic.List[string]]::new()
+foreach ($line in Get-Content -LiteralPath $ini) { $lines.Add($line) }
+$section = -1
+for ($i=0; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^\[plugins\]\s*$') { $section=$i; break } }
+if ($section -lt 0) { $lines.Add('[plugins]'); $section=$lines.Count-1 }
+$end = $section+1
+while ($end -lt $lines.Count -and $lines[$end] -notmatch '^\s*\[') { $end++ }
+$entry = -1
+for ($i=$section+1; $i -lt $end; $i++) { if ($lines[$i] -match '^\s*EarthworksPlanning\s*=') { $entry=$i; break } }
+if ($entry -ge 0) { $lines[$entry]='EarthworksPlanning=1' } else { $lines.Insert($section+1,'EarthworksPlanning=1') }
+[IO.File]::WriteAllLines($ini,$lines,[Text.UTF8Encoding]::new($false))
+Write-Host 'Earthworks installed. Start the game through TesmioLoader.'

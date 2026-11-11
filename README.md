@@ -10,9 +10,7 @@ TesmioLoader does not install the plugin DLL from Steam Workshop. Install Tesmio
 
 The RML fallback uses `plugins/EarthworksPlanning.rml.json` beside the DLL. RML users must enable the plugin and Workshop content in the RML playlist.
 
-## Current compatibility limit
-
-The native hook addresses are verified for game 1.1.1.9, PE timestamp `0x6A3EB6AD`. The plugin keeps a strict version check. If the game executable has another timestamp, the plugin declines initialization and installs no hooks. Verify addresses against the updated executable before adding support for a newer version.
+The plugin loads through TesmioLoader API 4 without checking the game executable timestamp or whole-file hash. Each native hook still checks its target signature before patching.
 
 ## Development
 
@@ -34,4 +32,4 @@ Build the developer UI with `scripts/Build-DeveloperUI.ps1`. With Steam running,
 
 Use `launch-rml-fallback.cmd` to open the retained RML diagnostic path. `launch-diagnostics.cmd` remains a legacy alias for that fallback.
 
-The launch script preserves the executable timestamp guard. A successful loader start does not prove that native hooks work. Use a disposable save and report the observed game and loader logs.
+A successful loader start does not prove that native hooks work. Use a disposable save and report the observed game and loader logs.

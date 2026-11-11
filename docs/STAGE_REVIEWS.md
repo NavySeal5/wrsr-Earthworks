@@ -808,7 +808,14 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 ## Tesmio-primary loader migration — 11 November 2026
 
 - **Decision:** TesmioLoader is primary; RML remains a fallback. This supersedes D01. The player-facing Earthworks behavior and native hook code did not change in this integration step.
-- **Changes:** `launch-prototype.cmd` now stages and opens the project-local TesmioLoader. The RML diagnostic path remains available through `launch-rml-fallback.cmd` and the legacy `launch-diagnostics.cmd` wrapper. The combined package includes the Tesmio DLL installer and setup guide, plus the RML manifest. The installer copies the DLL to the game directory's Tesmio `plugins` folder and refuses to overwrite a different DLL without `-Force`; forced replacement creates a backup.
-- **Compatibility limit:** The native hook addresses are verified only for game 1.1.1.9, PE timestamp `0x6A3EB6AD`. The guard remains active. A different executable timestamp causes Earthworks to decline initialization without installing hooks. This migration does not verify newer game addresses.
+- **Changes:** `launch-prototype.cmd` stages and opens the project-local TesmioLoader. The RML fallback remains available through `launch-rml-fallback.cmd`. The combined package includes one installer that copies the DLL and enables it in Tesmio's plugin configuration.
+- **Compatibility:** Plugin loading has no executable timestamp or whole-file hash gate. Runtime hook signatures remain checked before patching.
 - **Validation status:** No game launch or in-game test was performed. No loader integration claim is accepted until the user checks it in-game. Tesmio's manual plugin installation and ordinary game launch behavior follow the [official TesmioLoader README](https://github.com/MaxLegend/TesmioLoader/blob/master/README.md) and [plugin documentation](https://github.com/MaxLegend/TesmioLoader/blob/master/docs/09-plugins.md).
-- **Next user check:** Install TesmioLoader in the game directory, install the packaged plugin DLL in its `plugins` folder, confirm the loader enables Earthworks, then launch a disposable save on a supported game executable. If the timestamp differs, do not expect the plugin to initialize.
+- **Next user check:** Install TesmioLoader in the game directory, run the package installer, then launch a disposable save and check the game and loader logs.
+
+### Installer and loader gate cleanup — 11 November 2026
+
+- Removed whole-executable hash rejection from the facility staging scripts and PE timestamp rejection from Tesmio staging and plugin initialization.
+- The package installer now copies the plugin and enables it in `tesmioloader.ini` in one step. It does not create backups or require a force flag.
+- Per-hook native signature checks remain. They prevent a detour from patching unexpected instructions; they are not a game-version gate.
+- Documentation and developer instructions now describe this behavior. No build or in-game test was performed for this cleanup.

@@ -1,6 +1,6 @@
 # Planning prototype native bindings
 
-Supported game: 1.1.1.9, Steam build 23935965. Binary SHA-256 identities are in game-baseline.json. Staging refuses changed binaries; runtime checks the executable PE timestamp, import availability and exact inline prologues before installation. This is a build-specific prototype.
+Reference game: 1.1.1.9, Steam build 23935965. Binary identities in game-baseline.json are historical research notes only. Staging and plugin initialization do not reject a changed executable by timestamp or whole-file hash. Runtime checks required imports and exact native hook signatures before patching; this is a build-specific prototype.
 
 Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/world.cpp, game/camera.cpp, game/input_block.cpp, determinism/sim_patches.cpp, determinism/determinism.cpp and world/terrain_hook.cpp. Prologues were independently compared with the installed executable using MSVC dumpbin.
 
@@ -27,7 +27,7 @@ In the accepted 0.2.0 preview, terrain/camera reads have SEH guards and no terra
 
 The rendering code does not retain a back-buffer reference between frames, allowing native resize handling. The initial temporary swap-chain bootstrap conflicted with Steam overlay initialization; the retained implementation observes the actual game creation instead. Startup crash iterations and the final gameplay evidence are recorded separately in STAGE_REVIEWS.md.
 
-Hook failure leaves the DLL resident with planning disabled, rather than unloading code that may already contain an active detour. Unsupported builds decline in Init before hooks. RML owns the two inline trampolines and import records. The COM Present slot is patched directly and is additional to RML's tracked hook count.
+Hook failure leaves the DLL resident with the affected runtime disabled, rather than unloading code that may already contain an active detour. Tesmio API compatibility is checked during Init. RML owns the two inline trampolines and import records. The COM Present slot is patched directly and is additional to RML's tracked hook count.
 
 ## Stage 3 temporary terrain experiment (0.3.0)
 

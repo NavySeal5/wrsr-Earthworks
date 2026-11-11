@@ -19,14 +19,6 @@ $targetRoot = Join-Path $media 'workshop_wip'
 $target = Join-Path $targetRoot $id
 $marker = '.earthworks-generated'
 
-$baseline = Get-Content -LiteralPath (Join-Path $root 'docs\game-baseline.json') -Raw | ConvertFrom-Json
-foreach ($binary in $baseline.binaries) {
-    $path = Join-Path $game $binary.name
-    if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $binary.sha256) {
-        throw "Installed game differs from the inspected baseline: $path"
-    }
-}
-
 if (Test-Path -LiteralPath $target) {
     if (-not (Test-Path -LiteralPath (Join-Path $target $marker))) {
         throw "Refusing to overwrite an existing Workshop item without the Earthworks marker: $target"

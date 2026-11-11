@@ -34,7 +34,6 @@ target_include_directories(EarthworksPlanning SYSTEM PRIVATE "${TESMIO_SDK_DIR}/
 target_compile_features(EarthworksPlanning PRIVATE cxx_std_17)
 target_compile_definitions(EarthworksPlanning PRIVATE
     WIN32_LEAN_AND_MEAN NOMINMAX
-    EARTHWORKS_GAME_PE_TIMESTAMP=0x6A3EB6ADu
 )
 if(EARTHWORKS_DEVELOPER_UI)
     target_compile_definitions(EarthworksPlanning PRIVATE EARTHWORKS_DEVELOPER_UI=1)

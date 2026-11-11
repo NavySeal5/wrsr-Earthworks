@@ -17,29 +17,7 @@ foreach ($required in @($launcher, $loader, $ini, (Join-Path $game 'SOVIET64.exe
     if (-not (Test-Path -LiteralPath $required)) { throw "Required Tesmio or game file is missing: $required" }
 }
 
-# Keep the native plugin safety check enabled. The current game may be newer
-# than the version for which Earthworks hook addresses have been verified.
 $gameExe = Join-Path $game 'SOVIET64.exe'
-$reader = $null
-$stream = [IO.File]::OpenRead($gameExe)
-try {
-    $reader = [IO.BinaryReader]::new($stream)
-    if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'The game executable has an invalid DOS header.' }
-    $stream.Position = 0x3C
-    $peOffset = $reader.ReadInt32()
-    if ($peOffset -lt 0 -or $peOffset + 8 -gt $stream.Length) { throw 'The game executable has an invalid PE header offset.' }
-    $stream.Position = $peOffset
-    if ($reader.ReadUInt32() -ne 0x00004550) { throw 'The game executable has an invalid PE signature.' }
-    $null = $reader.ReadUInt32() # machine + section count
-    $actualTimestamp = $reader.ReadUInt32()
-} finally {
-    if ($reader) { $reader.Dispose() } else { $stream.Dispose() }
-}
-$supportedTimestamp = [Convert]::ToUInt32('6A3EB6AD', 16)
-if ($actualTimestamp -ne $supportedTimestamp) {
-    Write-Warning ('Earthworks currently supports PE timestamp 0x{0:X8}; this game is 0x{1:X8}. The plugin will decline initialization and install no hooks.' -f $supportedTimestamp, $actualTimestamp)
-    Write-Warning 'Do not remove or bypass this guard. Hook addresses must be re-verified for the updated executable first.'
-}
 
 $preset = if ($DeveloperUI) { 'windows-x64-developer-ui' } else { 'windows-x64' }
 $dll = Join-Path $root ("build\{0}\bin\EarthworksPlanning.dll" -f $preset)

@@ -30,28 +30,6 @@ LONG CALLBACK TraceFault(EXCEPTION_POINTERS* exception)
 }
 #endif
 
-bool IsSupportedImage(const TsmHost& host) noexcept
-{
-    if (!host.exeBase || host.exeSize < sizeof(IMAGE_DOS_HEADER)) {
-        return false;
-    }
-
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(host.exeBase);
-    if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew < 0) {
-        return false;
-    }
-
-    const auto offset = static_cast<std::size_t>(dos->e_lfanew);
-    if (offset > host.exeSize || host.exeSize - offset < sizeof(IMAGE_NT_HEADERS64)) {
-        return false;
-    }
-
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(host.exeBase + offset);
-    return nt->Signature == IMAGE_NT_SIGNATURE
-        && nt->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64
-        && nt->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC
-        && nt->FileHeader.TimeDateStamp == EARTHWORKS_GAME_PE_TIMESTAMP;
-}
 }
 
 extern "C" __declspec(dllexport) unsigned TsmPluginApiVersion(void)
@@ -71,13 +49,8 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     info->name = "Earthworks Planning - dedicated facility prototype";
     info->version = "0.16.61-completed-site-delete-no-confirm";
 
-    if (!IsSupportedImage(*host)) {
-        host->log("earthworks  unsupported executable; diagnostic declined without installing hooks");
-        return 1;
-    }
-
     g_host = host;
-    host->log("earthworks  planning prototype initialized; API %u, supported PE timestamp", TSM_API_VERSION);
+    host->log("earthworks  planning prototype initialized; API %u", TSM_API_VERSION);
     return 0;
 }
 

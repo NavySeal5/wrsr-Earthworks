@@ -20,18 +20,14 @@ The package contains the three facility definitions, `plugins/EarthworksPlanning
 
    Example: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1 -GameRoot "D:\Games\SovietRepublic"`
 
-4. The installer copies `EarthworksPlanning.dll` to `<game directory>\plugins`. It refuses to replace a different DLL unless `-Force` is used. With `-Force`, it saves a timestamped backup first.
+4. The installer copies `EarthworksPlanning.dll` to `<game directory>\plugins` and enables `EarthworksPlanning=1` in `tesmioloader.ini`.
 5. Start TesmioLoader, then launch the game through it.
 
-TesmioLoader loads enabled plugins from its `plugins` directory. Its `tesmioloader.ini` must enable `EarthworksPlanning` in the `[plugins]` section. The local development launcher stages and enables it automatically in the project-local Tesmio runtime.
+The local development launcher stages and enables the plugin automatically in its project-local Tesmio runtime.
 
 ## RML fallback
 
 Use RML only if the Tesmio path is unavailable. Keep the package's `plugins/EarthworksPlanning.rml.json` beside the DLL. Add the package as an RML mod and enable both the mod content and the Earthworks plugin in the RML playlist. Do not install or enable the plugin in both loaders for the same game session.
-
-## Game version guard
-
-The plugin checks the executable timestamp before it installs native hooks. The verified baseline is game version 1.1.1.9, PE timestamp `0x6A3EB6AD`. If the check reports a different timestamp, Earthworks will not initialize and it will install no hooks. Do not remove the guard. Re-verify the native addresses against the new executable before supporting a later game version.
 
 ## First in-game check
 
