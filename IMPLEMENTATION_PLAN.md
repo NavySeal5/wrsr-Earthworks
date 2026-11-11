@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 7 November 2026. RML is the primary host. The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The current facility filter allows only bulldozers and excavators (D92); the earlier dumper/bus allowance is superseded. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Queued grey-wireframe visibility, stale-state, Save As, autosave and corrupt/mismatched companion checks were not reported as tested and remain documented as unverified. Stage 13 is now flexible Site geometry/editing; Stage 14 is balance/candidate work. See the stage review log for evidence and progression.
+Updated 11 November 2026. TesmioLoader is the primary host; RML remains an optional fallback (D155 supersedes D01). The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The current facility filter allows only bulldozers and excavators (D92); the earlier dumper/bus allowance is superseded. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Queued grey-wireframe visibility, stale-state, Save As, autosave and corrupt/mismatched companion checks were not reported as tested and remain documented as unverified. Stage 13 is now flexible Site geometry/editing; Stage 14 is balance/candidate work. See the stage review log for evidence and progression.
 
 **1. What we are building**
 
@@ -49,7 +49,7 @@ A remaining technical uncertainty is whether the staffing/machinery combination 
 - MSVC x64, the Windows SDK, CMake, Ninja and Git are available.
 - An x64 diagnostic DLL builds and loads outside the game; its API-version export returns 4.
 - RML 1.0.1 is pinned, with source and runtime hashes recorded.
-- The existing plugin uses RML's Tesmio API 4 compatibility host. A standalone TesmioLoader runtime is not used.
+- The plugin uses Tesmio API 4. TesmioLoader is the primary host; RML can provide the same API as a fallback. See D155 and the Tesmio playtest setup instructions.
 - RML recognizes the installed game as 1.1.1.9 and displays the diagnostic as the single enabled plugin in Earthworks Development.
 - The original game hashes are recorded. Discovery does not establish successful initialization inside the game.
 

@@ -7,7 +7,7 @@ $game = Split-Path $root -Parent
 $launcher = Join-Path $root 'tools\runtime\rml\RepublicModLoader.exe'
 $running = @(Get-Process RepublicModLoader -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $launcher })
 if ($running.Count -gt 0) {
-    throw 'The project-local RML launcher is already open. Close it before staging the plugin and Earthworks facility; then rerun launch-prototype.cmd.'
+    throw 'The project-local RML launcher is already open. Close it before staging the plugin and Earthworks facility; then rerun launch-rml-fallback.cmd.'
 }
 if (-not (Get-Process steam -ErrorAction SilentlyContinue)) { throw 'Start Steam before launching the diagnostic game session.' }
 if (Get-Process SOVIET64,SOVIET -ErrorAction SilentlyContinue) { throw 'Close the running game before launching a diagnostic session.' }

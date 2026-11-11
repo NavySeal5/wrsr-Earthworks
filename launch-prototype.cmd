@@ -1,6 +1,6 @@
 @echo off
-echo This launcher stages the developer Earthworks plugin and dedicated facility before opening the project-local RML.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Launch-Diagnostics.ps1" %*
+echo This launcher stages the Earthworks plugin and facility, then opens the project-local TesmioLoader.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Launch-Tesmio.ps1" -DeveloperUI %*
 set "launchExitCode=%errorlevel%"
 if not "%launchExitCode%"=="0" (
     echo.

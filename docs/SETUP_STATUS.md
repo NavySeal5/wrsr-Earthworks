@@ -1,6 +1,12 @@
 **Local development setup — 1 November 2026**
 
-The initial toolchain is installed and the diagnostic plugin builds successfully. RML is now the selected primary host, with the existing plugin ABI retained through RML's Tesmio API 4 compatibility layer. Gameplay implementation has not started.
+The sections below record the initial setup as it stood on 1 November 2026. At that time, RML was the primary host and gameplay implementation had not started. The host selection changed later.
+
+**Current loader decision — 11 November 2026**
+
+TesmioLoader is now the primary host. RML remains an optional fallback. The combined mod package must include the Tesmio plugin installer and the RML manifest. Workshop subscription does not install the Tesmio DLL into the loader's `plugins` directory.
+
+The project-local launcher uses TesmioLoader and stages the plugin into its isolated runtime. The game-root installer copies the plugin to TesmioLoader's `plugins` directory. The current game update is not yet verified: Earthworks supports PE timestamp `0x6A3EB6AD` for game 1.1.1.9. The strict guard remains enabled and declines initialization on a different timestamp. No in-game validation was performed for this host migration.
 
 | Component | Verified local version/status |
 |---|---|

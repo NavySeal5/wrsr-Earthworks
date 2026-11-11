@@ -52,6 +52,6 @@ foreach ($file in $lock.rml.runtime_files.PSObject.Properties) {
     }
     Assert-Hash $destination $file.Value
 }
-Write-Host "Dependencies verified: RML $($lock.rml.version), with Tesmio API $($lock.tesmioloader.api_version) SDK compatibility."
-Write-Host "RML runtime staged locally: $runtime"
-Write-Host 'No standalone Tesmio runtime is required. The game has not been launched.'
+Write-Host "Dependencies verified: Tesmio API $($lock.tesmioloader.api_version) SDK and RML $($lock.rml.version) fallback source/runtime."
+Write-Host "RML fallback runtime staged locally: $runtime"
+Write-Host 'Install TesmioLoader separately in the game directory. The game has not been launched.'

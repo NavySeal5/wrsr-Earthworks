@@ -1,3 +1,3 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Launch-Diagnostics.ps1"
+call "%~dp0launch-rml-fallback.cmd" %*
 exit /b %errorlevel%
