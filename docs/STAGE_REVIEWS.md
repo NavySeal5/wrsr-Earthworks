@@ -819,3 +819,8 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - The package installer now copies the plugin and enables it in `tesmioloader.ini` in one step. It does not create backups or require a force flag.
 - Per-hook native signature checks remain. They prevent a detour from patching unexpected instructions; they are not a game-version gate.
 - Documentation and developer instructions now describe this behavior. No build or in-game test was performed for this cleanup.
+
+### Tesmio installer path detection — 11 November 2026
+
+- The optional `-GameRoot` argument now defaults to automatic detection through Steam's registered library folders. If no game folder is found, the installer asks for it. An explicit path remains available as an override.
+- No game installation was modified as part of this documentation and script change.

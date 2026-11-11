@@ -12,13 +12,13 @@ The package contains the three facility definitions, `plugins/EarthworksPlanning
 
 1. Close the game and TesmioLoader.
 2. Open PowerShell in the package folder.
-3. Run the installer and provide the game directory:
+3. Run the installer. It searches Steam libraries automatically. If needed, it asks for the game folder. You can also pass `-GameRoot`:
 
    ```powershell
-   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1 -GameRoot "<game directory>"
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1
    ```
 
-   Example: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1 -GameRoot "D:\Games\SovietRepublic"`
+   Example override: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1 -GameRoot "D:\Games\SovietRepublic"`
 
 4. The installer copies `EarthworksPlanning.dll` to `<game directory>\plugins` and enables `EarthworksPlanning=1` in `tesmioloader.ini`.
 5. Start TesmioLoader, then launch the game through it.

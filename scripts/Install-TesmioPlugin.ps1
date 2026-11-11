@@ -1,11 +1,31 @@
-param([Parameter(Mandatory=$true)][string]$GameRoot)
+param([string]$GameRoot = '')
 
 $ErrorActionPreference = 'Stop'
-$game = (Resolve-Path -LiteralPath $GameRoot).Path
 $dll = Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'
+
+if ([string]::IsNullOrWhiteSpace($GameRoot)) {
+    $libraries = @()
+    try { $libraries += (Get-ItemPropertyValue 'HKCU:\Software\Valve\Steam' SteamPath).Replace('/', '\') } catch {}
+    foreach ($library in @($libraries)) {
+        $vdf = Join-Path $library 'steamapps\libraryfolders.vdf'
+        if (Test-Path $vdf) {
+            $text = Get-Content -LiteralPath $vdf -Raw
+            foreach ($match in [regex]::Matches($text, '"path"\s+"([^"]+)"|"\d+"\s+"([^"]+)"')) {
+                $path = if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }
+                $libraries += $path.Replace('\\', '\')
+            }
+        }
+    }
+    $GameRoot = $libraries | Select-Object -Unique | ForEach-Object { Join-Path $_ 'steamapps\common\SovietRepublic' } |
+        Where-Object { Test-Path (Join-Path $_ 'SOVIET64.exe') } | Select-Object -First 1
+    if (-not $GameRoot) { $GameRoot = Read-Host 'Game folder not found automatically. Enter the folder containing SOVIET64.exe' }
+}
+
+$game = (Resolve-Path -LiteralPath $GameRoot).Path
 $plugins = Join-Path $game 'plugins'
 $ini = Join-Path $game 'tesmioloader.ini'
 
+if (-not (Test-Path -LiteralPath $dll)) { throw "Earthworks plugin is missing beside the installer: $dll" }
 if (-not (Test-Path (Join-Path $game 'tesmioloader.dll')) -or -not (Test-Path $ini)) {
     throw 'Install TesmioLoader in the game folder first.'
 }

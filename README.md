@@ -6,7 +6,7 @@ Earthworks Planning adds editable terrain Sites, named Projects, and dedicated S
 
 TesmioLoader is the primary loader. Republic Mod Loader (RML) remains an optional fallback. Do not load the plugin through both loaders in the same game session.
 
-TesmioLoader does not install the plugin DLL from Steam Workshop. Install TesmioLoader in the game directory, then copy the plugin into its `plugins` directory. The combined playtest package includes `Install-TesmioPlugin.ps1` for this step. See [Tesmio playtest setup](docs/TESMIO_PLAYTEST.md).
+TesmioLoader does not install the plugin DLL from Steam Workshop. The combined package includes `Install-TesmioPlugin.ps1`, which finds the Steam game folder and installs/enables the plugin. See [Tesmio playtest setup](docs/TESMIO_PLAYTEST.md).
 
 The RML fallback uses `plugins/EarthworksPlanning.rml.json` beside the DLL. RML users must enable the plugin and Workshop content in the RML playlist.
 
