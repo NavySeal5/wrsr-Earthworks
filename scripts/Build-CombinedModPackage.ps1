@@ -37,7 +37,7 @@ if (Test-Path -LiteralPath $wipItem) {
         throw "Refusing to modify an existing unrecognized WIP folder: $wipItem"
     }
     $existingText = Get-Content -LiteralPath $existingConfig -Raw
-    $expectedIdPattern = '^\$ITEM_ID\s+' + [regex]::Escape($ItemId) + '\s*$'
+    $expectedIdPattern = '(?m)^\$ITEM_ID\s+' + [regex]::Escape($ItemId) + '\s*$'
     if ($existingText -notmatch $expectedIdPattern -or
         $existingText -notmatch '(?m)^\$ITEM_NAME\s+"Earthworks Planning \(Playtest\)"\s*$') {
         throw "Refusing to modify an existing WIP folder that does not match this package: $wipItem"
