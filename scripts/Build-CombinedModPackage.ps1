@@ -12,19 +12,17 @@ $repo = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrWhiteSpace($GameRoot)) { $GameRoot = Split-Path $repo -Parent }
 $version = (Get-Content -LiteralPath (Join-Path $repo 'VERSION') -Raw).Trim()
 $sourceRoot = Join-Path $repo 'build\earthworks-workshop'
-$packageRoot = if ($Release) {
-    Join-Path $repo ("build\release\EarthworksPlanning-$version")
-} else {
-    Join-Path $repo 'build\playtest\EarthworksPlanning'
-}
 $wipRoot = Join-Path $GameRoot 'media_soviet\workshop_wip'
 $wipItem = Join-Path $wipRoot $ItemId
+$packageRoot = if ($Release) { $wipItem } else { Join-Path $repo 'build\playtest\EarthworksPlanning' }
 $pluginSource = Join-Path $repo 'build\windows-x64\bin\EarthworksPlanning.dll'
 $rmlManifestSource = Join-Path $repo 'assets\rml\EarthworksPlanning.rml.json'
 $tesmioInstallerSource = Join-Path $repo 'scripts\Install-TesmioPlugin.ps1'
 $tesmioInstallerWrapperSource = Join-Path $repo 'scripts\Install-TesmioPlugin.cmd'
 $playerReadmeSource = Join-Path $repo 'docs\PLAYER_INSTALLATION.md'
 $workshopDescriptionSource = Join-Path $repo 'description.txt'
+$releaseWorkshopConfigSource = Join-Path $repo 'assets\workshop\workshopconfig.ini'
+$releaseWorkshopPreviewSource = Join-Path $repo 'assets\workshop\previewimage.png'
 
 $facilities = @(
     [pscustomobject]@{ SourceId = '9100000012'; Name = 'Small' },
@@ -38,22 +36,29 @@ if (-not (Test-Path -LiteralPath $rmlManifestSource)) { throw "RML manifest temp
 if (-not (Test-Path -LiteralPath $tesmioInstallerSource)) { throw "Tesmio installer is missing: $tesmioInstallerSource" }
 if (-not (Test-Path -LiteralPath $tesmioInstallerWrapperSource)) { throw "Tesmio installer wrapper is missing: $tesmioInstallerWrapperSource" }
 if (-not (Test-Path -LiteralPath $workshopDescriptionSource)) { throw "Workshop description is missing: $workshopDescriptionSource" }
+if ($Release -and -not (Test-Path -LiteralPath $releaseWorkshopConfigSource)) { throw "Workshop item config is missing: $releaseWorkshopConfigSource" }
+if ($Release -and -not (Test-Path -LiteralPath $releaseWorkshopPreviewSource)) { throw "Workshop preview is missing: $releaseWorkshopPreviewSource" }
 if (-not $Release -and -not (Test-Path -LiteralPath $playerReadmeSource)) { throw "Player installation instructions are missing: $playerReadmeSource" }
 if (-not (Test-Path -LiteralPath $sourceRoot)) { throw "Facility package sources are missing: $sourceRoot" }
 
-if ($Release -and (Test-Path -LiteralPath $packageRoot)) {
-    throw "Release output already exists. Move or remove it before building a fresh package: $packageRoot"
+if ($Release -and -not (Test-Path -LiteralPath $wipItem)) {
+    throw "The existing Workshop item folder is missing: $wipItem. Create or open the item in game before staging a release."
 }
 
-if (-not $Release -and (Test-Path -LiteralPath $wipItem)) {
+if (Test-Path -LiteralPath $wipItem) {
     $existingConfig = Join-Path $wipItem 'workshopconfig.ini'
     if (-not (Test-Path -LiteralPath $existingConfig)) {
         throw "Refusing to modify an existing unrecognized WIP folder: $wipItem"
     }
     $existingText = Get-Content -LiteralPath $existingConfig -Raw
     $expectedIdPattern = '(?m)^\$ITEM_ID\s+' + [regex]::Escape($ItemId) + '\s*$'
-    if ($existingText -notmatch $expectedIdPattern -or
-        $existingText -notmatch '(?m)^\$ITEM_NAME\s+"Earthworks Planning \(Playtest\)"\s*$') {
+    if ($existingText -notmatch $expectedIdPattern) {
+        throw "Refusing to modify an existing WIP folder that does not match this package: $wipItem"
+    }
+    if ($Release -and $existingText -notmatch '(?m)^\$OWNER_ID\s+\d+\s*$') {
+        throw "The Workshop item config has no valid owner field: $existingConfig"
+    }
+    if (-not $Release -and $existingText -notmatch '(?m)^\$ITEM_NAME\s+"Earthworks Planning \(Playtest\)"\s*$') {
         throw "Refusing to modify an existing WIP folder that does not match this package: $wipItem"
     }
 }
@@ -199,8 +204,36 @@ foreach ($facility in $facilities) {
 
 foreach ($destination in @($packageRoot)) {
     $config = Join-Path $destination 'workshopconfig.ini'
-    $configLines = @($itemLines.ToArray()) + '$END'
-    [IO.File]::WriteAllLines($config, [string[]]$configLines, [Text.UTF8Encoding]::new($false))
+    if ($Release) {
+        $templateConfig = Get-Content -LiteralPath $releaseWorkshopConfigSource -Raw
+        $templateId = [regex]::Match($templateConfig, '(?m)^\$ITEM_ID\s+(\d{10})\s*$')
+        if (-not $templateId.Success -or $templateId.Groups[1].Value -ne $ItemId) {
+            throw "Release ItemId $ItemId does not match the in-game Workshop config template. Update assets\workshop\workshopconfig.ini from the created Workshop item."
+        }
+        $localItemConfig = Join-Path $wipItem 'workshopconfig.ini'
+        $localConfigText = Get-Content -LiteralPath $localItemConfig -Raw
+        $localItemId = [regex]::Match($localConfigText, '(?m)^\$ITEM_ID\s+(\d{10})\s*$')
+        $localOwnerId = [regex]::Match($localConfigText, '(?m)^\$OWNER_ID\s+(\d+)\s*$')
+        if (-not $localItemId.Success -or $localItemId.Groups[1].Value -ne $ItemId) {
+            throw "The local Workshop item at $wipItem does not match ID $ItemId."
+        }
+        if (-not $localOwnerId.Success -or $localOwnerId.Groups[1].Value -eq '0') {
+            throw "The local Workshop item at $wipItem has no valid owner ID. Open and save the item in game first."
+        }
+        # Keep the item's current title, owner, description, tags and visibility.
+        # Replace only building declarations generated by this release process.
+        $templateConfig = [regex]::Replace($localConfigText, '(?m)^\$OBJECT_BUILDING\s+\S+\s*\r?\n?', '')
+        $objectLines = @($itemLines.ToArray() | Where-Object { $_ -match '^\$OBJECT_BUILDING\s+' })
+        if ($objectLines.Count -ne $facilities.Count) { throw 'The release config does not contain all facility declarations.' }
+        $endPattern = '(?m)^\$END\s*$'
+        if (-not [regex]::IsMatch($templateConfig, $endPattern)) { throw "Workshop config has no `$END marker: $releaseWorkshopConfigSource" }
+        $configBody = ($objectLines + '$END') -join "`r`n"
+        $configText = [regex]::Replace($templateConfig, $endPattern, $configBody, 1)
+        [IO.File]::WriteAllText($config, $configText, [Text.UTF8Encoding]::new($false))
+    } else {
+        $configLines = @($itemLines.ToArray()) + '$END'
+        [IO.File]::WriteAllLines($config, [string[]]$configLines, [Text.UTF8Encoding]::new($false))
+    }
     $plugins = Join-Path $destination 'plugins'
     New-Item -ItemType Directory -Path $plugins -Force | Out-Null
     Copy-Item -LiteralPath $pluginSource -Destination (Join-Path $plugins 'EarthworksPlanning.dll') -Force
@@ -214,6 +247,10 @@ foreach ($destination in @($packageRoot)) {
     if (-not $Release) {
         Copy-Item -LiteralPath $playerReadmeSource -Destination (Join-Path $destination 'README.md') -Force
         New-PackagePreview $previewSources.ToArray() (Join-Path $destination 'previewimage.png')
+    } else {
+        Copy-Item -LiteralPath $releaseWorkshopPreviewSource -Destination (Join-Path $destination 'previewimage.png') -Force
+        $previewBytes = (Get-Item -LiteralPath (Join-Path $destination 'previewimage.png')).Length
+        if ($previewBytes -gt 1MB) { throw "Workshop preview exceeds 1 MB: $previewBytes bytes" }
     }
 }
 
@@ -233,8 +270,8 @@ if ($Release) {
 }
 
 if ($Release) {
-    Write-Host "Clean release candidate package created: $packageRoot"
-    Write-Host 'Includes game content, Workshop description, loader files, the Tesmio installer, and license notices. Source remains in the project repository. No local game WIP item was changed.'
+    Write-Host "Release candidate files staged in Workshop item: $packageRoot"
+    Write-Host 'Includes the three facilities, plugin, loader metadata, installers, Workshop description, preview, and license notices. Source remains in the project repository.'
     Write-Host 'Workshop upload was not performed.'
 } else {
     $previewBytes = (Get-Item -LiteralPath (Join-Path $packageRoot 'previewimage.png')).Length

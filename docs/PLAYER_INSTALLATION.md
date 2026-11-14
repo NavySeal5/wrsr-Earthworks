@@ -24,7 +24,7 @@ Use RML only if you do not use TesmioLoader for this session. Add this package a
 - Fuel storage and refuelling are not included. The facility tank is decorative.
 - Terrain work does not consume fuel, money, or quarried stone.
 - The plugin checks each native hook signature before it installs that hook. A failed signature disables the affected hook.
-- Test the candidate in a disposable save. Report the release-candidate version from the ZIP filename with loader logs and game behavior.
+- Test the candidate in a disposable save. Report the release-candidate version from `VERSION` with loader logs and game behavior.
 
 ## Source and notices
 

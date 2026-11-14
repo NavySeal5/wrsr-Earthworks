@@ -902,3 +902,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 
 - Added `description.txt` with mod purpose, installation, usage, Project/Site and facility behavior, Site creation controls, license/source links, and an AI disclosure. The release builder copies it to the Workshop item root.
 - Rebuilt the candidate package. It contains 48 files; the ZIP is 2,355,941 bytes. The x64 build and Tesmio export checks passed. No game or automated tests were run.
+
+### In-game Workshop item integration — 14 November 2026
+
+- The game created Workshop item `3839682596` with title `Earthworks`, Workshop tag `13`, the full item description, and a 503,608-byte preview image. The owner ID stays in the local Workshop config and is not stored in the public repository.
+- Copied the item config and preview into `assets/workshop`. The release builder reads this metadata and adds the three facility declarations.
+- Rebuilt the candidate package with item ID `3839682596`. It contains 49 files; the ZIP is 2,860,796 bytes. The metadata has all three facilities, the description, and preview. No Workshop upload or game test was performed.
+- The release command now stages game files directly into the existing Workshop item folder. It preserves the current item metadata, replaces generated building declarations, and does not create a ZIP or upload the item. The command can be repeated for the same version.

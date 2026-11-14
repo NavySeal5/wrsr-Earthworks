@@ -1,92 +1,59 @@
-EARTHWORKS PLANNING
+[h1]EARTHWORKS PLANNING[/h1]
 
-Plan and schedule terrain work as editable Sites inside named Projects. Preview
-the terrain change, set heights at individual points, and assign dedicated
-Earthworks facilities to provide machine capacity.
+Plan and schedule terrain work as editable Sites inside named Projects. Preview terrain changes, set target heights at individual points, and assign Earthworks facilities to provide machine capacity.
 
-FEATURES
+[h2]FEATURES[/h2]
+[list]
+[*]Small, Medium, and Large Earthworks facilities with 4, 8, and 20 vehicle spaces.
+[*]Create multiple named Projects and manage several Sites in each Project.
+[*]Draw polygon, square, and rectangular Sites. Set or sample the target height at each point, then review the terrain preview and cut/fill estimates.
+[*]Start, pause, resume, and review terrain work from the Earthworks panel.
+[*]Save and reload Projects, Sites, facility assignments, and work progress.
+[/list]
 
-- Small, Medium, and Large Earthworks facilities with 4, 8, and 20 vehicle
-  spaces.
-- Create multiple named Projects and manage multiple Sites in each Project.
-- Draw polygon, square, and rectangular Sites. Set or sample the target height
-  at each point, then review the terrain preview and cut/fill estimates.
-- Start, pause, resume, and review terrain work from the Earthworks panel.
-- Save and reload Projects, Sites, facility assignments, and work progress.
+[h2]REQUIREMENTS AND INSTALLATION[/h2]
+[b]Game version:[/b] Workers & Resources: Soviet Republic 1.1.1.13
+[b]Recommended plugin host:[/b] TesmioLoader b0.3.7 with Tesmio API 4
 
-REQUIREMENTS AND INSTALLATION
+[olist]
+[*]Subscribe to this Workshop item to install its buildings and mod files.
+[*]Install TesmioLoader if you have not already installed it.
+[*]Open this mod's Workshop folder (steamapps\workshop\content\784150\3839682596) and run the installer [b]Install-TesmioPlugin.cmd[/b]. The installer copies the plugin DLL to the TesmioLoader plugins folder and enables it.
+[*]Start TesmioLoader, then launch the game through it.
+[/olist]
 
-Built for Workers & Resources: Soviet Republic 1.1.1.13. TesmioLoader b0.3.7
-with Tesmio API 4 is the primary plugin host.
+Republic Mod Loader (RML) is an optional alternative. Its setup has not been verified for this release candidate. Use only one loader for Earthworks in a game session. Do not enable Earthworks in both TesmioLoader and RML.
 
-1. Subscribe to this Workshop item to install its buildings and mod files.
-2. Install TesmioLoader if it is not already installed.
-3. Close the game and TesmioLoader. Open this mod's installed Workshop folder
-   and double-click Install-TesmioPlugin.cmd. The installer copies the plugin
-   DLL to TesmioLoader's plugins folder and enables it.
-4. Start TesmioLoader, then launch the game through it.
+[h2]USING PROJECTS, FACILITIES, AND SITES[/h2]
+Open the Earthworks panel from the button near the lower-left corner of the screen. Create or select a Project, then create Sites in that Project.
 
-Republic Mod Loader (RML) is an optional alternative, but its path has not been
-verified for this release candidate. Use only one loader for Earthworks in a
-game session. Do not enable it in both TesmioLoader and RML.
+[b]In the building menu, Earthworks facilities are listed with Depots.[/b] Only Earthworks facilities can be assigned to a Project and provide capacity for its Sites. Park bulldozers or excavators at these facilities. Only bulldozers and excavators count toward Earthworks capacity; other vehicles do not.
 
-USING PROJECTS, FACILITIES, AND SITES
+In the Facilities section, assign one or more Earthworks facilities to the selected Project.
 
-Open the Earthworks panel from its button near the lower-left of the screen.
-Create or select a Project, then create Sites in that Project. Build an
-Earthworks facility and park bulldozers or excavators there. In the Facilities
-section, assign one or more facilities to the selected Project.
+A facility can belong to only one Project. A Project can have several facilities and Sites. Workers are not required. Start a Site to begin work. Within a Project, the first eligible Site in queue order uses the pooled machine capacity of its assigned facilities. Other started Sites wait until it completes. Paused Sites and Sites that need review are skipped.
 
-A facility can belong to only one Project. A Project can have several
-facilities and several Sites. Parked bulldozers and excavators supply capacity;
-workers are not required. Start a Site when you want work to begin. Within a
-Project, the first eligible Site in queue order uses the assigned facilities'
-pooled machine capacity. Other started Sites wait until it completes. Paused
-Sites and Sites that need review are skipped.
+[h2]SITE CREATION CONTROLS[/h2]
+[olist]
+[*]Select a Project and click [b]New Site[/b].
+[*]Choose [b]Free draw[/b], [b]Square[/b], or [b]Rectangle[/b] before placing the first point.
+[*]Optional: enable [b]Lock to Grid[/b] before placing the first point. New points then snap to the nearest terrain grid vertex.
+[*]For Free draw, click boundary points in sequence. Click within 5 m of the first point or choose [b]Finish shape[/b] to close the Site. For Square or Rectangle, click one corner, move the cursor to preview the shape, then click the other corner.
+[*]Name the Site. Select points to enter a target height, or click [b]Sample selected[/b] and click the map to sample a height. Use the minus or plus button to adjust selected points by 1 m. Hold Ctrl for 10 m steps. Shift-click points to add them to or remove them from the selection. Hold Shift while clicking minus or plus to adjust all points in the shape.
+[*]Click [b]Save Site[/b] to add it to the Project queue. Drawing and saving only create a plan. Terrain changes begin after you start the Site.
+[/olist]
 
-SITE CREATION CONTROLS
+Sites support up to 32 points, with at least 5 m between points. You can add a point on an edge, remove selected points while keeping at least three, or Shift-drag inside a Site to move its full footprint. Editing active work pauses the Site. Review the terrain before resuming it.
 
-1. Select a Project and click New Site.
-2. Choose Free draw, Square, or Rectangle before placing the first point.
-3. Optionally enable Lock to Grid before the first point. New points then snap
-   to the nearest terrain grid vertex.
-4. In Free draw, click boundary points in sequence. Click within 5 m of the
-   first point or choose Finish shape to close the Site. In Square or Rectangle,
-   click one corner, move the cursor to preview the shape, then click the other
-   corner.
-5. Name the Site. Select points to enter a target height, or use Sample selected
-   and click the map to sample a height. Click the minus or plus button to
-   adjust selected points by 1 m. Hold Ctrl for 10 m steps. Shift-click points
-   to add or remove them from the selection. Hold Shift while clicking minus
-   or plus to adjust all points in the shape.
-6. Save Site to add it to the Project queue. Drawing and saving only create a
-   plan. Terrain changes begin after you start the Site.
+[h2]CAPACITY AND SCOPE[/h2]
+Each eligible parked vehicle contributes 250 m3 per in-game day for each displayed Speed/Level point at 1x speed. The global Site speed setting scales the work rate and estimates. Optional distance contribution is off by default. It reduces facility contribution by distance, but does not set a maximum operating radius.
 
-Sites support up to 32 points, with at least 5 m between points. You can add a
-point on an edge, remove selected points while keeping at least three, or
-Shift-drag inside a Site to move its full footprint. Editing active work pauses
-the Site. Review the terrain before resuming it.
+Terrain work does not consume fuel, money, or quarried stone. Facility fuel storage and refuelling are not included. The visible facility tank is decorative.
 
-CAPACITY AND SCOPE
+[h2]LICENSE AND SOURCE[/h2]
+The plugin and adapted runtime code use GPL-3.0-only. Dear ImGui components use the MIT License. License texts and third-party notices are included with the mod.
 
-Each parked eligible vehicle contributes 250 m3 per in-game day for each
-displayed Speed/Level point at 1x. The global Site speed setting scales work
-rate and estimates. Optional distance contribution is off by default. It
-reduces facility contribution by distance but does not set a maximum operating
-radius.
+[url=https://github.com/NavySeal5/wrsr-Earthworks]View the source code on GitHub[/url]
 
-Terrain work does not consume fuel, money, or quarried stone. Facility fuel
-storage and refuelling are not included. The visible facility tank is
-decorative.
-
-LICENSE AND SOURCE
-
-The plugin and adapted runtime code use GPL-3.0-only. Dear ImGui components use
-the MIT License. License texts and third-party notices are included with the
-mod. Source code: https://github.com/NavySeal5/wrsr-Earthworks
-
-AI DISCLOSURE
-
-AI tools, including ChatGPT/Codex, assisted with software development,
-debugging, and documentation. The mod author conducted the in-game playtests;
-AI did not perform those playtests.
+[h2]AI DISCLOSURE[/h2]
+AI tools, including ChatGPT and Codex, assisted with software development, debugging, and documentation. The mod author conducted the in-game playtests; AI did not perform those playtests.

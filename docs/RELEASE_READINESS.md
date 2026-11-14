@@ -20,7 +20,8 @@ Do not load Earthworks through TesmioLoader and RML in the same game session. Wo
 ## Current evidence
 
 - Build `0.16.64-release-candidate` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
-- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.64-release-candidate`. The package contains the three facilities, `workshopconfig.ini`, Workshop description, plugin, Tesmio installer and CMD wrapper, RML metadata, and license notices. It does not include developer source or review documents. The corresponding source remains in the public repository.
+- The actual in-game Workshop item ID is `3839682596`. Its metadata and preview are stored under `assets/workshop` and feed the release package.
+- The release builder stages the three facilities, plugin, loader files, installer and CMD wrapper, description, preview, and license notices in Workshop item `3839682596`. It preserves that item's current metadata. It does not include developer source or review documents. The corresponding source remains in the public repository.
 - The user reports active playtesting over several days. The user confirms that facility costs, terrain editing, Tesmio use, and saving/loading work.
 - These are user-reported results, not developer-run tests. The user did not provide individual checklist results or logs. Stage 13 geometry and editing are accepted based on this report. The exact save-recovery cases listed below were not itemized.
 - Facility costs are accepted. Appearance, access, construction behavior, and other facility checks for Medium and Large remain open.
@@ -64,7 +65,7 @@ Run these checks with the same identified candidate build. Use a disposable save
 
 ### 5. Final package
 
-1. Install the package into a clean test setup. Confirm it contains all required building assets, plugin files, setup instructions, source code, and license notices.
+1. Review the staged Workshop item. Confirm it contains all required building assets, plugin files, setup instructions, description, and license notices. The source remains in the repository.
 2. Upgrade from the prior playtest package. Confirm the installer enables the intended plugin and does not leave an old DLL or manifest that loads twice.
 3. Disable or remove the plugin and confirm the game launches normally. Check how saved Earthworks data behaves when the plugin is disabled, then re-enabled.
 4. Run the agreed maximum Site, Project, queue, and facility load. Record any frame-time impact or limit.
@@ -82,6 +83,6 @@ Run these checks with the same identified candidate build. Use a disposable save
 ## Documentation notes
 
 - Older Stage 13 checklists retain prior RML build labels. Their introduction now points current candidate reviews to the Tesmio install guide and this checklist.
-- The release path is versioned and stops when output for that version already exists. Move or remove the matching folder and ZIP before rebuilding the same version.
+- The release command can be run again for the same version. It replaces generated game files in the existing Workshop item and preserves its Workshop metadata.
 - The full player, developer, and historical document map is in [docs/INDEX.md](INDEX.md). A link scan found no broken local links across the Markdown files.
-- The release package path is versioned and refuses an existing output folder or ZIP. Review the generated file list, Workshop description, and license notices before distribution.
+- The release builder does not create a separate folder or ZIP. Review the Workshop item files, description, and license notices before upload through the in-game Workshop UI.

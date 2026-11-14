@@ -6,15 +6,12 @@ Set-StrictMode -Version Latest
 
 $repo = Split-Path $PSScriptRoot -Parent
 $version = (Get-Content -LiteralPath (Join-Path $repo 'VERSION') -Raw).Trim()
-$releaseParent = Join-Path $repo 'build\release'
-$packageRoot = Join-Path $releaseParent "EarthworksPlanning-$version"
-$archivePath = Join-Path $releaseParent "EarthworksPlanning-$version.zip"
-
-foreach ($output in @($packageRoot, $archivePath)) {
-    if (Test-Path -LiteralPath $output) {
-        throw "Release output already exists. Move or remove it before rebuilding this version: $output"
-    }
-}
+$workshopConfigSource = Join-Path $repo 'assets\workshop\workshopconfig.ini'
+if (-not (Test-Path -LiteralPath $workshopConfigSource)) { throw "Workshop item config is missing: $workshopConfigSource" }
+$workshopConfig = Get-Content -LiteralPath $workshopConfigSource -Raw
+$workshopIdMatch = [regex]::Match($workshopConfig, '(?m)^\$ITEM_ID\s+(\d{10})\s*$')
+if (-not $workshopIdMatch.Success) { throw "Workshop item ID is missing or invalid in $workshopConfigSource" }
+$workshopItemId = $workshopIdMatch.Groups[1].Value
 
 & (Join-Path $PSScriptRoot 'Build.ps1')
 if (-not $?) { throw 'The player plugin build failed.' }
@@ -24,10 +21,10 @@ foreach ($scriptName in @('Stage-EarthworksBuilding.ps1', 'Stage-EarthworksBuild
     if (-not $?) { throw "Release package source preparation failed: $scriptName" }
 }
 
-& (Join-Path $PSScriptRoot 'Build-CombinedModPackage.ps1') -Release -ItemId '0000000000'
-if (-not $?) { throw 'Release package assembly failed.' }
+& (Join-Path $PSScriptRoot 'Build-CombinedModPackage.ps1') -Release -ItemId $workshopItemId
+if (-not $?) { throw 'Release Workshop item staging failed.' }
 
-Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $archivePath -CompressionLevel Optimal
-Write-Host "Release candidate folder: $packageRoot"
-Write-Host "Release candidate archive: $archivePath"
-Write-Host 'This script does not upload the package or modify the local game WIP folder.'
+Write-Host "Release candidate staged in Workshop item: $workshopItemId"
+Write-Host "Workshop item ID: $workshopItemId"
+Write-Host 'Review the Workshop item in game, then upload it through the in-game Workshop UI.'
+Write-Host 'This script does not upload or publish the Workshop item.'

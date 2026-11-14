@@ -22,7 +22,7 @@ The package includes `plugins/EarthworksPlanning.rml.json` for RML. Add the pack
 
 The playtest script refreshes only its generated package folder and copies its files into the local WIP item. It does not upload to Steam Workshop. It does not remove older files from the WIP item.
 
-For a separate candidate package with source and license files, use `scripts/Build-ReleasePackage.ps1`. It writes a versioned folder and ZIP under `build/release`, and it does not stage a WIP item. See the root README for details.
+To prepare the existing release Workshop item, use `scripts/Build-ReleasePackage.ps1`. It writes release files directly into the Workshop WIP folder whose item ID is stored in `assets/workshop/workshopconfig.ini`. It preserves the current Workshop title, owner, description, tags, and visibility. It does not create a ZIP or upload the item. See the root README for details.
 
 The plugin does not gate loading on the game executable timestamp or whole-file hash. Native hooks check their target signatures before patching.
 
