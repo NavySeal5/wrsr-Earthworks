@@ -20,12 +20,12 @@ Do not load Earthworks through TesmioLoader and RML in the same game session. Wo
 ## Current evidence
 
 - Build `0.16.64-release-candidate` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
-- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.64-release-candidate`. The package includes 88 source files, license materials, change log, compatibility notes, and known issues. All 139 package checksum entries match.
+- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.64-release-candidate`. The installable package contains the three facilities, `workshopconfig.ini`, the plugin, Tesmio installer, RML metadata, and license notices. It does not include developer source or review documents. The corresponding source remains in the public repository.
 - The user reports active playtesting over several days. The user confirms that facility costs, terrain editing, Tesmio use, and saving/loading work.
 - These are user-reported results, not developer-run tests. The user did not provide individual checklist results or logs. Stage 13 geometry and editing are accepted based on this report. The exact save-recovery cases listed below were not itemized.
 - Facility costs are accepted. Appearance, access, construction behavior, and other facility checks for Medium and Large remain open.
 - Tesmio use is accepted. The RML fallback is not verified for this release candidate.
-- The playtest package remains a local development artifact. The release candidate package is separate and includes corresponding source, license texts, and third-party notices. Review this package before any distribution.
+- The playtest package remains a local development artifact. The release candidate package contains game content, loader files, the Tesmio installer, license texts, and third-party notices. Corresponding source remains in the public repository. Review this package before any distribution.
 
 ## User-run release checks
 

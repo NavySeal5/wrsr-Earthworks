@@ -884,3 +884,9 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - **Build and package:** Build `0.16.64-release-candidate` completed. The x64 DLL and Tesmio exports were verified. Release folder and ZIP were created under `build/release`. The package has 139 checksum entries and 88 source files; all package checksums match. DLL SHA-256: `5DC7791B9C560939F7139FC96B620FD18134E80B8456308EBD7441CE0B69118D`.
 - **Validation status:** `git diff --check` passed. No automated test executable or game was run. The user-run release checks remain open.
 - **Next action:** Review `build/release/EarthworksPlanning-0.16.64-release-candidate.zip` and run [the release checklist](RELEASE_READINESS.md) in a disposable save.
+
+### Runtime package cleanup — 14 November 2026
+
+- **Package contents:** The release builder now keeps only the three facility assets, `workshopconfig.ini`, the plugin DLL, RML metadata, Tesmio installer, and license texts/notices in the installable folder. It omits source, review documents, package checksums, and preview artwork. Corresponding source remains in the public repository.
+- **Build result:** Rebuilt `0.16.64-release-candidate`. The package contains 46 files and the ZIP is about 2.2 MB. The x64 build and Tesmio export checks passed. No game or automated tests were run.
+- **Artifacts:** `build/release/EarthworksPlanning-0.16.64-release-candidate` and its ZIP.
