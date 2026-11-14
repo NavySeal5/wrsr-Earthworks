@@ -58,27 +58,9 @@ ULONGLONG lastEditorVolumeEstimate = 0;
 uint64_t editorVolumeSiteId = 0;
 Volumes cachedEditorVolumes{};
 bool cachedEditorVolumesValid = false;
-Point SiteCenter(const Plan& plan)
-{
-    if(plan.pointCount>=3) {
-        double twiceArea=0.0,weightedX=0.0,weightedZ=0.0;
-        for(unsigned i=0;i<plan.pointCount;++i) {
-            const auto& a=plan.points[i];
-            const auto& b=plan.points[(i+1u)%plan.pointCount];
-            const double cross=static_cast<double>(a.x)*b.z-static_cast<double>(b.x)*a.z;
-            twiceArea+=cross;
-            weightedX+=(static_cast<double>(a.x)+b.x)*cross;
-            weightedZ+=(static_cast<double>(a.z)+b.z)*cross;
-        }
-        if(std::abs(twiceArea)>1.0e-6)
-            return {static_cast<float>(weightedX/(3.0*twiceArea)),0,
-                static_cast<float>(weightedZ/(3.0*twiceArea))};
-    }
-    return {(plan.a.x+plan.b.x)*0.5f,0,(plan.a.z+plan.b.z)*0.5f};
-}
 double EffectiveRateForPlan(const Plan& plan,const Snapshot& snapshot)
 {
-    const Point center=SiteCenter(plan);
+    const Point center=SiteCentroid(plan);
     double total=0;
     for(unsigned i=0;i<snapshot.assignedFacilityCount;++i) {
         const auto& facility=snapshot.assignedFacilities[i];
@@ -706,7 +688,7 @@ void RefreshProjectStatus()
             BuildingReading facility{};
             if(FindEarthworksFacility(current.projectFacilityId,&facility)) {
                 current.assignedFacilityFound=true;
-                const Point center=SiteCenter(selected->plan);
+                const Point center=SiteCentroid(selected->plan);
                 current.projectFacilityDistance=std::hypot(center.x-facility.position.x,center.z-facility.position.z);
             }
         }
@@ -861,10 +843,12 @@ void Process(const Command& command)
         FinishCurrentSiteShape();break;
     }
     case Action::Pick: {
+#if defined(EARTHWORKS_DEVELOPER_UI)
         if(current.mode==PickMode::DrawSite&&host&&host->log)
             host->log("earthworks draw-click processed points=%u creating=%d cursorValid=%d cursorX=%.2f cursorZ=%.2f snap=%d grid=%d",
                 current.plan.pointCount,static_cast<int>(creatingSite),static_cast<int>(current.cursorValid),current.cursor.x,current.cursor.z,
                 static_cast<int>(siteDraftLockToGrid),static_cast<int>(current.terrainGridValid));
+#endif
         if (!current.cursorValid) { if(siteEditorOpen)SiteActionError(creatingSite?0:editingSiteId,"No ground under the cursor. Try another point.");else Message("No ground under the cursor. Try another point."); break; }
         if(current.mode==PickMode::InspectBuilding) {
             FindWorkforceBuildings(current.cursor);current.mode=PickMode::None;RefreshProjectStatus();
@@ -1691,7 +1675,7 @@ void TickProjectRunner()
                     &&vehicle.displayedLevelValid&&vehicle.constructionRateUnits>0) {
                     double contribution=1.0;
                     if(DistanceBasedFacilityContribution()) {
-                        const Point center=jobs.empty()?Point{}:SiteCenter(jobs.front()->plan);
+                        const Point center=jobs.empty()?Point{}:SiteCentroid(jobs.front()->plan);
                         const double distance=std::hypot(static_cast<double>(center.x)-workforce.building.position.x,
                             static_cast<double>(center.z)-workforce.building.position.z);
                         contribution=FacilityDistanceContribution(distance);

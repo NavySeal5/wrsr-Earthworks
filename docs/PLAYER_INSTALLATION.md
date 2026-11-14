@@ -29,3 +29,5 @@ Use RML only if you do not use TesmioLoader for this session. Add this package a
 ## Source and notices
 
 The `SOURCE` folder contains the corresponding project source, build files, dependency pins, and authored building assets. `THIRD_PARTY_NOTICES.md` lists third-party sources and licenses. License texts are in `LICENSES`.
+
+Read `COMPATIBILITY.md`, `KNOWN_ISSUES.md`, and `CHANGELOG.md` before review.

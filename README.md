@@ -2,6 +2,8 @@
 
 Earthworks Planning adds editable terrain Sites, named Projects, and dedicated Small, Medium, and Large facilities to *Workers & Resources: Soviet Republic*.
 
+For player setup, start with [the installation guide](docs/PLAYER_INSTALLATION.md). Read the [compatibility notes](COMPATIBILITY.md), [known issues](KNOWN_ISSUES.md), and [change log](CHANGELOG.md) before reviewing the candidate. See the [documentation index](docs/INDEX.md) for developer notes and stage records.
+
 ## Loader support
 
 TesmioLoader is the primary loader. Republic Mod Loader (RML) remains an optional fallback. Do not load the plugin through both loaders in the same game session.

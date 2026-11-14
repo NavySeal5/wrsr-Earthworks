@@ -318,9 +318,11 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             wheelOverEarthworksTable=siteHit||facilityHit;
             if(wheelOverEarthworksTable)
                 tableWheelCaptureUntilMs.store(GetTickCount64()+250,std::memory_order_release);
+#if defined(EARTHWORKS_DEVELOPER_UI)
             if(host&&host->log)host->log("earthworks table-wheel client=%ld,%ld imgui=%ld,%ld scale=%.3f,%.3f site=%d[%ld,%ld,%ld,%ld] facility=%d[%ld,%ld,%ld,%ld] swallowed=%d",
                 cursor.x,cursor.y,imguiCursor.x,imguiCursor.y,scaleX,scaleY,static_cast<int>(siteHit),siteTableRect.left,siteTableRect.top,siteTableRect.right,siteTableRect.bottom,
                 static_cast<int>(facilityHit),facilityTableRect.left,facilityTableRect.top,facilityTableRect.right,facilityTableRect.bottom,static_cast<int>(wheelOverEarthworksTable));
+#endif
         }
     }
     unsigned handleIndex=MaxSitePoints;
@@ -468,6 +470,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool mapPick = mapPickCapture && !nativeUiOccluded && !over && WorldHit(lParam);
     const bool leftOwned = mouseCapture || leftRelease || over || mapPick;
     const bool leftClickMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK;
+#if defined(EARTHWORKS_DEVELOPER_UI)
     if(leftClickMessage&&drawingNewSite&&host&&host->log) {
         host->log("earthworks draw-click route x=%d y=%d mapCapture=%d nativeUi=%d uiRects=%u cursorRectIgnored=%d uiHit=%d uiBounds=%.1f,%.1f,%.1f,%.1f over=%d world=%d mapPick=%d owned=%d foreground=%d cursorValid=%d points=%u",
             GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),static_cast<int>(mapPickCapture.load()),static_cast<int>(nativeUiOccluded),
@@ -475,6 +478,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             static_cast<int>(over),static_cast<int>(WorldHit(lParam)),static_cast<int>(mapPick),static_cast<int>(leftOwned),
             static_cast<int>(GetForegroundWindow()==gameWindow),static_cast<int>(inputSnapshot.cursorValid),inputSnapshot.plan.pointCount);
     }
+#endif
     if (leftClickMessage && leftOwned) {
         leftRelease = true;
         if (mapPick && GetForegroundWindow() == gameWindow&&handleIndex>=MaxSitePoints) Send(Action::Pick);

@@ -206,6 +206,11 @@ foreach ($destination in @($packageRoot)) {
     [IO.File]::WriteAllText((Join-Path $plugins 'EarthworksPlanning.rml.json'), $manifestText, [Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath $tesmioInstallerSource -Destination (Join-Path $destination 'Install-TesmioPlugin.ps1') -Force
     Copy-Item -LiteralPath $playerReadmeSource -Destination (Join-Path $destination 'README.md') -Force
+    if ($Release) {
+        foreach ($document in @('CHANGELOG.md', 'COMPATIBILITY.md', 'KNOWN_ISSUES.md')) {
+            Copy-Item -LiteralPath (Join-Path $repo $document) -Destination (Join-Path $destination $document) -Force
+        }
+    }
     New-PackagePreview $previewSources.ToArray() (Join-Path $destination 'previewimage.png')
 }
 

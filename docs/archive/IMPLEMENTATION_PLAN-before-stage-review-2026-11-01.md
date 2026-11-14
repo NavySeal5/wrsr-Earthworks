@@ -1,7 +1,7 @@
 Earthworks Planning — implementation plan
 =======================================
 
-Prepared 1 November 2026. Status: the initial toolchain and diagnostic plugin scaffold are now prepared; gameplay integration remains pending. See [setup status](docs/SETUP_STATUS.md) for verified local results.
+Prepared 1 November 2026. Status: the initial toolchain and diagnostic plugin scaffold are now prepared; gameplay integration remains pending. See [setup status](../SETUP_STATUS.md) for verified local results.
 
 **1. Intended result and first-release scope**
 

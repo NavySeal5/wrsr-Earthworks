@@ -1,6 +1,6 @@
 **Earthworks Planning — staged implementation plan**
 
-Updated 11 November 2026. TesmioLoader is the primary host; RML remains an optional fallback (D155 supersedes D01). The user has accepted the first planning prototype (0.2.0), controlled terrain-edit experiment (0.3.1), Stage 4a comparison (fuel unmeasured), Stage 4b dedicated-facility checklist and Stage 6 durable plans. The current facility filter allows only bulldozers and excavators (D92); the earlier dumper/bus allowance is superseded. D32 sets a provisional 22 worker-equivalent productivity reference for later balancing; it is not a measured terrain rate. Queued grey-wireframe visibility, stale-state, Save As, autosave and corrupt/mismatched companion checks were not reported as tested and remain documented as unverified. Stage 13 is now flexible Site geometry/editing; Stage 14 is balance/candidate work. See the stage review log for evidence and progression.
+Updated 14 November 2026. This document records the staged design and implementation history. The current candidate is `0.16.64-release-candidate`; the user confirmed its scope in D163. Candidate acceptance is still open. Use [the stage review log](docs/STAGE_REVIEWS.md) for observed results and acceptance, [the release checklist](docs/RELEASE_READINESS.md) for the current blockers, and [the docs index](docs/INDEX.md) for current player and developer instructions. TesmioLoader is primary; RML remains an optional fallback. User-run game checks are required before release.
 
 **1. What we are building**
 

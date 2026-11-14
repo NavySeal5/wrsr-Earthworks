@@ -47,6 +47,7 @@ struct Plan {
     void RefreshBounds();
     Point Vertex(int x, int z, bool proposed,float blendWidth=0.0f) const;
 };
+Point SiteCentroid(const Plan& plan) noexcept;
 bool ValidFootprint(const Plan& plan);
 double MaximumSurfaceGrade(const Plan& plan);
 bool FootprintsOverlap(const Plan& a,const Plan& b);

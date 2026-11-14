@@ -85,6 +85,24 @@ bool TriangleHeight(const Point& p,const Point& a,const Point& b,const Point& c,
     *height=static_cast<float>(wa*a.y+wb*b.y+wc*c.y);return std::isfinite(*height);
 }
 }
+Point SiteCentroid(const Plan& plan) noexcept
+{
+    if(plan.pointCount>=3) {
+        double twiceArea=0.0,weightedX=0.0,weightedZ=0.0;
+        for(unsigned i=0;i<plan.pointCount;++i) {
+            const auto& a=plan.points[i];
+            const auto& b=plan.points[(i+1u)%plan.pointCount];
+            const double cross=static_cast<double>(a.x)*b.z-static_cast<double>(b.x)*a.z;
+            twiceArea+=cross;
+            weightedX+=(static_cast<double>(a.x)+b.x)*cross;
+            weightedZ+=(static_cast<double>(a.z)+b.z)*cross;
+        }
+        if(std::abs(twiceArea)>1.0e-6)
+            return {static_cast<float>(weightedX/(3.0*twiceArea)),0,
+                static_cast<float>(weightedZ/(3.0*twiceArea))};
+    }
+    return {(plan.a.x+plan.b.x)*0.5f,0,(plan.a.z+plan.b.z)*0.5f};
+}
 float Plan::MinX() const { if(pointCount){float v=points[0].x;for(unsigned i=1;i<pointCount;++i)v=std::min(v,points[i].x);return v;}return std::min(a.x,b.x); }
 float Plan::MaxX() const { if(pointCount){float v=points[0].x;for(unsigned i=1;i<pointCount;++i)v=std::max(v,points[i].x);return v;}return std::max(a.x,b.x); }
 float Plan::MinZ() const { if(pointCount){float v=points[0].z;for(unsigned i=1;i<pointCount;++i)v=std::min(v,points[i].z);return v;}return std::min(a.z,b.z); }

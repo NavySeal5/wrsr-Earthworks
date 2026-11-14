@@ -19,8 +19,8 @@ Do not load Earthworks through TesmioLoader and RML in the same game session. Wo
 
 ## Current evidence
 
-- Build `0.16.63-distance-based-facility-contribution` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
-- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.63-distance-based-facility-contribution`. The package includes source and license materials. All 136 listed file checksums match. The builder does not touch the game WIP folder or upload to Workshop.
+- Build `0.16.64-release-candidate` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
+- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.64-release-candidate`. The package includes 88 source files, license materials, change log, compatibility notes, and known issues. All 139 package checksum entries match.
 - No automated or in-game tests were run for that build. Its player checks remain open in [the stage review log](STAGE_REVIEWS.md).
 - Stage 13 has not been accepted for the current build.
 - Stage 12's facility UI is accepted. The Small facility is accepted. The latest Medium and Large model/config changes still need the documented user checks.
@@ -80,8 +80,9 @@ Run these checks with the same identified candidate build. Use a disposable save
 - Confirm performance limits and define the supported maximum workload.
 - Decide separately whether to publish the candidate publicly.
 
-## Documentation issues to fix before handing off the candidate
+## Documentation notes
 
-- Some older Stage 13 instructions tell the player to launch the project-local RML profile. TesmioLoader is now primary. Update those instructions before handing off the candidate.
-- The top status matrix and the end of `IMPLEMENTATION_PLAN.md` contain old stage and next-action notes. Keep one current status and point old notes to the review history.
+- Older Stage 13 checklists retain prior RML build labels. Their introduction now points current candidate reviews to the Tesmio install guide and this checklist.
+- The release path is versioned and stops when output for that version already exists. Move or remove the matching folder and ZIP before rebuilding the same version.
+- The full player, developer, and historical document map is in [docs/INDEX.md](INDEX.md). A link scan found no broken local links across the Markdown files.
 - The release package path is versioned and refuses an existing output folder or ZIP. Review the generated file list and checksum manifest before distribution.
