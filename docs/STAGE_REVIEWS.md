@@ -897,3 +897,8 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Updated model staging scripts and plugin matching. Runtime recognition retains the previous internal names for older local copies.
 - Rebuilt the 0.16.64 release candidate. The x64 build and Tesmio exports passed. No game or automated tests were run after the asset rename; verify the new assets in game before upload.
 - **Artifacts:** `build/release/EarthworksPlanning-0.16.64-release-candidate` and its ZIP.
+
+### Steam Workshop description — 14 November 2026
+
+- Added `description.txt` with mod purpose, installation, usage, Project/Site and facility behavior, Site creation controls, license/source links, and an AI disclosure. The release builder copies it to the Workshop item root.
+- Rebuilt the candidate package. It contains 48 files; the ZIP is 2,355,941 bytes. The x64 build and Tesmio export checks passed. No game or automated tests were run.

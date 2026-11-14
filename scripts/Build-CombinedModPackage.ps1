@@ -24,6 +24,7 @@ $rmlManifestSource = Join-Path $repo 'assets\rml\EarthworksPlanning.rml.json'
 $tesmioInstallerSource = Join-Path $repo 'scripts\Install-TesmioPlugin.ps1'
 $tesmioInstallerWrapperSource = Join-Path $repo 'scripts\Install-TesmioPlugin.cmd'
 $playerReadmeSource = Join-Path $repo 'docs\PLAYER_INSTALLATION.md'
+$workshopDescriptionSource = Join-Path $repo 'description.txt'
 
 $facilities = @(
     [pscustomobject]@{ SourceId = '9100000012'; Name = 'Small' },
@@ -36,6 +37,7 @@ if (-not (Test-Path -LiteralPath $pluginSource)) { throw 'Build the player-facin
 if (-not (Test-Path -LiteralPath $rmlManifestSource)) { throw "RML manifest template is missing: $rmlManifestSource" }
 if (-not (Test-Path -LiteralPath $tesmioInstallerSource)) { throw "Tesmio installer is missing: $tesmioInstallerSource" }
 if (-not (Test-Path -LiteralPath $tesmioInstallerWrapperSource)) { throw "Tesmio installer wrapper is missing: $tesmioInstallerWrapperSource" }
+if (-not (Test-Path -LiteralPath $workshopDescriptionSource)) { throw "Workshop description is missing: $workshopDescriptionSource" }
 if (-not $Release -and -not (Test-Path -LiteralPath $playerReadmeSource)) { throw "Player installation instructions are missing: $playerReadmeSource" }
 if (-not (Test-Path -LiteralPath $sourceRoot)) { throw "Facility package sources are missing: $sourceRoot" }
 
@@ -208,6 +210,7 @@ foreach ($destination in @($packageRoot)) {
     [IO.File]::WriteAllText((Join-Path $plugins 'EarthworksPlanning.rml.json'), $manifestText, [Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath $tesmioInstallerSource -Destination (Join-Path $destination 'Install-TesmioPlugin.ps1') -Force
     Copy-Item -LiteralPath $tesmioInstallerWrapperSource -Destination (Join-Path $destination 'Install-TesmioPlugin.cmd') -Force
+    Copy-Item -LiteralPath $workshopDescriptionSource -Destination (Join-Path $destination 'description.txt') -Force
     if (-not $Release) {
         Copy-Item -LiteralPath $playerReadmeSource -Destination (Join-Path $destination 'README.md') -Force
         New-PackagePreview $previewSources.ToArray() (Join-Path $destination 'previewimage.png')
@@ -231,7 +234,7 @@ if ($Release) {
 
 if ($Release) {
     Write-Host "Clean release candidate package created: $packageRoot"
-    Write-Host 'Includes game content, loader files, the Tesmio installer, and license notices. Source remains in the project repository. No local game WIP item was changed.'
+    Write-Host 'Includes game content, Workshop description, loader files, the Tesmio installer, and license notices. Source remains in the project repository. No local game WIP item was changed.'
     Write-Host 'Workshop upload was not performed.'
 } else {
     $previewBytes = (Get-Item -LiteralPath (Join-Path $packageRoot 'previewimage.png')).Length

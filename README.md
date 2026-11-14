@@ -34,7 +34,7 @@ Build the developer UI separately with `scripts/Build-DeveloperUI.ps1`. Build ou
 
 ## Release candidate package
 
-Run `scripts/Build-ReleasePackage.ps1`. It builds the player plugin, prepares the three facility package inputs without changing the game's Workshop WIP folders, and creates a versioned folder and ZIP under `build/release`. The installable package contains the game content, loader files, `.cmd` and PowerShell Tesmio installers, and license notices. Corresponding source remains in this public repository. The builder fails if output for that version already exists. It does not upload to Workshop.
+Run `scripts/Build-ReleasePackage.ps1`. It builds the player plugin, prepares the three facility package inputs without changing the game's Workshop WIP folders, and creates a versioned folder and ZIP under `build/release`. The package contains the game content, Workshop description, loader files, `.cmd` and PowerShell Tesmio installers, and license notices. Corresponding source remains in this public repository. The builder fails if output for that version already exists. It does not upload to Workshop.
 
 The release builder reads native donor configuration from the installed game's `media_soviet` data. It writes generated facility inputs under `build` and does not install the plugin or change TesmioLoader settings.
 
