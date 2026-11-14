@@ -1,0 +1,3 @@
+#pragma once
+
+#define EARTHWORKS_VERSION "@EARTHWORKS_VERSION_STRING@"

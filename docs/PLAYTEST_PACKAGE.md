@@ -1,8 +1,8 @@
 # Earthworks Planning playtest package
 
-The combined package contains Earthworks Planning and the Small, Medium, and Large facilities. The packaging script writes a portable package to `build/release/EarthworksPlanning` and stages a local development item at `media_soviet/workshop_wip/9100000015`.
+The playtest package contains Earthworks Planning and the Small, Medium, and Large facilities. The packaging script writes a clean local package to `build/playtest/EarthworksPlanning` and stages the development item at `media_soviet/workshop_wip/9100000015`.
 
-The package keeps the runtime building files, the Tesmio plugin DLL, the RML fallback manifest, the Tesmio plugin installer, and its setup guide. It does not include source models, debug symbols, or diagnostic probes.
+The playtest package contains runtime building files, the Tesmio plugin DLL, the RML fallback manifest, the Tesmio plugin installer, and setup instructions. It does not include source models, debug symbols, or diagnostic probes.
 
 ## Primary setup: TesmioLoader
 
@@ -20,7 +20,9 @@ The package includes `plugins/EarthworksPlanning.rml.json` for RML. Add the pack
 2. Build the player plugin with `scripts/Build.ps1`.
 3. Run `scripts/Build-CombinedModPackage.ps1`.
 
-The packaging script preserves existing files and does not upload to Steam Workshop. It checks the package source and creates or refreshes the portable package and local WIP item.
+The playtest script refreshes only its generated package folder and copies its files into the local WIP item. It does not upload to Steam Workshop. It does not remove older files from the WIP item.
+
+For a separate candidate package with source and license files, use `scripts/Build-ReleasePackage.ps1`. It writes a versioned folder and ZIP under `build/release`, and it does not stage a WIP item. See the root README for details.
 
 The plugin does not gate loading on the game executable timestamp or whole-file hash. Native hooks check their target signatures before patching.
 

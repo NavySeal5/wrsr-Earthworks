@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$PackageOnly)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -19,7 +19,7 @@ $targetRoot = Join-Path $media 'workshop_wip'
 $target = Join-Path $targetRoot $id
 $marker = '.earthworks-generated'
 
-if (Test-Path -LiteralPath $target) {
+if (-not $PackageOnly -and (Test-Path -LiteralPath $target)) {
     if (-not (Test-Path -LiteralPath (Join-Path $target $marker))) {
         throw "Refusing to overwrite an existing Workshop item without the Earthworks marker: $target"
     }
@@ -270,6 +270,7 @@ $config = @"
 [IO.File]::WriteAllText((Join-Path $item 'workshopconfig.ini'), $config, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $item $marker), 'Generated locally by scripts/Stage-EarthworksBuilding-Large.ps1. Stage 12 Large model and access prototype.', [Text.UTF8Encoding]::new($false))
 
+if (-not $PackageOnly) {
 if (-not (Test-Path -LiteralPath $target)) {
     New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
     New-Item -ItemType Directory -Path $target | Out-Null
@@ -293,13 +294,15 @@ Get-ChildItem -LiteralPath $targetObject -Filter 'earthworks_probe_*.dds' -File 
 Get-ChildItem -LiteralPath $targetObject -Filter 'earthworks_*.dds' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Copy-Item -Path (Join-Path $objectDir 'earthworks_*.dds') -Destination $targetObject -Force
 [IO.File]::WriteAllText($modelHashMarker, $modelHash, [Text.UTF8Encoding]::new($false))
+}
 
 $parkingCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_PARKING\s' }).Count
 $stationCount = @(Get-Content -LiteralPath (Join-Path $objectDir 'building.ini') | Where-Object { $_ -match '^\s*\$VEHICLE_STATION\s' }).Count
 if ($parkingCount -ne 20 -or $stationCount -ne 2) {
     throw "Expected twenty parking slots and two loading stations, found $parkingCount parking slots and $stationCount stations"
 }
-Write-Host "Staged Stage 12 Large Earthworks facility at $target"
+if ($PackageOnly) { Write-Host "Prepared Stage 12 Large package source at $item" }
+else { Write-Host "Staged Stage 12 Large Earthworks facility at $target" }
 Write-Host 'The native road-depot type is used; the vehicle allowlist and Earthworks project scheduler remain plugin-controlled.'
 Write-Host 'Generated bbox/fire files are preserved on restage while the NMF model hash remains unchanged.'
 Write-Host 'The custom model uses sixteen covered garage stalls, four open-air stalls at the U opening, and two loading stations.'

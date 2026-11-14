@@ -19,12 +19,13 @@ Do not load Earthworks through TesmioLoader and RML in the same game session. Wo
 
 ## Current evidence
 
-- Build `0.16.63-distance-based-facility-contribution` is the latest recorded player build. The x64 plugin build and combined local package staging succeeded.
+- Build `0.16.63-distance-based-facility-contribution` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
+- The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.63-distance-based-facility-contribution`. The package includes source and license materials. All 136 listed file checksums match. The builder does not touch the game WIP folder or upload to Workshop.
 - No automated or in-game tests were run for that build. Its player checks remain open in [the stage review log](STAGE_REVIEWS.md).
 - Stage 13 has not been accepted for the current build.
 - Stage 12's facility UI is accepted. The Small facility is accepted. The latest Medium and Large model/config changes still need the documented user checks.
 - Tesmio migration has no recorded in-game acceptance. The RML path is also not verified as a fallback for this release candidate.
-- The existing package is labelled as a playtest package. It does not contain the source models, third-party notices, or debug materials. The final release package must include the source and notices required for distribution.
+- The playtest package remains a local development artifact. The release candidate package is separate and includes corresponding source, license texts, and third-party notices. Review this package before any distribution.
 
 ## User-run release checks
 
@@ -75,13 +76,12 @@ Run these checks with the same identified candidate build. Use a disposable save
 - Stage 12 model, access, construction, and cost reviews are not complete for every facility size.
 - Stage 13 geometry and editing are not accepted for the current build.
 - Intended gameplay settings and practical workload limits remain open under D14. Fuel use and terrain material accounting are outside the confirmed candidate scope under D163. Operating range limits still need review; D162's optional distance contribution does not define a maximum operating radius.
-- The final package needs a source and license review. The current playtest package is not the final distribution package.
+- Review the generated source and license materials before distribution.
 - Confirm performance limits and define the supported maximum workload.
 - Decide separately whether to publish the candidate publicly.
 
 ## Documentation issues to fix before handing off the candidate
 
-- Some older Stage 13 instructions tell the player to launch the project-local RML profile. TesmioLoader is now primary. Update the instructions to match the selected loader and candidate package.
+- Some older Stage 13 instructions tell the player to launch the project-local RML profile. TesmioLoader is now primary. Update those instructions before handing off the candidate.
 - The top status matrix and the end of `IMPLEMENTATION_PLAN.md` contain old stage and next-action notes. Keep one current status and point old notes to the review history.
-- `CMakeLists.txt` reports version 0.16.14 while the plugin and RML manifest report 0.16.63. Resolve this in the versioning and packaging step.
-- The package script preserves stale files in its output. Make the release package reproducible and verify its file list before distribution.
+- The release package path is versioned and refuses an existing output folder or ZIP. Review the generated file list and checksum manifest before distribution.

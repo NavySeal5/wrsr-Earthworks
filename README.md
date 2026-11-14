@@ -12,6 +12,10 @@ The RML fallback uses `plugins/EarthworksPlanning.rml.json` beside the DLL. RML 
 
 The plugin loads through TesmioLoader API 4 without checking the game executable timestamp or whole-file hash. Each native hook still checks its target signature before patching.
 
+## Version
+
+`VERSION` is the single source for the plugin, CMake project, RML manifest, and package name. Increase it once for each candidate build.
+
 ## Development
 
 Read [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), [decision register](docs/DECISIONS.md), and [stage review log](docs/STAGE_REVIEWS.md) before changing gameplay or UX behavior. The project uses staged implementation and user-run in-game reviews. Do not perform in-game tests unless the user explicitly asks.
@@ -25,6 +29,12 @@ Build the player plugin with:
 ```
 
 Build the developer UI separately with `scripts/Build-DeveloperUI.ps1`. Build outputs and fetched dependencies are ignored by Git.
+
+## Release candidate package
+
+Run `scripts/Build-ReleasePackage.ps1`. It builds the player plugin, prepares the three facility package inputs without changing the game's Workshop WIP folders, and creates a versioned folder and ZIP under `build/release`. The package includes player install instructions, corresponding source, license texts, and third-party notices. It fails if output for that version already exists. It does not upload to Workshop.
+
+The release builder reads native donor configuration from the installed game's `media_soviet` data. It writes generated facility inputs under `build` and does not install the plugin or change TesmioLoader settings.
 
 ## Local Tesmio development launch
 

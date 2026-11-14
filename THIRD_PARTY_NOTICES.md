@@ -1,4 +1,4 @@
-The primary runtime is Republic Mod Loader: https://github.com/Ultimate-Universe/WRSR-RepublicModLoader.
+TesmioLoader is the primary plugin host. Republic Mod Loader (RML) remains an optional fallback: https://github.com/Ultimate-Universe/WRSR-RepublicModLoader.
 
 Pinned RML release: 1.0.1, source commit `57e567e5cccaa3c38aee7e9d599d2443d2460b10`. Original binaries and the brand asset are copied from the pinned repository's `ModFiles` into the isolated runtime. SHA-256 hashes match installed Workshop item `3787969749` and are recorded in `dependencies.lock.json`. The full GPLv3 licence remains in `external/RepublicModLoader/LICENSE`.
 

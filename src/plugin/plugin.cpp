@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <cstddef>
 #include "tesmio_api.h"
+#include "earthworks_version.h"
 #include "../runtime/runtime.h"
 #include "../core/user_settings.h"
 
@@ -47,7 +48,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.63-distance-based-facility-contribution";
+    info->version = EARTHWORKS_VERSION;
 
     g_host = host;
     host->log("earthworks  planning prototype initialized; API %u", TSM_API_VERSION);

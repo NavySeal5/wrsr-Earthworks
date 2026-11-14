@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
-project(EarthworksPlanning VERSION 0.16.14 LANGUAGES CXX)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" EARTHWORKS_VERSION_STRING LIMIT_COUNT 1)
+if(NOT EARTHWORKS_VERSION_STRING MATCHES "^([0-9]+\\.[0-9]+\\.[0-9]+)([-+][A-Za-z0-9.-]+)?$")
+    message(FATAL_ERROR "VERSION must contain a semantic version and optional suffix.")
+endif()
+set(EARTHWORKS_CMAKE_VERSION "${CMAKE_MATCH_1}")
+project(EarthworksPlanning VERSION "${EARTHWORKS_CMAKE_VERSION}" LANGUAGES CXX)
 option(EARTHWORKS_TRACE_FAULT "Enable temporary native fault tracing during investigation" OFF)
 option(EARTHWORKS_DEVELOPER_UI "Include the technical workforce inspector" OFF)
 
@@ -28,9 +33,12 @@ add_library(earthworks_imgui STATIC
 target_include_directories(earthworks_imgui SYSTEM PUBLIC "${IMGUI_DIR}" "${IMGUI_DIR}/backends")
 target_compile_definitions(earthworks_imgui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 set_property(TARGET earthworks_imgui PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+configure_file(src/plugin/version.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/earthworks_version.h" @ONLY)
 add_library(EarthworksPlanning SHARED src/plugin/plugin.cpp src/core/planning.cpp src/core/productivity.cpp src/core/state_store.cpp src/core/user_settings.cpp src/runtime/runtime.cpp src/runtime/save_store.cpp src/runtime/native_terrain_edit_hook.cpp src/runtime/workforce_probe.cpp src/runtime/vehicle_filter.cpp src/ui/overlay.cpp src/ui/game_underlay.cpp)
 target_link_libraries(EarthworksPlanning PRIVATE earthworks_imgui d3d11 dxgi d3dcompiler dwmapi bcrypt windowscodecs ole32)
 target_include_directories(EarthworksPlanning SYSTEM PRIVATE "${TESMIO_SDK_DIR}/src")
+target_include_directories(EarthworksPlanning PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_compile_features(EarthworksPlanning PRIVATE cxx_std_17)
 target_compile_definitions(EarthworksPlanning PRIVATE
     WIN32_LEAN_AND_MEAN NOMINMAX

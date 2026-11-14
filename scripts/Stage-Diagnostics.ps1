@@ -31,6 +31,7 @@ $dll = Join-Path $root ("build\{0}\bin\EarthworksPlanning.dll" -f $buildPreset)
 if (-not (Test-Path -LiteralPath $dll)) { throw 'Build the plugin before staging it.' }
 $manifestPath = Join-Path $root 'assets\rml\EarthworksPlanning.rml.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$manifest.version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 $dllHash = (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash.ToLowerInvariant()
 $safeVersion = $manifest.version -replace '[^A-Za-z0-9._-]', '_'
 $stagedDllName = "EarthworksPlanning-$safeVersion-$($dllHash.Substring(0, 8)).dll"
