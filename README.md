@@ -8,7 +8,7 @@ For player setup, start with [the installation guide](docs/PLAYER_INSTALLATION.m
 
 TesmioLoader is the primary loader. Republic Mod Loader (RML) remains an optional fallback. Do not load the plugin through both loaders in the same game session.
 
-TesmioLoader does not install the plugin DLL from Steam Workshop. The combined package includes `Install-TesmioPlugin.ps1`, which finds the Steam game folder and installs/enables the plugin. See [Tesmio playtest setup](docs/TESMIO_PLAYTEST.md).
+TesmioLoader does not install the plugin DLL from Steam Workshop. Double-click `Install-TesmioPlugin.cmd` in the combined package to install and enable the plugin. The PowerShell installer remains available for advanced use. See [Tesmio playtest setup](docs/TESMIO_PLAYTEST.md).
 
 The RML fallback uses `plugins/EarthworksPlanning.rml.json` beside the DLL. RML users must enable the plugin and Workshop content in the RML playlist.
 
@@ -34,7 +34,7 @@ Build the developer UI separately with `scripts/Build-DeveloperUI.ps1`. Build ou
 
 ## Release candidate package
 
-Run `scripts/Build-ReleasePackage.ps1`. It builds the player plugin, prepares the three facility package inputs without changing the game's Workshop WIP folders, and creates a versioned folder and ZIP under `build/release`. The installable package contains the game content, loader files, Tesmio installer, and license notices. Corresponding source remains in this public repository. The builder fails if output for that version already exists. It does not upload to Workshop.
+Run `scripts/Build-ReleasePackage.ps1`. It builds the player plugin, prepares the three facility package inputs without changing the game's Workshop WIP folders, and creates a versioned folder and ZIP under `build/release`. The installable package contains the game content, loader files, `.cmd` and PowerShell Tesmio installers, and license notices. Corresponding source remains in this public repository. The builder fails if output for that version already exists. It does not upload to Workshop.
 
 The release builder reads native donor configuration from the installed game's `media_soviet` data. It writes generated facility inputs under `build` and does not install the plugin or change TesmioLoader settings.
 

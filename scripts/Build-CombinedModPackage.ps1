@@ -22,6 +22,7 @@ $wipItem = Join-Path $wipRoot $ItemId
 $pluginSource = Join-Path $repo 'build\windows-x64\bin\EarthworksPlanning.dll'
 $rmlManifestSource = Join-Path $repo 'assets\rml\EarthworksPlanning.rml.json'
 $tesmioInstallerSource = Join-Path $repo 'scripts\Install-TesmioPlugin.ps1'
+$tesmioInstallerWrapperSource = Join-Path $repo 'scripts\Install-TesmioPlugin.cmd'
 $playerReadmeSource = Join-Path $repo 'docs\PLAYER_INSTALLATION.md'
 
 $facilities = @(
@@ -34,6 +35,7 @@ if ($ItemId -notmatch '^\d{10}$') { throw 'ItemId must contain exactly 10 digits
 if (-not (Test-Path -LiteralPath $pluginSource)) { throw 'Build the player-facing plugin before packaging.' }
 if (-not (Test-Path -LiteralPath $rmlManifestSource)) { throw "RML manifest template is missing: $rmlManifestSource" }
 if (-not (Test-Path -LiteralPath $tesmioInstallerSource)) { throw "Tesmio installer is missing: $tesmioInstallerSource" }
+if (-not (Test-Path -LiteralPath $tesmioInstallerWrapperSource)) { throw "Tesmio installer wrapper is missing: $tesmioInstallerWrapperSource" }
 if (-not $Release -and -not (Test-Path -LiteralPath $playerReadmeSource)) { throw "Player installation instructions are missing: $playerReadmeSource" }
 if (-not (Test-Path -LiteralPath $sourceRoot)) { throw "Facility package sources are missing: $sourceRoot" }
 
@@ -205,6 +207,7 @@ foreach ($destination in @($packageRoot)) {
     $manifestText = $manifest | ConvertTo-Json -Depth 16
     [IO.File]::WriteAllText((Join-Path $plugins 'EarthworksPlanning.rml.json'), $manifestText, [Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath $tesmioInstallerSource -Destination (Join-Path $destination 'Install-TesmioPlugin.ps1') -Force
+    Copy-Item -LiteralPath $tesmioInstallerWrapperSource -Destination (Join-Path $destination 'Install-TesmioPlugin.cmd') -Force
     if (-not $Release) {
         Copy-Item -LiteralPath $playerReadmeSource -Destination (Join-Path $destination 'README.md') -Force
         New-PackagePreview $previewSources.ToArray() (Join-Path $destination 'previewimage.png')

@@ -10,7 +10,7 @@ TesmioLoader is the primary host. Steam Workshop does not install the plugin DLL
 
 1. Close the game and TesmioLoader.
 2. Install TesmioLoader in the game folder.
-3. Run `Install-TesmioPlugin.ps1` from this package. It detects the Steam library or asks for the folder.
+3. Double-click `Install-TesmioPlugin.cmd`. It runs the PowerShell installer, detects the Steam library or asks for the folder, and leaves the result visible in the open window. Advanced users can run `Install-TesmioPlugin.ps1` directly.
 4. Start TesmioLoader, then start the game through it.
 
 The installer copies the DLL and enables Earthworks in TesmioLoader. Do not load Earthworks through RML in the same session.

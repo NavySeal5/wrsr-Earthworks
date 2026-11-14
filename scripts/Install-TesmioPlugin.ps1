@@ -1,6 +1,16 @@
-param([string]$GameRoot = '')
+param(
+    [string]$GameRoot = '',
+    [switch]$NoPause
+)
 
 $ErrorActionPreference = 'Stop'
+trap {
+    Write-Host ''
+    Write-Host "Earthworks installation failed: $($_.Exception.Message)" -ForegroundColor Red
+    if (-not $NoPause) { Read-Host 'Press Enter to close this window' | Out-Null }
+    exit 1
+}
+
 $dllCandidates = @(
     (Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'),
     (Join-Path $PSScriptRoot '..\build\windows-x64\bin\EarthworksPlanning.dll')
@@ -61,3 +71,4 @@ if ($entry -ge 0) { $lines[$entry]='EarthworksPlanning=1' } else { $lines.Insert
 [IO.File]::WriteAllLines($ini,$lines,[Text.UTF8Encoding]::new($false))
 Write-Host "Earthworks installed in TesmioLoader folder: $loaderRoot"
 Write-Host 'Start the game through TesmioLoader.'
+if (-not $NoPause) { Read-Host 'Press Enter to close this window' | Out-Null }

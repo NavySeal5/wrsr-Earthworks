@@ -887,6 +887,7 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 
 ### Runtime package cleanup — 14 November 2026
 
-- **Package contents:** The release builder now keeps only the three facility assets, `workshopconfig.ini`, the plugin DLL, RML metadata, Tesmio installer, and license texts/notices in the installable folder. It omits source, review documents, package checksums, and preview artwork. Corresponding source remains in the public repository.
-- **Build result:** Rebuilt `0.16.64-release-candidate`. The package contains 46 files and the ZIP is about 2.2 MB. The x64 build and Tesmio export checks passed. No game or automated tests were run.
+- **Package contents:** The release builder now keeps only the three facility assets, `workshopconfig.ini`, the plugin DLL, RML metadata, Tesmio `.cmd` and PowerShell installers, and license texts/notices in the installable folder. It omits source, review documents, package checksums, and preview artwork. Corresponding source remains in the public repository.
+- **Build result:** Rebuilt `0.16.64-release-candidate`. The package contains 47 files and the ZIP is about 2.2 MB. The x64 build and Tesmio export checks passed. No game or automated tests were run.
+- **Installer usability:** Added a double-clickable CMD wrapper. Both the wrapper and direct PowerShell installer keep their window open until the user acknowledges the result.
 - **Artifacts:** `build/release/EarthworksPlanning-0.16.64-release-candidate` and its ZIP.

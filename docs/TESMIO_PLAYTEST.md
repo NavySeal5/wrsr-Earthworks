@@ -6,13 +6,13 @@
 - Build the player plugin with `scripts/Build.ps1`.
 - Assemble the local mod package with `scripts/Build-CombinedModPackage.ps1`.
 
-The package contains the three facility definitions, `plugins/EarthworksPlanning.dll`, the RML fallback manifest, this guide, and `Install-TesmioPlugin.ps1`. In a source checkout, first build with `scripts/Build.ps1`; the installer then uses `build/windows-x64/bin/EarthworksPlanning.dll`. Steam Workshop does not install the DLL into TesmioLoader's plugin folder.
+The package contains the three facility definitions, `plugins/EarthworksPlanning.dll`, the RML fallback manifest, `Install-TesmioPlugin.cmd`, and `Install-TesmioPlugin.ps1`. Double-click the CMD wrapper to install and keep the result visible. In a source checkout, first build with `scripts/Build.ps1`; the installer then uses `build/windows-x64/bin/EarthworksPlanning.dll`. Steam Workshop does not install the DLL into TesmioLoader's plugin folder.
 
 ## Install the plugin for TesmioLoader
 
 1. Close the game and TesmioLoader.
-2. Open PowerShell in the package folder.
-3. Run the installer. It searches Steam libraries automatically. If needed, it asks for the game folder. You can also pass `-GameRoot`:
+2. Double-click `Install-TesmioPlugin.cmd`. It searches Steam libraries automatically. If needed, it asks for the game folder. The CMD window stays open and shows the result.
+3. Advanced users can run the installer from PowerShell. It accepts a `-GameRoot` override:
 
    ```powershell
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-TesmioPlugin.ps1
