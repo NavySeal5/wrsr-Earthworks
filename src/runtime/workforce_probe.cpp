@@ -50,11 +50,14 @@ bool IsEarthworksAsset(const char* assetName)
 {
     if(!assetName || !assetName[0])return false;
     // The game may expose the Workshop id as a prefix, or only the internal
-    // object name. These generated names are unique; matching the final path
-    // component prevents a repacked item id from hiding a valid facility.
+    // object name. Match the final path component so a repacked item id does
+    // not hide a facility. Keep the previous names for older local copies.
     const char* objectName=std::strrchr(assetName,'/');
     objectName=objectName?objectName+1:assetName;
-    return std::strcmp(objectName,"EarthworksDevelopmentFacility")==0 ||
+    return std::strcmp(objectName,"EarthworksFacility")==0 ||
+        std::strcmp(objectName,"EarthworksFacilityMedium")==0 ||
+        std::strcmp(objectName,"EarthworksFacilityLarge")==0 ||
+        std::strcmp(objectName,"EarthworksDevelopmentFacility")==0 ||
         std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0 ||
         std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0;
 }
@@ -63,8 +66,10 @@ const char* EarthworksDisplayName(const char* assetName)
     if(!assetName)return "Earthworks Facility";
     const char* objectName=std::strrchr(assetName,'/');
     objectName=objectName?objectName+1:assetName;
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Facility (Large)";
-    if(std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Facility (Medium)";
+    if(std::strcmp(objectName,"EarthworksFacilityLarge")==0 ||
+        std::strcmp(objectName,"EarthworksDevelopmentFacilityLarge")==0)return "Facility (Large)";
+    if(std::strcmp(objectName,"EarthworksFacilityMedium")==0 ||
+        std::strcmp(objectName,"EarthworksDevelopmentFacilityMedium")==0)return "Facility (Medium)";
     return "Facility (Small)";
 }
 bool IsGeneratedBuildingName(const char* name,unsigned id)

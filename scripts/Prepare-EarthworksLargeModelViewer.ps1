@@ -6,7 +6,7 @@ Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
 $game = Split-Path $root -Parent
 $id = '9100000014'
-$object = 'EarthworksDevelopmentFacilityLarge'
+$object = 'EarthworksFacilityLarge'
 $targetRoot = Join-Path $game 'media_soviet\workshop_wip'
 $item = Join-Path $targetRoot $id
 $objectDir = Join-Path $item $object

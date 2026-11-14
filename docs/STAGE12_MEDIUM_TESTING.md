@@ -6,7 +6,7 @@ The Medium OBJ and its material files are prepared inside the game media directo
 
 1. Close the game and the project-local RML launcher.
 2. Open ModelViewer and import:
-   `media_soviet/workshop_wip/9100000013/EarthworksDevelopmentFacilityMedium/earthworks_facility_medium.obj`
+   `media_soviet/workshop_wip/9100000013/EarthworksFacilityMedium/earthworks_facility_medium.obj`
 3. Set **Object type** to **Building**.
 4. Save the NMF into that same object folder with the exact filename `model.nmf`.
 5. Copy `model.nmf` to `assets/building/medium/native/earthworks_facility_medium.nmf` in the project. The normal prototype launcher will then stage both Small and Medium items.

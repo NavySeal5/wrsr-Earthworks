@@ -1,6 +1,6 @@
 # Stage 12 — Large facility user review
 
-The Large Earthworks Facility is integrated as Workshop item `9100000014` (`EarthworksDevelopmentFacilityLarge`). The project RML launcher stages the item and enables it alongside Small and Medium in the isolated Earthworks Development profile. Its in-game review remains user-run.
+The Large Earthworks Facility is integrated as Workshop item `9100000014` (`EarthworksFacilityLarge`). The project RML launcher stages the item and enables it alongside Small and Medium in the isolated Earthworks Development profile. Its in-game review remains user-run.
 
 ## Decisions implemented
 
@@ -17,7 +17,7 @@ The Large Earthworks Facility is integrated as Workshop item `9100000014` (`Eart
 
 ## Prepare the ModelViewer source
 
-1. Run `scripts/Prepare-EarthworksLargeModelViewer.ps1` from the mod root. It copies the generated OBJ, MTL and roof texture into a marked object folder under `media_soviet/workshop_wip/9100000014/EarthworksDevelopmentFacilityLarge`.
+1. Run `scripts/Prepare-EarthworksLargeModelViewer.ps1` from the mod root. It copies the generated OBJ, MTL and roof texture into a marked object folder under `media_soviet/workshop_wip/9100000014/EarthworksFacilityLarge`.
 2. Open ModelViewer manually and import `earthworks_facility_large.obj` from that object folder. Keep the imported material groups and their order intact.
 3. Save the model as `model.nmf` in that same object folder. ModelViewer's Save As appends `.nmf`; enter only `model` as the filename.
 4. Copy the resulting `model.nmf` to `assets/building/large/native/earthworks_facility_large.nmf`.
