@@ -21,10 +21,10 @@ Do not load Earthworks through TesmioLoader and RML in the same game session. Wo
 
 - Build `0.16.64-release-candidate` is the current candidate. Its version comes from the root `VERSION` file and feeds CMake, the plugin, and the generated RML manifest.
 - The candidate folder and ZIP are at `build/release/EarthworksPlanning-0.16.64-release-candidate`. The package includes 88 source files, license materials, change log, compatibility notes, and known issues. All 139 package checksum entries match.
-- No automated or in-game tests were run for that build. Its player checks remain open in [the stage review log](STAGE_REVIEWS.md).
-- Stage 13 has not been accepted for the current build.
-- Stage 12's facility UI is accepted. The Small facility is accepted. The latest Medium and Large model/config changes still need the documented user checks.
-- Tesmio migration has no recorded in-game acceptance. The RML path is also not verified as a fallback for this release candidate.
+- The user reports active playtesting over several days. The user confirms that facility costs, terrain editing, Tesmio use, and saving/loading work.
+- These are user-reported results, not developer-run tests. The user did not provide individual checklist results or logs. Stage 13 geometry and editing are accepted based on this report. The exact save-recovery cases listed below were not itemized.
+- Facility costs are accepted. Appearance, access, construction behavior, and other facility checks for Medium and Large remain open.
+- Tesmio use is accepted. The RML fallback is not verified for this release candidate.
 - The playtest package remains a local development artifact. The release candidate package is separate and includes corresponding source, license texts, and third-party notices. Review this package before any distribution.
 
 ## User-run release checks
@@ -72,10 +72,9 @@ Run these checks with the same identified candidate build. Use a disposable save
 
 ## Release blockers
 
-- User-run checks above have not been recorded for the current build.
-- Stage 12 model, access, construction, and cost reviews are not complete for every facility size.
-- Stage 13 geometry and editing are not accepted for the current build.
-- Intended gameplay settings and practical workload limits remain open under D14. Fuel use and terrain material accounting are outside the confirmed candidate scope under D163. Operating range limits still need review; D162's optional distance contribution does not define a maximum operating radius.
+- The user's playtest report covers terrain editing, facility costs, Tesmio use, and saving/loading. Other checks in the checklist remain open unless listed above as accepted.
+- Stage 12 appearance, access, construction, and other facility checks are not complete for every facility size.
+- RML fallback, intended gameplay settings, and practical workload limits remain open under D14. Fuel use and terrain material accounting are outside the confirmed candidate scope under D163. Operating range limits still need review; D162's optional distance contribution does not define a maximum operating radius.
 - Review the generated source and license materials before distribution.
 - Confirm performance limits and define the supported maximum workload.
 - Decide separately whether to publish the candidate publicly.
