@@ -1,17 +1,21 @@
-# Vehicle construction-skill diagnostic
+# Vehicle Speed/Level productivity source
 
-The vanilla vehicle definitions store machine skill values in each vehicle's `script.ini`:
+Earthworks uses the same number shown in the vehicle information panel as its machine level. It does not substitute another construction skill when that value differs.
 
-- Bulldozers use `$SKILL_CONSTRUCTION_BULLDOZER`.
-- Excavators use `$SKILL_CONSTRUCTION_GROUNDWORKS`.
+| Vehicle | `script.ini` value used | Rate units |
+| --- | --- | --- |
+| Bulldozer | `$SKILL_CONSTRUCTION_BULLDOZER` | displayed Speed/Level directly |
+| Excavator | `$SKILL_GRAVELMINING` | displayed Speed/Level directly |
 
-Examples in the installed game data include KT50 bulldozer = 22, small bulldozer = 9, K12 bulldozer = 36, large bulldozer = 58, Stalinec bulldozer = 28; EO302B excavator = 22, T815 excavator = 15, RMN12215 = 17, WT174 = 26, LH360 = 28, E10011 = 33. This shows that a single static rate per machine discards real differences in the vanilla data. These configured skills are evidence about machine ratings; they do not establish a validated terrain-volume multiplier.
+For example, the M-III P 1.5 displays level 21, so it contributes 21 rate units. The Stalinets S-65 displays level 25, so it contributes 25. Its rate is not calculated from the separate Groundworks value. That value can still appear in the developer log for comparison, but it does not drive productivity.
 
-## Diagnostic behavior
+Each displayed Speed/Level point contributes 350 m³ per in-game day at the default 1× setting. This uses 60 simulation hours per in-game day, or 350/60 m³ per point per simulation hour. The global Site speed multiplier scales the rate. A level-21 machine therefore contributes 7,350 m³/day; a level-25 machine contributes 8,750 m³/day. A missing class-specific displayed-level value produces unavailable capacity. Earthworks does not silently fall back to Groundworks or a fixed rate.
 
-The Developer tab's **Log inspector snapshot** action now reports the matching vanilla `media_soviet/vehicles/<internal-type-name>/script.ini` and both construction skill tokens for each linked bulldozer or excavator. It reads only when the user requests a snapshot. It does not write game data, alter the executor, or affect productivity. Internal type names are restricted to plain folder-name characters before constructing the path.
+## Developer diagnostic
 
-Workshop/modded vehicles whose definitions are not in the vanilla vehicle directory will report unavailable. Their active mod source and parsed native type value have not yet been resolved. Do not silently use a different skill token or substitute the fallback for a missing value until this is decided and validated.
+The Developer tab's **Log inspector snapshot** reports the parsed bulldozer level, excavator level, Groundworks value, selected displayed level, selected field, derived rate units, and source `script.ini` for each linked bulldozer or excavator. The raw aligned-integer scan remains read-only and informational; it does not drive productivity.
+
+The lookup supports vanilla and DLC vehicle folders. Workshop or modded vehicles whose scripts are outside those folders can report unavailable until their definitions are resolved. Do not substitute a different field for these vehicles without confirming that field matches the displayed Speed/Level value.
 
 ## Open the developer inspector
 
@@ -22,8 +26,13 @@ The normal player build omits technical diagnostics. Build the developer-only UI
 .\scripts\Stage-Diagnostics.ps1 -DeveloperUI
 ```
 
-Close the game and project-local RML before staging or launching. Run `launch-prototype.cmd`; it stages the developer build and opens the project-local RML. Choose **Earthworks Development** and launch the game from RML. Open the Earthworks panel and select **Developer**, beside **Projects and Sites**. Confirm the RML plugin version is `0.16.39-construction-skill-diagnostic` with DLL hash prefix `5f912b7f`. The subscribed/player build does not include this tab.
+Close the game and TesmioLoader before staging. Run `launch-prototype.cmd`, choose **Earthworks Development**, and launch the game from TesmioLoader. Open the Earthworks panel and select **Developer**, beside **Projects and Sites**. The subscribed/player build does not include this tab.
 
-## User verification
+## Reference snapshot
 
-In-game, open Earthworks → Developer → Workforce inspector, select a facility containing machines with different known skills, then click **Log inspector snapshot**. Send the `earthworks skill-source` lines from the current game's `log.html`. Compare the reported configured skill with each vehicle's native information panel. In particular, check several different excavator and bulldozer models. Do not change productivity until the mapping and behavior are confirmed.
+The user's snapshot showed:
+
+- M-III P 1.5 excavator: displayed Speed/Level 21, `$SKILL_GRAVELMINING 21`, and separate `$SKILL_CONSTRUCTION_GROUNDWORKS 15`. Earthworks uses 21, giving 7,350 m³/day at 1×.
+- Stalinets S-65 bulldozer: displayed Speed/Level 25 and `$SKILL_CONSTRUCTION_BULLDOZER 25`. Earthworks uses 25, giving 8,750 m³/day at 1×.
+
+The raw scan found no varying runtime integer field. It is not needed for these supported definitions because the configured fields above match the displayed values.

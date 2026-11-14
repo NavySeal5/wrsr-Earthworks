@@ -192,6 +192,9 @@ $custom.Add('$COST_WORK_VEHICLE_STATION_ACCORDING_NODE mesh_foundation_concrete'
 $custom.Add('$COST_RESOURCE_AUTO ground_asphalt 1.350')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_BRICKS_LAYING 1.0')
+# One construction crane station is available in each later build phase.
+# This is for constructing the facility; it does not add crane use to Sites.
+$custom.Add('$COST_WORK_VEHICLE_STATION -15.5000 0.0000 18.0000 -9.5000 0.0000 18.0000')
 foreach ($node in @(
     'mesh_dispatch_concrete',
     'mesh_window_frames',
@@ -204,6 +207,7 @@ $custom.Add('$COST_RESOURCE_AUTO wall_brick 0.630')
 $custom.Add('$COST_RESOURCE_AUTO wall_wood 0.270')
 $custom.Add('------------------')
 $custom.Add('$COST_WORK SOVIET_CONSTRUCTION_ROOFTOP_BUILDING 1.0')
+$custom.Add('$COST_WORK_VEHICLE_STATION -15.5000 0.0000 18.0000 -9.5000 0.0000 18.0000')
 foreach ($node in @(
     'mesh_canopy_structural_steel',
     'mesh_decorative_tank_painted_steel',

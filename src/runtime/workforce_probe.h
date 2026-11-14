@@ -22,7 +22,7 @@ struct VehicleReading {
     bool nativeJobStateValid=false,routeValid=false,firstRouteStopIsFacility=false;
     float distance=0;
     unsigned constructionRateUnits=0;
-    bool constructionSkillValid=false;
+    bool displayedLevelValid=false;
     char type[65]{};
 };
 struct WorkforceView {

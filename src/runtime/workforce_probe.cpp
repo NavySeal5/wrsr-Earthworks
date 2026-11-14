@@ -18,8 +18,11 @@ namespace {
 using Address=uintptr_t;
 struct List { Address begin=0; unsigned count=0; };
 struct Identity { unsigned slot=0,id=0; Address address=0; };
+struct RawDiagnosticVehicle { unsigned id=0;Address vehicle=0,type=0;char name[65]{}; };
 WorkforceView view;
 std::array<Identity,WorkforceCandidates> candidates;
+std::array<RawDiagnosticVehicle,WorkforceRows> rawDiagnosticVehicles{};
+unsigned rawDiagnosticVehicleCount=0;
 Identity selected;
 unsigned blockedAssignments=0;
 ULONGLONG lastSample=0;
@@ -133,11 +136,12 @@ bool Resolve(const Identity& identity,Address* address)
     return PointerList(World()+0x11B08,262144,&buildings) && Element(buildings,identity.slot,address)
         && *address && *address==identity.address && Read(*address,&id) && id==identity.id;
 }
-bool Vehicle(Address address,Address building,const Address* parked,unsigned parkedCount,Point origin,VehicleReading* out)
+bool Vehicle(Address address,Address building,const Address* parked,unsigned parkedCount,Point origin,VehicleReading* out,Address* typeAddressOut=nullptr)
 {
     Address type=0,home=0,assigned=0;
     if(!Read(address+4,&out->id) || !Read(address+0x1708,&type) || !type ||
         !Read(type+0x294,&out->category) || !Read(address+0x4F0,&home) || !Read(address+0x4F8,&assigned)) return false;
+    if(typeAddressOut)*typeAddressOut=type;
     out->earthworksAllowed=IsEarthworksVehicleType(reinterpret_cast<void*>(type));
     out->groundworksMachine=IsGroundworksMachineType(reinterpret_cast<void*>(type));
     out->home=home==building;out->assigned=assigned==building;
@@ -167,11 +171,14 @@ bool Vehicle(Address address,Address building,const Address* parked,unsigned par
     if(out->positionValid)out->distance=Distance(position,origin);
     return true;
 }
-bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool* hasBulldozer,
-    float* groundworks,bool* hasGroundworks,char* source,size_t sourceSize)
+bool ReadConfiguredMachineLevels(const char* typeName,float* bulldozer,bool* hasBulldozer,
+    float* excavator,bool* hasExcavator,float* groundworks,bool* hasGroundworks,
+    char* source,size_t sourceSize)
 {
-    if(!typeName||!typeName[0]||!bulldozer||!hasBulldozer||!groundworks||!hasGroundworks||!source||sourceSize<2)return false;
-    *hasBulldozer=false;*hasGroundworks=false;*bulldozer=0;*groundworks=0;source[0]=0;
+    if(!typeName||!typeName[0]||!bulldozer||!hasBulldozer||!excavator||!hasExcavator||
+        !groundworks||!hasGroundworks||!source||sourceSize<2)return false;
+    *hasBulldozer=false;*hasExcavator=false;*hasGroundworks=false;
+    *bulldozer=0;*excavator=0;*groundworks=0;source[0]=0;
     // Vehicle type names normally correspond to their asset folder. DLC vehicles
     // are exposed by the game as DLC<n>_<asset-name>, while their files live in
     // media_soviet\dlc<n>\vehicles\<asset-name>. Only allow plain folder names;
@@ -225,26 +232,31 @@ bool ReadConfiguredConstructionSkills(const char* typeName,float* bulldozer,bool
         char key[80]{};float value=0;
         if(sscanf_s(first,"%79s %f",key,static_cast<unsigned>(_countof(key)),&value)!=2||!std::isfinite(value))continue;
         if(std::strcmp(key,"$SKILL_CONSTRUCTION_BULLDOZER")==0){*bulldozer=value;*hasBulldozer=true;}
+        else if(std::strcmp(key,"$SKILL_GRAVELMINING")==0){*excavator=value;*hasExcavator=true;}
         else if(std::strcmp(key,"$SKILL_CONSTRUCTION_GROUNDWORKS")==0){*groundworks=value;*hasGroundworks=true;}
     }
     std::fclose(file);return true;
 }
-bool ConstructionSkillForVehicle(const char* typeName,float* skill)
+bool DisplayedLevelForVehicle(const char* typeName,float* level,const char** field)
 {
-    if(!typeName||!skill)return false;
+    if(!typeName||!level||!field)return false;
     const bool bulldozer=std::strstr(typeName,"bulldozer")||std::strstr(typeName,"buldozer");
     const bool excavator=std::strstr(typeName,"excavator")||std::strstr(typeName,"exvacator");
     if(!bulldozer&&!excavator)return false;
-    float bulldozerSkill=0,groundworksSkill=0;bool hasBulldozer=false,hasGroundworks=false;char source[MAX_PATH]{};
-    if(!ReadConfiguredConstructionSkills(typeName,&bulldozerSkill,&hasBulldozer,
-        &groundworksSkill,&hasGroundworks,source,sizeof(source)))return false;
-    if(bulldozer&&hasBulldozer){*skill=bulldozerSkill;return true;}
-    if(excavator&&hasGroundworks){*skill=groundworksSkill;return true;}
+    float bulldozerLevel=0,excavatorLevel=0,groundworksSkill=0;
+    bool hasBulldozer=false,hasExcavator=false,hasGroundworks=false;char source[MAX_PATH]{};
+    if(!ReadConfiguredMachineLevels(typeName,&bulldozerLevel,&hasBulldozer,
+        &excavatorLevel,&hasExcavator,&groundworksSkill,&hasGroundworks,source,sizeof(source)))return false;
+    // Use the class-specific script value that matches the vehicle panel's
+    // displayed Speed/Level. Groundworks may differ and must not replace it.
+    if(bulldozer&&hasBulldozer){*level=bulldozerLevel;*field="$SKILL_CONSTRUCTION_BULLDOZER";return true;}
+    if(excavator&&hasExcavator){*level=excavatorLevel;*field="$SKILL_GRAVELMINING";return true;}
     return false;
 }
 bool SampleIdentity(const Identity& identity,WorkforceView* output)
 {
     if(!output)return false;
+    if(output==&view) { rawDiagnosticVehicles={};rawDiagnosticVehicleCount=0; }
     Address building=0;
     if(!Resolve(identity,&building)) {
         *output=WorkforceView{};
@@ -274,20 +286,28 @@ bool SampleIdentity(const Identity& identity,WorkforceView* output)
         if(next.parkedValid)std::sort(parkedAddresses.begin(),parkedAddresses.begin()+parked.count);
     }
     next.vehiclesValid=PointerList(World()+0x12810,65536,&vehicles);
+    std::array<RawDiagnosticVehicle,WorkforceRows> nextRawDiagnosticVehicles{};
+    unsigned nextRawDiagnosticVehicleCount=0;
     if(next.vehiclesValid)for(unsigned i=0;i<vehicles.count;++i) {
         Address address=0;
         if(!Element(vehicles,i,&address)){next.vehiclesValid=false;break;}
         if(!address)continue;
         VehicleReading row;
-        if(!Vehicle(address,building,parkedAddresses.data(),next.parkedValid?parked.count:0,next.building.position,&row)) {++next.unreadableVehicles;continue;}
+        Address typeAddress=0;
+        if(!Vehicle(address,building,parkedAddresses.data(),next.parkedValid?parked.count:0,next.building.position,&row,&typeAddress)) {++next.unreadableVehicles;continue;}
         if(!row.home && !row.assigned && !row.parked)continue;
         next.homeCount+=row.home?1u:0u;next.assignedCount+=row.assigned?1u:0u;next.parkedCount+=row.parked?1u:0u;
         if(row.parked && row.earthworksAllowed && row.groundworksMachine) {
             ++next.eligibleMachineCandidates;
-            float constructionSkill=0;
-            if(ConstructionSkillForVehicle(row.type,&constructionSkill)) {
-                row.constructionSkillValid=true;
-                const double rateUnits=MachineRate(constructionSkill);
+            if(nextRawDiagnosticVehicleCount<nextRawDiagnosticVehicles.size()) {
+                auto& raw=nextRawDiagnosticVehicles[nextRawDiagnosticVehicleCount++];
+                raw.id=row.id;raw.vehicle=address;raw.type=typeAddress;
+                strncpy_s(raw.name,row.type,_TRUNCATE);
+            }
+            float displayedLevel=0;const char* displayedLevelField=nullptr;
+            if(DisplayedLevelForVehicle(row.type,&displayedLevel,&displayedLevelField)) {
+                row.displayedLevelValid=true;
+                const double rateUnits=MachineRate(displayedLevel);
                 row.constructionRateUnits=rateUnits>=std::numeric_limits<unsigned>::max()
                     ?std::numeric_limits<unsigned>::max():static_cast<unsigned>(rateUnits);
                 if(row.constructionRateUnits>std::numeric_limits<unsigned>::max()-next.eligibleMachineRateUnits)
@@ -302,11 +322,15 @@ bool SampleIdentity(const Identity& identity,WorkforceView* output)
     next.blockedConstructionAssignments=blockedAssignments;
     strcpy_s(next.status,"Read-only sample. Counts describe native lists/links; they do not establish usable workers or machines.");
     *output=next;
+    if(output==&view) {
+        rawDiagnosticVehicles=nextRawDiagnosticVehicles;
+        rawDiagnosticVehicleCount=nextRawDiagnosticVehicleCount;
+    }
     return next.buildingValid;
 }
 void Sample() { SampleIdentity(selected,&view); }
 }
-void ResetWorkforce() {view=WorkforceView{};candidates={};selected={};blockedAssignments=0;lastSample=0;}
+void ResetWorkforce() {view=WorkforceView{};candidates={};rawDiagnosticVehicles={};rawDiagnosticVehicleCount=0;selected={};blockedAssignments=0;lastSample=0;}
 void FindWorkforceBuildings(Point point)
 {
     ResetWorkforce();List buildings;
@@ -399,6 +423,41 @@ void TickWorkforce()
     const auto now=GetTickCount64();if(now-lastSample<500)return;lastSample=now;Sample();
 }
 WorkforceView ReadWorkforce() {return view;}
+namespace {
+void LogRawCandidateOffsets(const char* label,bool typeObject,unsigned byteCount)
+{
+    if(rawDiagnosticVehicleCount<2) {
+        host->log("earthworks  raw-skill-candidate source=%s unavailable (park at least two eligible machines at this facility)",label);
+        return;
+    }
+    unsigned logged=0;
+    for(unsigned offset=0;offset+sizeof(int)<=byteCount;offset+=sizeof(int)) {
+        int values[WorkforceRows]{};bool readable=true;int minimum=101,maximum=-1;
+        for(unsigned i=0;i<rawDiagnosticVehicleCount;++i) {
+            const auto& vehicle=rawDiagnosticVehicles[i];
+            const Address base=typeObject?vehicle.type:vehicle.vehicle;
+            if(!base||!Read(base+offset,&values[i])||values[i]<0||values[i]>100) {readable=false;break;}
+            minimum=std::min(minimum,values[i]);maximum=std::max(maximum,values[i]);
+        }
+        if(!readable||minimum==maximum)continue;
+        char line[768]{};size_t used=0;
+        const int prefix=sprintf_s(line,"earthworks  raw-skill-candidate source=%s offset=0x%X values=",label,offset);
+        if(prefix<=0)continue;used=static_cast<size_t>(prefix);
+        for(unsigned i=0;i<rawDiagnosticVehicleCount;++i) {
+            const auto& vehicle=rawDiagnosticVehicles[i];
+            const int written=sprintf_s(line+used,sizeof(line)-used,"%s%u:%s:%d",i?",":"",vehicle.id,vehicle.name,values[i]);
+            if(written<=0||static_cast<size_t>(written)>=sizeof(line)-used){used=sizeof(line);break;}
+            used+=static_cast<size_t>(written);
+        }
+        host->log("%s",line);
+        if(++logged>=128) {
+            host->log("earthworks  raw-skill-candidate source=%s truncated=1 (first 128 varying integer offsets only)",label);
+            break;
+        }
+    }
+    if(!logged)host->log("earthworks  raw-skill-candidate source=%s no varying 0..100 integer fields found",label);
+}
+}
 void LogWorkforce()
 {
     if(view.selected)Sample();
@@ -411,20 +470,27 @@ void LogWorkforce()
         const auto& r=view.vehicles[i];
     host->log("earthworks  stage04 vehicle=%u type=%s category=%u H=%d A=%d P=%d jobStateValid=%d jobState=%d routeValid=%d routeStops=%u firstRouteIsFacility=%d positionValid=%d distance=%.1f constructionRateUnits=%s%u",
             r.id,r.type,r.category,r.home,r.assigned,r.parked,r.nativeJobStateValid,r.nativeJobState,r.routeValid,r.routeStopCount,r.firstRouteStopIsFacility,r.positionValid,r.distance,
-            r.constructionSkillValid?"":"unknown/",r.constructionRateUnits);
+            r.displayedLevelValid?"":"unknown/",r.constructionRateUnits);
         if(r.groundworksMachine) {
-            float bulldozer=0,groundworks=0;bool hasBulldozer=false,hasGroundworks=false;char source[MAX_PATH]{};
-            if(ReadConfiguredConstructionSkills(r.type,&bulldozer,&hasBulldozer,&groundworks,&hasGroundworks,source,sizeof(source))) {
-                char bulldozerText[32]{},groundworksText[32]{};
+            float bulldozer=0,excavator=0,groundworks=0;
+            bool hasBulldozer=false,hasExcavator=false,hasGroundworks=false;char source[MAX_PATH]{};
+            if(ReadConfiguredMachineLevels(r.type,&bulldozer,&hasBulldozer,&excavator,&hasExcavator,
+                &groundworks,&hasGroundworks,source,sizeof(source))) {
+                char bulldozerText[32]{},excavatorText[32]{},groundworksText[32]{};
                 if(hasBulldozer)sprintf_s(bulldozerText,"%.3f",bulldozer);else strcpy_s(bulldozerText,"n/a");
+                if(hasExcavator)sprintf_s(excavatorText,"%.3f",excavator);else strcpy_s(excavatorText,"n/a");
                 if(hasGroundworks)sprintf_s(groundworksText,"%.3f",groundworks);else strcpy_s(groundworksText,"n/a");
-                float relevantSkill=0;const bool hasRelevantSkill=ConstructionSkillForVehicle(r.type,&relevantSkill);
-                host->log("earthworks  skill-source vehicle=%u type=%s bulldozerSkill=%s groundworksSkill=%s selectedConstructionSkill=%s%.3f derivedRateUnits=%u source=%s",
-                    r.id,r.type,bulldozerText,groundworksText,hasRelevantSkill?"":"n/a/",hasRelevantSkill?relevantSkill:0.0f,
-                    r.constructionRateUnits,source);
+                float displayedLevel=0;const char* displayedField=nullptr;
+                const bool hasDisplayedLevel=DisplayedLevelForVehicle(r.type,&displayedLevel,&displayedField);
+                host->log("earthworks  level-source vehicle=%u type=%s bulldozerLevel=%s excavatorLevel=%s groundworksSkill=%s displayedLevel=%s%.3f displayedField=%s derivedRateUnits=%u source=%s",
+                    r.id,r.type,bulldozerText,excavatorText,groundworksText,hasDisplayedLevel?"":"n/a/",
+                    hasDisplayedLevel?displayedLevel:0.0f,hasDisplayedLevel?displayedField:"n/a",r.constructionRateUnits,source);
             }
             else host->log("earthworks  skill-source vehicle=%u type=%s unavailable (no matching supported media_soviet vehicle script.ini)",r.id,r.type);
         }
     }
+    host->log("earthworks  raw-skill-candidate note=read-only aligned integer scan; values are candidates, not confirmed nSkill offsets; gameplay rates use the class-specific displayed Speed/Level from script.ini");
+    LogRawCandidateOffsets("vehicle-type",true,0x1000);
+    LogRawCandidateOffsets("vehicle-instance",false,0x1800);
 }
 }

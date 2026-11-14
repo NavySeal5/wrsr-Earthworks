@@ -1,9 +1,14 @@
 param([string]$GameRoot = '')
 
 $ErrorActionPreference = 'Stop'
-$dll = Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'
+$dllCandidates = @(
+    (Join-Path $PSScriptRoot 'plugins\EarthworksPlanning.dll'),
+    (Join-Path $PSScriptRoot '..\build\windows-x64\bin\EarthworksPlanning.dll')
+)
+$dll = $dllCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 
-if ([string]::IsNullOrWhiteSpace($GameRoot)) {
+$searchRoot = $GameRoot
+if ([string]::IsNullOrWhiteSpace($searchRoot)) {
     $libraries = @()
     try { $libraries += (Get-ItemPropertyValue 'HKCU:\Software\Valve\Steam' SteamPath).Replace('/', '\') } catch {}
     foreach ($library in @($libraries)) {
@@ -16,19 +21,30 @@ if ([string]::IsNullOrWhiteSpace($GameRoot)) {
             }
         }
     }
-    $GameRoot = $libraries | Select-Object -Unique | ForEach-Object { Join-Path $_ 'steamapps\common\SovietRepublic' } |
+    $searchRoot = $libraries | Select-Object -Unique | ForEach-Object { Join-Path $_ 'steamapps\common\SovietRepublic' } |
         Where-Object { Test-Path (Join-Path $_ 'SOVIET64.exe') } | Select-Object -First 1
-    if (-not $GameRoot) { $GameRoot = Read-Host 'Game folder not found automatically. Enter the folder containing SOVIET64.exe' }
+    if (-not $searchRoot) { $searchRoot = Read-Host 'Game folder not found automatically. Enter the game folder or TesmioLoader folder' }
 }
 
-$game = (Resolve-Path -LiteralPath $GameRoot).Path
-$plugins = Join-Path $game 'plugins'
-$ini = Join-Path $game 'tesmioloader.ini'
+if (-not $dll) { throw 'Earthworks DLL not found. Build it with scripts\Build.ps1 or use the packaged installer.' }
+$searchRoot = (Resolve-Path -LiteralPath $searchRoot).Path
+$loaderRoots = @(
+    $searchRoot,
+    (Join-Path $searchRoot 'tesmioloader'),
+    (Join-Path $searchRoot 'tesmioloader\build'),
+    (Join-Path $searchRoot 'build')
+) | Select-Object -Unique
+$loaderRoot = $loaderRoots | Where-Object {
+    (Test-Path -LiteralPath (Join-Path $_ 'tesmioloader.dll')) -and
+    (Test-Path -LiteralPath (Join-Path $_ 'tesmioloader.ini'))
+} | Select-Object -First 1
 
-if (-not (Test-Path -LiteralPath $dll)) { throw "Earthworks plugin is missing beside the installer: $dll" }
-if (-not (Test-Path (Join-Path $game 'tesmioloader.dll')) -or -not (Test-Path $ini)) {
-    throw 'Install TesmioLoader in the game folder first.'
+if (-not $loaderRoot) {
+    throw 'TesmioLoader files were not found. Checked this folder and its tesmioloader\build subfolder.'
 }
+$plugins = Join-Path $loaderRoot 'plugins'
+$ini = Join-Path $loaderRoot 'tesmioloader.ini'
+
 New-Item -ItemType Directory -Path $plugins -Force | Out-Null
 Copy-Item -LiteralPath $dll -Destination (Join-Path $plugins 'EarthworksPlanning.dll') -Force
 
@@ -43,4 +59,5 @@ $entry = -1
 for ($i=$section+1; $i -lt $end; $i++) { if ($lines[$i] -match '^\s*EarthworksPlanning\s*=') { $entry=$i; break } }
 if ($entry -ge 0) { $lines[$entry]='EarthworksPlanning=1' } else { $lines.Insert($section+1,'EarthworksPlanning=1') }
 [IO.File]::WriteAllLines($ini,$lines,[Text.UTF8Encoding]::new($false))
-Write-Host 'Earthworks installed. Start the game through TesmioLoader.'
+Write-Host "Earthworks installed in TesmioLoader folder: $loaderRoot"
+Write-Host 'Start the game through TesmioLoader.'

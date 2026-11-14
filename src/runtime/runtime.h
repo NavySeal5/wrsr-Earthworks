@@ -8,7 +8,7 @@
 #include <cstdint>
 
 namespace ew {
-enum class Action { Pick, Select, NewSite, SetShapeMode, SetGridSnap, SetSiteSafeAngles, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, AdjustSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, MoveSiteShape, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, SetSiteVisibility, SetProjectSitesVisibility, StartProject, RestartProject, PauseProject, ResumeProject, ReviewResumeProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RefreshFacilities, DismissFacilityWarning, RemoveUnresolvedFacilityAssignments };
+enum class Action { Pick, Select, NewSite, SetShapeMode, SetGridSnap, SetSiteSafeAngles, FinishSite, CloseSiteEditor, CancelSiteDraft, SetSiteTarget, SetSitePointTarget, AdjustSitePointTarget, SampleSiteTarget, SampleSitePointTarget, SelectSitePoint, AddSitePoint, RemoveSitePoint, MoveSitePoint, MoveSiteShape, Sample, CancelPick, Target, Clear, Undo, Redo, ConfirmProject, SetDraftSiteName, SelectProject, SelectNamedProject, CreateNamedProject, RenameNamedProject, DeleteNamedProject, RenameSite, AddProjectFacility, RemoveProjectFacility, MoveProjectUp, MoveProjectDown, AssignProject, ClearProjectAssignment, SetSiteVisibility, SetProjectSitesVisibility, StartProject, RestartProject, PauseProject, ResumeProject, ReviewResumeProject, InspectBuilding, ChooseBuilding, ClearInspector, LogInspector, RemoveProject, RefreshFacilities, SettingsChanged, DismissFacilityWarning, RemoveUnresolvedFacilityAssignments };
 enum class PickMode { DrawSite, Sample, None, InspectBuilding, SampleSitePointTarget };
 struct Command { Action action; float value = 0; uint64_t generation = 0; uint64_t projectId = 0; unsigned pointIndex = 0; Point point{}; bool allSitePoints=false; char text[MaxSavedNameBytes+1]{}; };
 struct NamedProjectBrief { uint64_t id=0; char name[MaxSavedNameBytes+1]{}; unsigned facilityCount=0; };
@@ -16,6 +16,8 @@ struct ProjectFacilityBrief {
     unsigned id=0,eligibleMachines=0;
     unsigned eligibleMachineRateUnits=0;
     float distance=0;
+    Point position{};
+    bool positionValid=false;
     uint64_t assignedProjectId=0;
     bool machineCountValid=false,machineRateValid=false;
     char assetName[64]{};
@@ -27,7 +29,8 @@ struct ProjectBrief {
     char name[MaxSavedNameBytes+1]{};
     ProjectStatus status = ProjectStatus::Draft;
     unsigned facilityId = 0;
-    unsigned allocatedWorkers = 0, allocatedMachines = 0, allocatedRateUnits = 0;
+    unsigned allocatedWorkers = 0, allocatedMachines = 0;
+    double allocatedRateUnits = 0;
     float progress = 0;
     bool needsReview = false, visible = true;
     SiteOutline outline{};
@@ -62,8 +65,10 @@ struct Snapshot {
     Plan editorPlan{};
     Volumes editorVolumes{};
     bool editorVolumesValid=false;
-    unsigned assignedEligibleMachines=0, assignedMachineRateUnits=0;
-    unsigned editorAllocatedMachines=0,editorAllocatedRateUnits=0;
+    unsigned assignedEligibleMachines=0;
+    double assignedMachineRateUnits=0;
+    unsigned editorAllocatedMachines=0;
+    double editorAllocatedRateUnits=0;
     bool assignedMachineReadingsValid=false;
     char siteDraftError[192]{};
     char siteActionError[192]{};
@@ -88,6 +93,7 @@ struct Snapshot {
 };
 extern const TsmHost* host;
 extern std::atomic<bool> panelOpen, mouseCapture, keyboardCapture, leftRelease, mapPickCapture, escapeCapture;
+extern std::atomic<uint64_t> tableWheelCaptureUntilMs;
 bool LeftTaken();
 bool InstallRuntime();
 void ClearInputLatches();

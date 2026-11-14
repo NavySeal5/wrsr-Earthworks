@@ -45,8 +45,8 @@ struct SavedEarthwork {
     bool visible = true;
     float workRemainderM3 = 0;
     unsigned allocatedWorkers = 0, allocatedMachines = 0;
-    // Runtime-only total of floor(construction skill / 3) for allocated machines.
-    unsigned allocatedRateUnits = 0;
+    // Runtime-only total of displayed vehicle Speed/Level points for allocated machines.
+    double allocatedRateUnits = 0;
     Plan plan{};
 };
 

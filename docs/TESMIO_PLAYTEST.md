@@ -6,7 +6,7 @@
 - Build the player plugin with `scripts/Build.ps1`.
 - Assemble the local mod package with `scripts/Build-CombinedModPackage.ps1`.
 
-The package contains the three facility definitions, `plugins/EarthworksPlanning.dll`, the RML fallback manifest, this guide, and `Install-TesmioPlugin.ps1`. Steam Workshop does not install the DLL into TesmioLoader's plugin folder.
+The package contains the three facility definitions, `plugins/EarthworksPlanning.dll`, the RML fallback manifest, this guide, and `Install-TesmioPlugin.ps1`. In a source checkout, first build with `scripts/Build.ps1`; the installer then uses `build/windows-x64/bin/EarthworksPlanning.dll`. Steam Workshop does not install the DLL into TesmioLoader's plugin folder.
 
 ## Install the plugin for TesmioLoader
 

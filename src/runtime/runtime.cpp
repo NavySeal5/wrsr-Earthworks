@@ -25,6 +25,7 @@
 namespace ew {
 const TsmHost* host = nullptr;
 std::atomic<bool> panelOpen{false}, mouseCapture{false}, keyboardCapture{false}, leftRelease{false}, mapPickCapture{false}, escapeCapture{false};
+std::atomic<uint64_t> tableWheelCaptureUntilMs{0};
 namespace {
 // Native terrain sampling varies by a few millimeters between reads. Keep
 // terrain review protection while allowing this observed readback jitter.
@@ -57,6 +58,42 @@ ULONGLONG lastEditorVolumeEstimate = 0;
 uint64_t editorVolumeSiteId = 0;
 Volumes cachedEditorVolumes{};
 bool cachedEditorVolumesValid = false;
+Point SiteCenter(const Plan& plan)
+{
+    if(plan.pointCount>=3) {
+        double twiceArea=0.0,weightedX=0.0,weightedZ=0.0;
+        for(unsigned i=0;i<plan.pointCount;++i) {
+            const auto& a=plan.points[i];
+            const auto& b=plan.points[(i+1u)%plan.pointCount];
+            const double cross=static_cast<double>(a.x)*b.z-static_cast<double>(b.x)*a.z;
+            twiceArea+=cross;
+            weightedX+=(static_cast<double>(a.x)+b.x)*cross;
+            weightedZ+=(static_cast<double>(a.z)+b.z)*cross;
+        }
+        if(std::abs(twiceArea)>1.0e-6)
+            return {static_cast<float>(weightedX/(3.0*twiceArea)),0,
+                static_cast<float>(weightedZ/(3.0*twiceArea))};
+    }
+    return {(plan.a.x+plan.b.x)*0.5f,0,(plan.a.z+plan.b.z)*0.5f};
+}
+double EffectiveRateForPlan(const Plan& plan,const Snapshot& snapshot)
+{
+    const Point center=SiteCenter(plan);
+    double total=0;
+    for(unsigned i=0;i<snapshot.assignedFacilityCount;++i) {
+        const auto& facility=snapshot.assignedFacilities[i];
+        if(!facility.machineRateValid)continue;
+        double contribution=1.0;
+        if(DistanceBasedFacilityContribution()) {
+            if(!facility.positionValid)return 0.0;
+            const double distance=std::hypot(static_cast<double>(center.x)-facility.position.x,
+                static_cast<double>(center.z)-facility.position.z);
+            contribution=FacilityDistanceContribution(distance);
+        }
+        total+=static_cast<double>(facility.eligibleMachineRateUnits)*contribution;
+    }
+    return total;
+}
 uint32_t PointMask(unsigned index)
 {
     return index<MaxSitePoints?static_cast<uint32_t>(1u<<index):0u;
@@ -92,7 +129,9 @@ using ConstructionAssignFn = void (*)(void*,void*,void*,float,bool,bool);
 ConstructionAssignFn originalConstructionAssign = nullptr;
 using VehicleSlotFn = unsigned char (*)(void*,void*,void*,uintptr_t,int*);
 VehicleSlotFn originalVehicleSlot = nullptr;
-constexpr size_t LateRva = 0x30D1A0, LoadRva = 0x430FC0, ConstructionAssignRva=0x161C90, VehicleSlotRva=0x3E3F40;
+// WRSR 1.1.1.13 (Steam build 24922914). The instruction prologues remain
+// unchanged from 1.1.1.9, but the functions moved in the updated executable.
+constexpr size_t LateRva = 0x30D120, LoadRva = 0x430F50, ConstructionAssignRva=0x161CB0, VehicleSlotRva=0x3E3E80;
 const unsigned char lateBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xE0,0xDB,0xFF,0xFF};
 const unsigned char loadBytes[] = {0x40,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x00,0x38,0xFF,0xFF};
 const unsigned char constructionAssignBytes[] = {0x48,0x8B,0xC4,0xF3,0x0F,0x11,0x58,0x20,0x4C,0x89,0x40,0x18,0x48,0x89,0x50,0x10,0x53,0x56};
@@ -311,6 +350,21 @@ SavedProject* FindNamedProject(uint64_t id)
 {
     for(auto& project:durableState.projects)if(project.id==id)return &project;
     return nullptr;
+}
+void ResetProjectWorkBacklog(uint64_t projectId)
+{
+    // workRemainderM3 is terrain work that the executor has not applied yet.
+    // It can accumulate when terrain edits are throttled. If the facility
+    // roster changes, discard that stale allowance so the next slice uses
+    // only the machines currently assigned. Applied terrain and progress are
+    // retained; the remainder will accumulate again at the new rate.
+    double discarded=0;
+    for(auto& site:durableState.earthworks)if(site.projectId==projectId) {
+        discarded+=std::max(0.0,static_cast<double>(site.workRemainderM3));
+        site.workRemainderM3=0;
+    }
+    if(discarded>0)host->log("earthworks  project=%llu discarded stale terrain-work backlog=%.3f m3 after facility roster change",
+        static_cast<unsigned long long>(projectId),discarded);
 }
 SavedEarthwork* FindProject(uint64_t id)
 {
@@ -552,6 +606,8 @@ void RefreshProjectStatus()
         for(unsigned j=0;j<previousFacilityCount;++j)if(previousFacilities[j].id==id) {
             target.eligibleMachines=previousFacilities[j].eligibleMachines;
             target.eligibleMachineRateUnits=previousFacilities[j].eligibleMachineRateUnits;
+            target.position=previousFacilities[j].position;
+            target.positionValid=previousFacilities[j].positionValid;
             target.machineCountValid=previousFacilities[j].machineCountValid;
             target.machineRateValid=previousFacilities[j].machineRateValid;
             cached=true;break;
@@ -560,20 +616,22 @@ void RefreshProjectStatus()
             WorkforceView facility{};
             target.eligibleMachines=0;target.eligibleMachineRateUnits=0;
             target.machineCountValid=false;target.machineRateValid=false;
+            target.positionValid=false;
             if(ReadEarthworksFacilityWorkforce(id,&facility) && facility.buildingValid && facility.selectedIsEarthworksFacility
                 && facility.parkedValid && facility.vehiclesValid && facility.unreadableVehicles==0) {
                 target.eligibleMachines=facility.eligibleMachineCandidates;
                 target.machineCountValid=true;
                 target.eligibleMachineRateUnits=facility.eligibleMachineRateUnits;
                 target.machineRateValid=facility.machineSkillReadingsValid;
+                target.position=facility.building.position;
+                target.positionValid=true;
             }
         }
         if(target.machineCountValid)current.assignedEligibleMachines=std::min<unsigned>(
             MaxSavedEarthworks,current.assignedEligibleMachines+target.eligibleMachines);
         else current.assignedMachineReadingsValid=false;
         if(target.machineRateValid) {
-            const uint64_t total=static_cast<uint64_t>(current.assignedMachineRateUnits)+target.eligibleMachineRateUnits;
-            current.assignedMachineRateUnits=static_cast<unsigned>(std::min<uint64_t>(MaxSavedEarthworks*32u,total));
+            current.assignedMachineRateUnits+=target.eligibleMachineRateUnits;
         } else current.assignedMachineReadingsValid=false;
     }
     if(refreshFacilityReadings||current.assignedFacilityCount!=previousFacilityCount)lastProjectFacilityReadings=now;
@@ -586,6 +644,7 @@ void RefreshProjectStatus()
                 auto& target=current.facilityCandidates[i];target=ProjectFacilityBrief{};
                 target.id=buildings[i].id;strncpy_s(target.assetName,buildings[i].assetName,_TRUNCATE);
                 strncpy_s(target.displayName,buildings[i].displayName,_TRUNCATE);
+                target.position=buildings[i].position;target.positionValid=true;
             }
         }
         lastWorldFacilityScan=now;
@@ -647,7 +706,7 @@ void RefreshProjectStatus()
             BuildingReading facility{};
             if(FindEarthworksFacility(current.projectFacilityId,&facility)) {
                 current.assignedFacilityFound=true;
-                const Point center{(selected->plan.a.x+selected->plan.b.x)*0.5f,0,(selected->plan.a.z+selected->plan.b.z)*0.5f};
+                const Point center=SiteCenter(selected->plan);
                 current.projectFacilityDistance=std::hypot(center.x-facility.position.x,center.z-facility.position.z);
             }
         }
@@ -665,6 +724,10 @@ void RefreshProjectStatus()
         selectedSitePointsMask=ValidPointMask(selectedSitePointsMask,current.editorPlan.pointCount);
         current.selectedSitePoint=selectedSitePointIndex;current.selectedSitePointsMask=selectedSitePointsMask;
     }
+    if(siteEditorOpen&&current.editorPlan.complete)
+        current.assignedMachineRateUnits=EffectiveRateForPlan(current.editorPlan,current);
+    else if(current.queuedPlan.complete)
+        current.assignedMachineRateUnits=EffectiveRateForPlan(current.queuedPlan,current);
     UpdateEditorLiveVolumes();
 }
 bool SamplePlan(Plan* plan)
@@ -713,12 +776,17 @@ void Process(const Command& command)
     case Action::PauseProject:
     case Action::ResumeProject:
     case Action::ReviewResumeProject:
+    case Action::SettingsChanged:
         projectSchedulerDirty=true;
         break;
     default:
         break;
     }
     switch(command.action) {
+    case Action::SettingsChanged:
+        RefreshProjectStatus();
+        ++current.revision;
+        break;
     case Action::NewSite:
         if(!FindNamedProject(durableState.selectedProjectId)) {Message("Create or select a Project before creating a Site.");break;}
         if(creatingSite) {siteEditorOpen=true;current.mode=current.plan.complete?PickMode::None:PickMode::DrawSite;RefreshProjectStatus();Message(current.plan.complete?"New Site draft reopened.":"Click vertices to draw the Site boundary, then finish the shape.");break;}
@@ -1134,22 +1202,26 @@ pick_done:
         project->facilityIds.push_back(id);
         project->facilityAnchors.resize(project->facilityIds.size());
         SaveFacilityAnchor(project->facilityAnchors.back(),facility);
+        ResetProjectWorkBacklog(project->id);
         RefreshProjectStatus();Message("Facility added to this Project.");break;
     }
     case Action::RemoveProjectFacility: {
         auto* project=FindNamedProject(durableState.selectedProjectId);if(!project)break;
-        const bool active=std::any_of(durableState.earthworks.begin(),durableState.earthworks.end(),[&](const SavedEarthwork& site) {
-            return site.projectId==project->id&&(site.status==ProjectStatus::Running||site.status==ProjectStatus::Waiting);
-        });
-        if(active) {Message("Pause active Sites before changing this Project's facilities.");break;}
         const auto id=static_cast<uint32_t>(command.projectId);
         const auto it=std::find(project->facilityIds.begin(),project->facilityIds.end(),id);
-        if(it!=project->facilityIds.end()) {
-            const auto index=static_cast<size_t>(std::distance(project->facilityIds.begin(),it));
-            project->facilityIds.erase(it);
-            if(index<project->facilityAnchors.size())project->facilityAnchors.erase(project->facilityAnchors.begin()+index);
-        }
-        RefreshProjectStatus();Message("Facility removed from this Project.");break;
+        if(it==project->facilityIds.end()) {Message("This facility is not assigned to the selected Project.");break;}
+        const auto index=static_cast<size_t>(std::distance(project->facilityIds.begin(),it));
+        project->facilityIds.erase(it);
+        if(index<project->facilityAnchors.size())project->facilityAnchors.erase(project->facilityAnchors.begin()+index);
+        ResetProjectWorkBacklog(project->id);
+        ++current.revision;
+        RefreshProjectStatus();
+        host->log("earthworks  facility removed from project=%llu facility=%u remaining=%zu",
+            static_cast<unsigned long long>(project->id),id,project->facilityIds.size());
+        Message(project->facilityIds.empty()
+            ?"Facility removed. Active Sites will pause with progress preserved because the Project has no assigned facilities."
+            :"Facility removed. Active Site work will be rebalanced across the remaining facilities.");
+        break;
     }
     case Action::SelectProject:
         if(auto* site=FindProject(command.projectId);site&&site->projectId==durableState.selectedProjectId) {
@@ -1219,6 +1291,7 @@ pick_done:
             if(!namedProject)break;
             namedProject->facilityIds.assign(1,workforce.building.id);
             namedProject->facilityAnchors.resize(1);SaveFacilityAnchor(namedProject->facilityAnchors.front(),workforce.building);
+            ResetProjectWorkBacklog(namedProject->id);
             RefreshProjectStatus();
             SelectEarthworksFacility(workforce.building.id);
             Message(project.status==ProjectStatus::Paused
@@ -1230,7 +1303,10 @@ pick_done:
     }
     case Action::ClearProjectAssignment:
         for(auto& project:durableState.earthworks)if(project.id==current.projectId && project.status==ProjectStatus::Queued) {
-            if(auto* namedProject=FindNamedProject(project.projectId)) {namedProject->facilityIds.clear();namedProject->facilityAnchors.clear();}
+            if(auto* namedProject=FindNamedProject(project.projectId)) {
+                if(!namedProject->facilityIds.empty())ResetProjectWorkBacklog(namedProject->id);
+                namedProject->facilityIds.clear();namedProject->facilityAnchors.clear();
+            }
         }
         RefreshProjectStatus();Message("Facility assignment cleared. The queued project remains saved.");break;
     case Action::StartProject:
@@ -1392,6 +1468,7 @@ pick_done:
         if(!facilityAssignmentWarningPending||unresolvedFacilityAssignments.empty())break;
         DurableState cleaned=durableState;
         size_t removed=0;
+        std::vector<uint64_t> changedProjectIds;
         for(auto& project:cleaned.projects) {
             for(size_t i=project.facilityIds.size();i>0;--i) {
                 const size_t index=i-1;
@@ -1400,6 +1477,8 @@ pick_done:
                 if(!unresolved)continue;
                 project.facilityIds.erase(project.facilityIds.begin()+static_cast<std::ptrdiff_t>(index));
                 if(index<project.facilityAnchors.size())project.facilityAnchors.erase(project.facilityAnchors.begin()+static_cast<std::ptrdiff_t>(index));
+                if(std::find(changedProjectIds.begin(),changedProjectIds.end(),project.id)==changedProjectIds.end())
+                    changedProjectIds.push_back(project.id);
                 ++removed;
             }
         }
@@ -1421,6 +1500,7 @@ pick_done:
             break;
         }
         durableState=std::move(cleaned);
+        for(const auto projectId:changedProjectIds)ResetProjectWorkBacklog(projectId);
         unresolvedFacilityAssignments.clear();facilityAssignmentWarningPending=false;
         lastFacilityIdentityReconcile=0;
         ReconcileSavedFacilities();
@@ -1474,15 +1554,27 @@ void ExecuteProjectSlice(SavedEarthwork* project,double relativeRate,double elap
         SiteActionError(project->id,ProjectAreaMessage(areaError));return;
     }
     void* terrain=TerrainObject();if(!terrain)return;
-    // Provisional Stage 8 conversion: one relative manual-rate unit completes
-    // 10 m3 per simulation hour. Balancing remains open under D10/D14.
-    project->workRemainderM3=static_cast<float>(std::min(1.0e9,
-        static_cast<double>(project->workRemainderM3)+relativeRate*ConstructionSpeedMultiplier()*VolumePerRateUnitPerSimulationHour*std::min(elapsed,1.0)));
     const int count=rect.Count();
     const double cellArea=static_cast<double>(grid.stepX)*grid.stepZ;
     const double precision=static_cast<double>(grid.heightScale)/60000.0;
     const int batch=std::min(count,64);
     const double threshold=cellArea*precision*batch;
+    // Each displayed Speed/Level point completes 250 m3 per in-game day at
+    // 1x (60 simulation hours per day). Execution and forecasts share this
+    // conversion; the global speed multiplier scales it.
+    const double currentRateAllowance=relativeRate*ConstructionSpeedMultiplier()
+        *VolumePerRateUnitPerSimulationHour*std::min(elapsed,1.0);
+    const double maximumBufferedWork=currentRateAllowance+threshold;
+    const double previousRemainder=std::max(0.0,static_cast<double>(project->workRemainderM3));
+    const double pendingWork=previousRemainder+currentRateAllowance;
+    if(pendingWork>maximumBufferedWork&&previousRemainder>maximumBufferedWork) {
+        host->log("earthworks  site=%llu trimmed stale work backlog %.3f -> %.3f m3 at current rate %.3f units",
+            static_cast<unsigned long long>(project->id),previousRemainder,maximumBufferedWork,relativeRate);
+    }
+    // Keep at most one current simulation slice plus the terrain precision
+    // buffer. Older saved backlog must not let a reduced facility roster keep
+    // executing at its former rate.
+    project->workRemainderM3=static_cast<float>(std::min(pendingWork,maximumBufferedWork));
     if(project->workRemainderM3<threshold)return;
     const double maxStep=0.05;
     const double requestedStep=project->workRemainderM3/(cellArea*batch);
@@ -1585,7 +1677,7 @@ void TickProjectRunner()
             }
             continue;
         }
-        std::vector<unsigned> availableMachineRateUnits;
+        std::vector<double> availableMachineRateUnits;
         bool facilityReadFailed=false;uint32_t failedFacilityId=0;WorkforceView failedFacility{};
         for(const auto facilityId:namedProject->facilityIds) {
             WorkforceView workforce{};
@@ -1596,8 +1688,16 @@ void TickProjectRunner()
             for(unsigned i=0;i<workforce.rowCount;++i) {
                 const auto& vehicle=workforce.vehicles[i];
                 if(vehicle.parked&&vehicle.earthworksAllowed&&vehicle.groundworksMachine
-                    &&vehicle.constructionSkillValid&&vehicle.constructionRateUnits>0)
-                    availableMachineRateUnits.push_back(vehicle.constructionRateUnits);
+                    &&vehicle.displayedLevelValid&&vehicle.constructionRateUnits>0) {
+                    double contribution=1.0;
+                    if(DistanceBasedFacilityContribution()) {
+                        const Point center=jobs.empty()?Point{}:SiteCenter(jobs.front()->plan);
+                        const double distance=std::hypot(static_cast<double>(center.x)-workforce.building.position.x,
+                            static_cast<double>(center.z)-workforce.building.position.z);
+                        contribution=FacilityDistanceContribution(distance);
+                    }
+                    availableMachineRateUnits.push_back(static_cast<double>(vehicle.constructionRateUnits)*contribution);
+                }
             }
         }
         if(facilityReadFailed) {
@@ -1614,7 +1714,7 @@ void TickProjectRunner()
             continue;
         }
         if(jobs.empty())continue;
-        std::sort(availableMachineRateUnits.begin(),availableMachineRateUnits.end(),std::greater<unsigned>());
+        std::sort(availableMachineRateUnits.begin(),availableMachineRateUnits.end(),std::greater<double>());
         size_t machineCursor=0;
         std::vector<Allocation> projectAllocations;
         projectAllocations.reserve(jobs.size());
@@ -1887,8 +1987,8 @@ bool HKeyDown(void* self,int key) { const bool value=keyDown(self,key); return k
 bool HKeyPress(void* self,int key) { const bool value=keyPress(self,key); return keyboardCapture || escapeCapture ? false:value; }
 bool HButtonDown(void* self,char* binding) { const bool value=buttonDown(self,binding); return keyboardCapture || escapeCapture ? false:value; }
 bool HButtonPress(void* self,char* binding) { const bool value=buttonPress(self,binding); return keyboardCapture || escapeCapture ? false:value; }
-float HAxis(void* self,char* binding,int* out,float a,float b) { const float value=axis(self,binding,out,a,b); return keyboardCapture || escapeCapture ? 0:value; }
-float* HRelative(void* self,float* out) { auto* value=relative(self,out); if (mouseCapture) out[0]=out[1]=out[2]=0; return value; }
+float HAxis(void* self,char* binding,int* out,float a,float b) { const float value=axis(self,binding,out,a,b); return keyboardCapture || escapeCapture || GetTickCount64()<=tableWheelCaptureUntilMs.load(std::memory_order_acquire) ? 0:value; }
+float* HRelative(void* self,float* out) { auto* value=relative(self,out); if (mouseCapture||GetTickCount64()<=tableWheelCaptureUntilMs.load(std::memory_order_acquire)) out[0]=out[1]=out[2]=0; return value; }
 struct Import { const char* symbol; void* detour; void** original; };
 Import imports[] = {
     {"?GetMouseLeftPress@C3D_INPUT@@QEAA_NXZ",reinterpret_cast<void*>(HLeftPress),reinterpret_cast<void**>(&leftPress)},
@@ -1948,14 +2048,31 @@ bool InstallRuntime()
     raiseLower=reinterpret_cast<RaiseFn>(GetProcAddress(engine,"?EditRaiseLower@C3D_TERRAIN@@QEAAXVC3DVECTOR3@@MMMM_N@Z"));
     openHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureOpen@C3D_TERRAIN@@QEAAXXZ"));
     closeHeightmap=reinterpret_cast<TextureFn>(GetProcAddress(engine,"?HeightmapTextureClose@C3D_TERRAIN@@QEAAXXZ"));
-    if (!heightQuery || host->exeSize < 0xA54E92 || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
-        || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)
-        || !host->findIatSlot || !host->patchIat || !host->installInlineHook
-        || std::memcmp(host->exeBase+LateRva,lateBytes,sizeof(lateBytes)) != 0
-        || std::memcmp(host->exeBase+LoadRva,loadBytes,sizeof(loadBytes)) != 0
-        || std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0
-        || std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0) {
-        host->log("earthworks  native preflight failed; planning disabled"); return false;
+    if (!heightQuery) { host->log("earthworks  native preflight failed: terrain-height export unavailable; planning disabled"); return false; }
+    if (host->exeSize < 0xA54E92 || host->exeSize < LateRva+sizeof(lateBytes)
+        || host->exeSize < LoadRva+sizeof(loadBytes)
+        || host->exeSize < ConstructionAssignRva+sizeof(constructionAssignBytes)
+        || host->exeSize < VehicleSlotRva+sizeof(vehicleSlotBytes)) {
+        host->log("earthworks  native preflight failed: game image is smaller than required bindings; planning disabled"); return false;
+    }
+    if (!host->findIatSlot || !host->patchIat || !host->installInlineHook) {
+        host->log("earthworks  native preflight failed: Tesmio hook API unavailable; planning disabled"); return false;
+    }
+    if (std::memcmp(host->exeBase+LateRva,lateBytes,sizeof(lateBytes)) != 0) {
+        host->log("earthworks  native preflight failed: frame hook mismatch at EXE+0x%llX; planning disabled",
+            static_cast<unsigned long long>(LateRva)); return false;
+    }
+    if (std::memcmp(host->exeBase+LoadRva,loadBytes,sizeof(loadBytes)) != 0) {
+        host->log("earthworks  native preflight failed: world-load hook mismatch at EXE+0x%llX; planning disabled",
+            static_cast<unsigned long long>(LoadRva)); return false;
+    }
+    if (std::memcmp(host->exeBase+ConstructionAssignRva,constructionAssignBytes,sizeof(constructionAssignBytes)) != 0) {
+        host->log("earthworks  native preflight failed: construction-assignment hook mismatch at EXE+0x%llX; planning disabled",
+            static_cast<unsigned long long>(ConstructionAssignRva)); return false;
+    }
+    if (std::memcmp(host->exeBase+VehicleSlotRva,vehicleSlotBytes,sizeof(vehicleSlotBytes)) != 0) {
+        host->log("earthworks  native preflight failed: vehicle-slot hook mismatch at EXE+0x%llX; planning disabled",
+            static_cast<unsigned long long>(VehicleSlotRva)); return false;
     }
     for (const auto& item:imports) if (!host->findIatSlot(host->exeModule,"C3DDLL64.dll",item.symbol)) {
         host->log("earthworks  missing input import %s; planning disabled",item.symbol); return false;

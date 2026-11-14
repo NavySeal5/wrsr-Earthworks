@@ -1,13 +1,13 @@
 # Planning prototype native bindings
 
-Reference game: 1.1.1.9, Steam build 23935965. Binary identities in game-baseline.json are historical research notes only. Staging and plugin initialization do not reject a changed executable by timestamp or whole-file hash. Runtime checks required imports and exact native hook signatures before patching; this is a build-specific prototype.
+Reference game: 1.1.1.13, Steam build 24922914, with TesmioLoader b0.3.7. Binary identities are in game-baseline.json. Runtime checks required imports and exact native hook signatures before patching. The 1.1.1.13 hook RVAs below were rechecked against the installed executable; the prologues are unchanged from 1.1.1.9.
 
 Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/world.cpp, game/camera.cpp, game/input_block.cpp, determinism/sim_patches.cpp, determinism/determinism.cpp and world/terrain_hook.cpp. Prologues were independently compared with the installed executable using MSVC dumpbin.
 
 | Binding | Location / signature | Use |
 |---|---|---|
-| Main frame Late | EXE+0x30D1A0, void(int64 world) | Observe after native cursor picking, process queued commands |
-| World load | EXE+0x430FC0, void() | Invalidate session draft and queued commands before native loading |
+| Main frame Late | EXE+0x30D120, void(int64 world) | Observe after native cursor picking, process queued commands |
+| World load | EXE+0x430F50, void() | Invalidate session draft and queued commands before native loading |
 | World | Inline EXE+0x9D4F10 | Cursor +0xF78; day/year/progress +0x590/594/59C |
 | Readiness | Road-network pointer EXE+0x9E46B0 and byte EXE+0x993C65 | Gate all planning queries |
 | Camera | Pointer EXE+0x9EAD10 | Copy view matrix and projection at +0xC8 for cursor projection. Project-row camera centering is disabled; TODO: investigate and use the same native camera-centering behavior as the game's entity View action before re-enabling it. |
@@ -18,8 +18,8 @@ Reference: RepublicMP commit 630775724abd5e3346eb59f9c66e2873128d74a4, game/worl
 | Escape latch | EXE+0xA54C91 | Clear only while text input owns keyboard |
 | Device creation | C3DDLL64 IAT D3D11CreateDeviceAndSwapChain | Observe actual swap-chain creation after the original returns |
 | Present | IDXGISwapChain vtable slot 8 | Render overlay using copied snapshots |
-| Construction assignment filter | Inline EXE+0x161C90, `void(world, office, construction, amount, first, second)` | Block assignment only when `office` resolves to the dedicated Earthworks building type descriptor; otherwise call the original |
-| Vehicle station slot filter | Inline EXE+0x3E3F40, `bool(world, building, vehicleType, slotHint, int* slot)` | For the exact dedicated type descriptor, reject names outside the initial bulldozer/excavator/dumper/bus patterns; ordinary construction offices forward unchanged. Installation requires the exact pinned 17-byte instruction-aligned prologue |
+| Construction assignment filter | Inline EXE+0x161CB0, `void(world, office, construction, amount, first, second)` | Block assignment only when `office` resolves to the dedicated Earthworks building type descriptor; otherwise call the original |
+| Vehicle station slot filter | Inline EXE+0x3E3E80, `bool(world, building, vehicleType, slotHint, int* slot)` | For the exact dedicated type descriptor, reject names outside the allowed bulldozer/excavator patterns; ordinary construction offices forward unchanged. Installation requires the exact 17-byte instruction-aligned prologue |
 | Native terrain-overlap guard | EXE IAT+0x86D240 -> C3DDLL64 `EditRaiseLowerAngleLimit` at RVA 0xF9380 | Minimal hook guarded by exact IAT target, export RVA and function prologue; forwards brush center/radius to the overlap review rule, then calls the native function unchanged. Diagnostic call counts and caller/brush telemetry are removed. |
 | Native save boundary | World save path at `world+0x9F8`; save trigger at `world+0x14D35`; observed through the existing Late frame hook | Detect a native save completing, then write an atomic `earthworks.dat` companion in that save folder. On world load, restore only after its SHA-256 fingerprint matches the saved `heightmap.dds` |
 
@@ -74,7 +74,7 @@ Project assignment stores the stable native building ID in companion schema v2; 
 
 ## Stage 4d vehicle allowlist prototype
 
-On supported executable 1.1.1.9/build 23935965, the slot selector at EXE+0x3E3F40 is used by the pinned purchase replay as the native test for a vehicle type's depot slot. The plugin detours it and checks the exact dedicated-facility identity. The original Stage 4d policy permitted bulldozers, excavators, dumpers and buses. Current policy D92 narrows the facility to bulldozers and excavators only, using case-insensitive internal-name matching plus the raw category at type+0x294: named machines must be road (category 1) or road service (category 2). The initial 0.5.1 classifier incorrectly assigned bulldozers/excavators to category 2; user logs exposed these false negatives, and build 0.5.2 corrected category matching. Other/unreadable/unmatched vehicle types are rejected; other buildings are forwarded unchanged.
+On supported executable 1.1.1.13/build 24922914, the slot selector at EXE+0x3E3E80 is used by the pinned purchase replay as the native test for a vehicle type's depot slot. The plugin detours it and checks the exact dedicated-facility identity. The original Stage 4d policy permitted bulldozers, excavators, dumpers and buses. Current policy D92 narrows the facility to bulldozers and excavators only, using case-insensitive internal-name matching plus the raw category at type+0x294: named machines must be road (category 1) or road service (category 2). The initial 0.5.1 classifier incorrectly assigned bulldozers/excavators to category 2; user logs exposed these false negatives, and build 0.5.2 corrected category matching. Other/unreadable/unmatched vehicle types are rejected; other buildings are forwarded unchanged.
 
 This is a conservative name-based classifier, not proof that every modded vehicle name follows these patterns. The community vehicle guide documents construction skill tokens and dumper-deck animation as separate script properties, but the current native binding does not inspect those parsed properties. User in-game validation is required to verify native UI, purchase and vehicle-transfer behavior. [Vehicle modding guide](https://steamcommunity.com/sharedfiles/filedetails/?id=1861143159).
 
@@ -84,4 +84,4 @@ Unverified: effective productivity, max staffing, vehicle skills, fuel/readiness
 
 ## Stage 4b assignment filter
 
-The filter checks the 18-byte prologue at EXE+0x161C90 before installation. Pinned RepublicMP `game_calls.cpp` maps construction-office windows, office pick tools and area-office tools to this function with the `WOOFbb` argument shape. The wrapper checks the office argument and forwards every argument unchanged for other offices. The separate native routine at EXE+0x1561C0 is used by the office window's automatic “add construction” controls and is not directly hooked in this build. Whether that route funnels through EXE+0x161C90 must be established in the user's Stage 4b check; ordinary-job exclusion remains unverified until then.
+The filter checks the 18-byte prologue at EXE+0x161CB0 before installation. Pinned RepublicMP `game_calls.cpp` maps construction-office windows, office pick tools and area-office tools to this function with the `WOOFbb` argument shape. The wrapper checks the office argument and forwards every argument unchanged for other offices. The separate native routine at EXE+0x1561C0 is used by the office window's automatic “add construction” controls and is not directly hooked in this build. Whether that route funnels through EXE+0x161CB0 must be established in the user's Stage 4b check; ordinary-job exclusion remains unverified until then.

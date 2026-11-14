@@ -10,6 +10,7 @@
 #include "../runtime/runtime.h"
 #include "game_underlay.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_win32.h"
 #include "../core/productivity.h"
 #include "../core/user_settings.h"
@@ -60,6 +61,8 @@ WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
 RECT buttonRect{}, panelRect{}, settingsRect{}, popupRect{}, assignmentWarningRect{};
 RECT editorRect{};
+RECT siteTableRect{}, facilityTableRect{};
+bool siteTableRectValid=false, facilityTableRectValid=false;
 bool panelRectValid = false;
 bool settingsRectValid = false;
 bool popupRectValid = false;
@@ -74,6 +77,7 @@ bool escapeOwned = false;
 bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
+bool settingsDistanceEditing = false;
 bool showAllFacilities = false;
 bool settingsOpen = false;
 std::atomic<bool> areaPickCapture{false};
@@ -213,7 +217,7 @@ void NativeTooltip(const char* text)
     ImGui::BeginTooltip();ImGui::TextUnformatted(text);ImGui::EndTooltip();
     ImGui::PopStyleColor(3);ImGui::PopStyleVar(3);
 }
-bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback,const char* tooltip,ImVec2 size={30,30})
+bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char* fallback,const char* tooltip,ImVec2 size={30,30},bool transparentBackground=false)
 {
     const auto pos=ImGui::GetCursorScreenPos();
     const bool hovered=ImGui::IsMouseHoveringRect(pos,{pos.x+size.x,pos.y+size.y},true);
@@ -226,7 +230,8 @@ bool GameIconButton(const char* id,ID3D11ShaderResourceView* texture,const char*
         ImGui::PushStyleColor(ImGuiCol_Button,{0,0,0,0});
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0,0,0,0});
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,{0,0,0,0});
-        pressed=ImGui::ImageButton(id,image,size,{0,0},{1,1},hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1});
+        const ImVec4 background=transparentBackground?ImVec4{0,0,0,0}:(hovered?ImVec4{1,1,1,1}:ImVec4{0.82f,0.82f,0.82f,1});
+        pressed=ImGui::ImageButton(id,image,size,{0,0},{1,1},background,ImVec4{1,1,1,1});
         ImGui::PopStyleColor(3);ImGui::PopStyleVar(2);
     }
     if(hovered&&tooltip) NativeTooltip(tooltip);
@@ -236,6 +241,13 @@ bool Hit(const RECT& rect, LPARAM point)
 {
     const POINT p = {GET_X_LPARAM(point),GET_Y_LPARAM(point)};
     return PtInRect(&rect,p) != FALSE;
+}
+void RememberTableRect(RECT* rect,bool* valid,ImVec2 min,ImVec2 size)
+{
+    if(!rect||!valid||size.x<=0.0f||size.y<=0.0f) { if(valid)*valid=false; return; }
+    *rect={static_cast<LONG>(min.x),static_cast<LONG>(min.y),
+        static_cast<LONG>(min.x+size.x),static_cast<LONG>(min.y+size.y)};
+    *valid=true;
 }
 bool CursorOverEarthworksUi(LPARAM point)
 {
@@ -289,12 +301,28 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     NativeUiOcclusionInfo nativeUiInfo{};
     const bool nativeUiOccluded=mousePositionMessage
         &&NativeUiOccludes(static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&nativeUiInfo);
-    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&Hit(buttonRect,lParam)&&GetForegroundWindow()==gameWindow) {
-        panelOpen=!panelOpen.load();leftRelease=true;
-        host->log("earthworks  planning panel %s",panelOpen?"opened":"closed");
-    }
     const auto& inputSnapshot=ReadSnapshot();
     const bool drawingNewSite=inputSnapshot.creatingSite&&inputSnapshot.mode==PickMode::DrawSite;
+    const bool wheelMessage=message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL;
+    bool wheelOverEarthworksTable=false;
+    if(wheelMessage&&panelOpen) {
+        POINT cursor{GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam)};
+        if(ScreenToClient(window,&cursor)) {
+            RECT client{};GetClientRect(window,&client);
+            const ImVec2 display=ImGui::GetIO().DisplaySize;
+            const float scaleX=client.right>0?display.x/static_cast<float>(client.right):1.0f;
+            const float scaleY=client.bottom>0?display.y/static_cast<float>(client.bottom):1.0f;
+            const POINT imguiCursor{static_cast<LONG>(cursor.x*scaleX),static_cast<LONG>(cursor.y*scaleY)};
+            const bool siteHit=siteTableRectValid&&PtInRect(&siteTableRect,imguiCursor)!=FALSE;
+            const bool facilityHit=facilityTableRectValid&&PtInRect(&facilityTableRect,imguiCursor)!=FALSE;
+            wheelOverEarthworksTable=siteHit||facilityHit;
+            if(wheelOverEarthworksTable)
+                tableWheelCaptureUntilMs.store(GetTickCount64()+250,std::memory_order_release);
+            if(host&&host->log)host->log("earthworks table-wheel client=%ld,%ld imgui=%ld,%ld scale=%.3f,%.3f site=%d[%ld,%ld,%ld,%ld] facility=%d[%ld,%ld,%ld,%ld] swallowed=%d",
+                cursor.x,cursor.y,imguiCursor.x,imguiCursor.y,scaleX,scaleY,static_cast<int>(siteHit),siteTableRect.left,siteTableRect.top,siteTableRect.right,siteTableRect.bottom,
+                static_cast<int>(facilityHit),facilityTableRect.left,facilityTableRect.top,facilityTableRect.right,facilityTableRect.bottom,static_cast<int>(wheelOverEarthworksTable));
+        }
+    }
     unsigned handleIndex=MaxSitePoints;
     // While Free draw is armed, nearby draft vertices are not selection
     // targets: every map click must reach Action::Pick so it can append the
@@ -453,12 +481,12 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     }
     if (message == WM_LBUTTONUP) leftRelease = false;
     const bool otherMouse = message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_RBUTTONDBLCLK
-        || message == WM_MBUTTONDOWN || message == WM_MBUTTONUP || message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL;
+        || message == WM_MBUTTONDOWN || message == WM_MBUTTONUP;
     const bool keyboardMessage=message==WM_KEYDOWN||message==WM_KEYUP||message==WM_CHAR||message==WM_SYSKEYDOWN
         ||message==WM_SYSKEYUP||message==WM_SYSCHAR||message==WM_DEADCHAR||message==WM_SYSDEADCHAR
         ||message==WM_UNICHAR||message==WM_IME_STARTCOMPOSITION||message==WM_IME_COMPOSITION||message==WM_IME_ENDCOMPOSITION;
     const bool suppressTypedShortcut=keyboardMessage&&keyboardCapture&&!KeyboardShortcutPassesThrough(message,wParam);
-    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || suppressTypedShortcut || escapeMessage;
+    const bool swallow = (leftMessage && leftOwned) || (otherMouse && mouseCapture) || wheelOverEarthworksTable || suppressTypedShortcut || escapeMessage;
     ImGui::SetCurrentContext(previous);
     if (swallow) return TRUE;
     if(message==WM_MOUSEMOVE) {
@@ -751,7 +779,7 @@ void DrawFacilityAssignmentWarning(const Snapshot& s,ImVec2 display)
 void DrawSettingsPanel(ImVec2 display)
 {
     if(!panelOpen||!settingsOpen||!panelRectValid) {settingsRectValid=false;return;}
-    constexpr float width=330.0f,height=210.0f,headerHeight=54.0f;
+    constexpr float width=360.0f,height=390.0f,headerHeight=54.0f;
     float x=static_cast<float>(panelRect.left)-width-10.0f;
     if(x<10.0f)x=static_cast<float>(panelRect.right)+10.0f;
     x=std::clamp(x,10.0f,std::max(10.0f,display.x-width-10.0f));
@@ -765,7 +793,9 @@ void DrawSettingsPanel(ImVec2 display)
     ImGui::PopStyleVar();ImGui::PopStyleColor();
     const auto pos=ImGui::GetWindowPos(),size=ImGui::GetWindowSize();
     DrawPanelPaper(false);
-    ImGui::GetWindowDrawList()->AddText({pos.x+11.0f,pos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Settings");
+    auto* panelDraw=ImGui::GetWindowDrawList();
+    panelDraw->AddRectFilled(pos,{pos.x+size.x,pos.y+headerHeight},IM_COL32(150,60,55,255),12.0f,ImDrawFlags_RoundCornersTop);
+    panelDraw->AddText({pos.x+11.0f,pos.y+29.5f-ImGui::GetTextLineHeight()*0.5f},IM_COL32(255,255,255,255),"Earthworks | Settings");
     ImGui::PushStyleColor(ImGuiCol_Text,{1,1,1,1});
     ImGui::PushStyleColor(ImGuiCol_Button,{0.59f,0.235f,0.216f,1});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,{0.70f,0.31f,0.29f,1});
@@ -785,7 +815,35 @@ void DrawSettingsPanel(ImVec2 display)
     if(ImGui::Checkbox("High contrast colors",&highContrast)) {
         SetHighContrastColors(highContrast);SetWinterWireframeMode(highContrast);SaveGlobalSettings();
     }
-    ImGui::TextWrapped("Scales Site work and capacity estimates.");
+    ImGui::TextUnformatted("Scales Site work and capacity estimates.");
+    ImGui::Separator();
+    bool distanceMode=DistanceBasedFacilityContribution();
+    if(ImGui::Checkbox("Distance-based facility contribution",&distanceMode)) {
+        SetDistanceBasedFacilityContribution(distanceMode);SaveGlobalSettings();Send(Action::SettingsChanged);
+    }
+    ImGui::TextWrapped("Facilities contribute less when farther from a Site.");
+    int closeMetersValue=CloseFacilityDistanceMeters();
+    int mediumMetersValue=MediumFacilityDistanceMeters();
+    int farMetersValue=FarFacilityDistanceMeters();
+    auto distanceRow=[&](const char* label,const char* id,const char* infoId,const char* info,int* value) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        ImGui::SameLine(104.0f);
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::InputInt(id,value,0,0);
+        settingsDistanceEditing|=ImGui::IsItemActive();
+        const bool changed=ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::SameLine();ImGui::TextUnformatted("m");
+        ImGui::SameLine();
+        GameIconButton(infoId,targetHeightInfoIcon,"i",info,{22.0f,22.0f});
+        if(changed) {
+            SetFacilityDistanceThresholds(closeMetersValue,mediumMetersValue,farMetersValue);
+            SaveGlobalSettings();Send(Action::SettingsChanged);
+        }
+    };
+    distanceRow("Close (100%)","##FacilityCloseDistance","##FacilityCloseInfo","Within this distance, facilities contribute 100%. Efficiency falls linearly to 50% at Medium.",&closeMetersValue);
+    distanceRow("Medium (50%)","##FacilityMediumDistance","##FacilityMediumInfo","At this distance, facilities contribute 50%. Efficiency falls linearly from 100% at Close.",&mediumMetersValue);
+    distanceRow("Far (25%)","##FacilityFarDistance","##FacilityFarInfo","At this distance and beyond, facilities contribute 25%. Efficiency falls linearly from 50% at Medium.",&farMetersValue);
     RememberRect(&settingsRect);settingsRectValid=true;
     ImGui::End();
     if(!open)settingsOpen=false;
@@ -794,8 +852,11 @@ void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
     nameTextEditing = false;
+    settingsDistanceEditing = false;
     popupRectValid=false;
     assignmentWarningRectValid=false;
+    siteTableRectValid=false;
+    facilityTableRectValid=false;
     frameGeneration=s.generation;
     SetWinterWireframeMode(HighContrastColors());
     if (!s.ready) { panelOpen=false; panelRectValid=false;settingsRectValid=false; popupRectValid=false; assignmentWarningRectValid=false;editorRectValid=false; }
@@ -809,8 +870,35 @@ void DrawInterface(const Snapshot& s)
     const auto display=ImGui::GetIO().DisplaySize;
     buttonRect={};
     if(s.ready&&s.cameraValid) {
-        const float x=70.0f,y=display.y-132.0f;
-        buttonRect={static_cast<LONG>(x),static_cast<LONG>(y),static_cast<LONG>(x+150.0f),static_cast<LONG>(y+42.0f)};
+        const ImVec2 buttonPos{70.0f,display.y-132.0f};
+        constexpr ImVec2 buttonSize{150.0f,42.0f};
+        const auto mousePos=ImGui::GetIO().MousePos;
+        const bool coveredByNativeUi=NativeUiAreaOccludes(buttonPos.x,buttonPos.y,
+            buttonSize.x,buttonSize.y,mousePos.x,mousePos.y);
+        // The game draws native panels before the ImGui overlay. Do not draw
+        // the launcher over them. Keep its fixed hit rectangle so the usual
+        // native-UI input occlusion checks still apply when the panel closes.
+        buttonRect={static_cast<LONG>(buttonPos.x),static_cast<LONG>(buttonPos.y),
+            static_cast<LONG>(buttonPos.x+buttonSize.x),static_cast<LONG>(buttonPos.y+buttonSize.y)};
+        constexpr ImGuiWindowFlags launcherFlags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
+            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|
+            ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoBackground;
+        if(!coveredByNativeUi) {
+            ImGui::SetNextWindowPos(buttonPos,ImGuiCond_Always);
+            ImGui::SetNextWindowSize(buttonSize,ImGuiCond_Always);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
+            ImGui::Begin("##EarthworksLauncher",nullptr,launcherFlags);
+            ImGui::PushStyleColor(ImGuiCol_Text,{0.20f,0.14f,0.09f,1.0f});
+            ImGui::SetCursorPos({0,0});
+            if(ImGui::Button("Earthworks",buttonSize)) {
+                panelOpen=!panelOpen.load();leftRelease=true;
+                host->log("earthworks  planning panel %s",panelOpen?"opened":"closed");
+            }
+            ImGui::PopStyleColor();
+            ImGui::End();
+            ImGui::PopStyleVar(2);
+        }
     }
     if (!s.ready) {panelRectValid=false;settingsRectValid=false;popupRectValid=false;editorRectValid=false;return;}
     if (!panelOpen) {panelRectValid=false;settingsRectValid=false;settingsOpen=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}
@@ -842,7 +930,7 @@ void DrawInterface(const Snapshot& s)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,{0,0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
     ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-104.0f,panelPos.y+14.5f});
-    if(GameIconButton("##EarthworksSettingsButton",settingsIcon,"S",nullptr,{30.0f,30.0f}))settingsOpen=!settingsOpen;
+    if(GameIconButton("##EarthworksSettingsButton",settingsIcon,"S",nullptr,{30.0f,30.0f},true))settingsOpen=!settingsOpen;
     ImGui::SameLine(0,4.0f);
     ImGui::SetCursorScreenPos({panelPos.x+panelSize.x-70.0f,panelPos.y+14.5f});
     if(ImGui::Button("-",{30.0f,30.0f})) { panelMinimized=!panelMinimized; restorePanelSize=!panelMinimized; }
@@ -918,6 +1006,8 @@ void DrawInterface(const Snapshot& s)
                 ImGui::BeginChild("Sites list",{0,225},ImGuiChildFlags_Borders);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,{3.0f,3.0f});
                 if(s.projectCount&&ImGui::BeginTable("Site rows",8,ImGuiTableFlags_BordersOuter|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY)) {
+                    const ImGuiTable* table=ImGui::GetCurrentTable();
+                    if(table)RememberTableRect(&siteTableRect,&siteTableRectValid,table->OuterRect.Min,{table->OuterRect.GetWidth(),table->OuterRect.GetHeight()});
                     constexpr float priorityButtonGap=2.0f;
                     const float priorityControlWidth=24.0f*2.0f+priorityButtonGap+ImGui::GetStyle().CellPadding.x*2.0f;
                     const float priorityWidth=std::max(ImGui::CalcTextSize("Order").x+ImGui::GetStyle().CellPadding.x*2.0f,priorityControlWidth);
@@ -1121,6 +1211,8 @@ void DrawInterface(const Snapshot& s)
                 ImGui::SameLine();if(ImGui::SmallButton("Refresh"))Send(Action::RefreshFacilities);
                 ImGui::SameLine();ImGui::TextDisabled("%u found",s.facilityCandidateCount);
                 if(ImGui::BeginTable("facilityTable",4,ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,{0,142.5f})) {
+                    const ImGuiTable* table=ImGui::GetCurrentTable();
+                    if(table)RememberTableRect(&facilityTableRect,&facilityTableRectValid,table->OuterRect.Min,{table->OuterRect.GetWidth(),table->OuterRect.GetHeight()});
                     ImGui::TableSetupColumn("Facility",ImGuiTableColumnFlags_WidthStretch,2.2f);
                     ImGui::TableSetupColumn("Project",ImGuiTableColumnFlags_WidthStretch,1.6f);
                     ImGui::TableSetupColumn("Machines",ImGuiTableColumnFlags_WidthFixed,84.0f);
@@ -1421,7 +1513,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
     ImGui::TextColored({0.12f,0.43f,0.29f,1},"Fill estimate: %.1f m3",volume.fill);
     const bool assignedCapacityKnown=s.assignedMachineReadingsValid;
     const bool useCurrentAllocation=!s.creatingSite&&s.projectStatus==ProjectStatus::Running&&s.editorAllocatedMachines>0;
-    const unsigned siteRateUnits=useCurrentAllocation?s.editorAllocatedRateUnits:s.assignedMachineRateUnits;
+    const double siteRateUnits=useCurrentAllocation?s.editorAllocatedRateUnits:s.assignedMachineRateUnits;
     const double ratePerUnitPerDay=VolumePerRateUnitPerSimulationHour*SimulationHoursPerInGameDay*ConstructionSpeedMultiplier();
     const double siteRateM3PerDay=siteRateUnits*ratePerUnitPerDay;
     if(!assignedCapacityKnown)ImGui::Text("Assigned capacity: reading unavailable");
@@ -1443,7 +1535,7 @@ void DrawSiteEditor(const Snapshot& s,ImVec2 display)
         if(useCurrentAllocation)ImGui::Text("Estimated time: ~%.1f in-game days (~%.0f m3/day current rate)",days,siteRateM3PerDay);
         else ImGui::Text("Estimated time: ~%.1f in-game days at full assigned capacity",days);
     }
-    if(ImGui::IsItemHovered())NativeTooltip("Provisional estimate: each machine contributes floor(its construction skill / 3) rate units. Each rate unit processes 10 m3 per simulation hour; the calendar advances 60 simulation hours per in-game day. Running Sites use their current allocation; other states assume all assigned capacity is available.");
+    if(ImGui::IsItemHovered())NativeTooltip("Each point of a machine's displayed Speed/Level contributes 250 m3 per in-game day at 1x. The global speed multiplier scales this rate. Running Sites use their current allocation; other states assume all assigned capacity is available.");
     ImGui::Separator();
     const bool editable=(s.creatingSite)||(!s.creatingSite&&(s.projectStatus==ProjectStatus::Queued||s.projectStatus==ProjectStatus::Running||s.projectStatus==ProjectStatus::Waiting||s.projectStatus==ProjectStatus::Paused));
     const unsigned selectedPoint=std::min<unsigned>(s.selectedSitePoint,plan.pointCount-1);
@@ -1873,7 +1965,7 @@ void Render(IDXGISwapChain* swap)
     mapPickCapture=areaPickCapture||(!pickCancelledByEscape&&sitePick);
     const bool focused=GetForegroundWindow()==gameWindow;
     mouseCapture=focused && io.WantCaptureMouse && snapshot.ready;
-    keyboardCapture=focused && (targetHeightEditing||nameTextEditing) && panelOpen;
+    keyboardCapture=focused && (targetHeightEditing||nameTextEditing||settingsDistanceEditing) && panelOpen;
     if (!(GetAsyncKeyState(VK_LBUTTON)&0x8000)) leftRelease=false;
     // Leave cursor shape and visibility entirely to the game window procedure.
     ImGui::GetIO().MouseDrawCursor=false;

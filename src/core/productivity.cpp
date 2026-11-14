@@ -4,10 +4,10 @@
 
 namespace ew {
 
-double MachineRate(double constructionSkill) noexcept
+double MachineRate(double displayedLevel) noexcept
 {
-    if (!std::isfinite(constructionSkill) || constructionSkill <= 0.0) return 0.0;
-    return std::floor(constructionSkill / 3.0);
+    if (!std::isfinite(displayedLevel) || displayedLevel <= 0.0) return 0.0;
+    return displayedLevel;
 }
 
 } // namespace ew

@@ -47,7 +47,7 @@ extern "C" __declspec(dllexport) int TsmPluginInit(const TsmHost* host, TsmPlugi
     }
 
     info->name = "Earthworks Planning - dedicated facility prototype";
-    info->version = "0.16.61-completed-site-delete-no-confirm";
+    info->version = "0.16.63-distance-based-facility-contribution";
 
     g_host = host;
     host->log("earthworks  planning prototype initialized; API %u", TSM_API_VERSION);
