@@ -472,9 +472,9 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool leftClickMessage=message==WM_LBUTTONDOWN||message==WM_LBUTTONDBLCLK;
 #if defined(EARTHWORKS_DEVELOPER_UI)
     if(leftClickMessage&&drawingNewSite&&host&&host->log) {
-        host->log("earthworks draw-click route x=%d y=%d mapCapture=%d nativeUi=%d uiRects=%u cursorRectIgnored=%d uiHit=%d uiBounds=%.1f,%.1f,%.1f,%.1f over=%d world=%d mapPick=%d owned=%d foreground=%d cursorValid=%d points=%u",
+        host->log("earthworks draw-click route x=%d y=%d mapCapture=%d nativeUi=%d uiRects=%u cursorDrawsIgnored=%u uiHit=%d uiBounds=%.1f,%.1f,%.1f,%.1f over=%d world=%d mapPick=%d owned=%d foreground=%d cursorValid=%d points=%u",
             GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),static_cast<int>(mapPickCapture.load()),static_cast<int>(nativeUiOccluded),
-            nativeUiInfo.rectCount,static_cast<int>(nativeUiInfo.cursorRectIgnored),nativeUiInfo.hitIndex,nativeUiInfo.left,nativeUiInfo.top,nativeUiInfo.right,nativeUiInfo.bottom,
+            nativeUiInfo.rectCount,nativeUiInfo.cursorDrawsIgnored,nativeUiInfo.hitIndex,nativeUiInfo.left,nativeUiInfo.top,nativeUiInfo.right,nativeUiInfo.bottom,
             static_cast<int>(over),static_cast<int>(WorldHit(lParam)),static_cast<int>(mapPick),static_cast<int>(leftOwned),
             static_cast<int>(GetForegroundWindow()==gameWindow),static_cast<int>(inputSnapshot.cursorValid),inputSnapshot.plan.pointCount);
     }
@@ -876,18 +876,13 @@ void DrawInterface(const Snapshot& s)
     if(s.ready&&s.cameraValid) {
         const ImVec2 buttonPos{70.0f,display.y-132.0f};
         constexpr ImVec2 buttonSize{150.0f,42.0f};
-        const auto mousePos=ImGui::GetIO().MousePos;
-        const bool coveredByNativeUi=NativeUiAreaOccludes(buttonPos.x,buttonPos.y,
-            buttonSize.x,buttonSize.y,mousePos.x,mousePos.y);
-        // The game draws native panels before the ImGui overlay. Do not draw
-        // the launcher over them. Keep its fixed hit rectangle so the usual
-        // native-UI input occlusion checks still apply when the panel closes.
-        buttonRect={static_cast<LONG>(buttonPos.x),static_cast<LONG>(buttonPos.y),
-            static_cast<LONG>(buttonPos.x+buttonSize.x),static_cast<LONG>(buttonPos.y+buttonSize.y)};
+        const bool coveredByNativeUi=NativeUiAreaOccludes(buttonPos.x,buttonPos.y,buttonSize.x,buttonSize.y);
         constexpr ImGuiWindowFlags launcherFlags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
             ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|
             ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoBackground;
         if(!coveredByNativeUi) {
+            buttonRect={static_cast<LONG>(buttonPos.x),static_cast<LONG>(buttonPos.y),
+                static_cast<LONG>(buttonPos.x+buttonSize.x),static_cast<LONG>(buttonPos.y+buttonSize.y)};
             ImGui::SetNextWindowPos(buttonPos,ImGuiCond_Always);
             ImGui::SetNextWindowSize(buttonSize,ImGuiCond_Always);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});

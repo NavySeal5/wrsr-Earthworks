@@ -2,6 +2,7 @@
 #include "game_underlay.h"
 #include "imgui.h"
 #include "../core/terrain_grid.h"
+#include <intrin.h>
 #include <windows.h>
 #include <algorithm>
 #include <array>
@@ -44,6 +45,52 @@ constexpr size_t GroupCount = 14;
 constexpr float ShadeRowPixels = 5.0f;
 constexpr size_t MaxNativeUiRects = 8192;
 
+// WRSR 1.1.1.13 calls to C3D_PANEL2D::Draw for cursor graphics. Match the
+// draw call because controls can use the same textures.
+// Each entry gives the call RVA and the eight bytes that follow it.
+struct CursorDrawCall { size_t rva; uint64_t followingBytes; };
+constexpr CursorDrawCall CursorDrawCalls[] = {
+    // Pointer draws in other native screens.
+    {0x0B050D, 0x000001D024848B41ULL},
+    {0x26244F, 0xFF0075BC040D8D48ULL},
+    // Resize, arrow, selected tool, cursor extension and free move.
+    {0x32712D, 0x5E38880D100F44F3ULL},
+    {0x32723C, 0x000000ADE8BE8341ULL},
+    {0x32751D, 0x480000B7709E8B49ULL},
+    {0x327669, 0x000000ADE8BE8341ULL},
+    {0x3277BE, 0x0F44F300000723E9ULL},
+    // Radiation meter back, trim and front.
+    {0x3278D2, 0x4800000F6C968D49ULL},
+    {0x327990, 0xBF0D8D48CB280F41ULL},
+    {0x327B53, 0x480000B7789E8B49ULL},
+    // Arrow and free-move variants.
+    {0x327C5B, 0x000000ADE8BE8341ULL},
+    {0x327D81, 0x5E2C340D100F44F3ULL},
+    {0x327EC0, 0x5E2AF50D100F44F3ULL},
+    // Tool indicators drawn beside the pointer. The tool controls and text
+    // boxes have separate draw calls and remain part of native UI capture.
+    {0x32818B, 0x480000F640968B41ULL},
+    {0x3283FE, 0x00031C908B068B48ULL},
+    {0x3285E2, 0x8B0000F7A0868B49ULL},
+    {0x3287DF, 0x8500011A14968B41ULL},
+    {0x328AB6, 0x8B0000F800868B49ULL},
+    {0x328D1C, 0x8B0000F858868B49ULL},
+    {0x328FEC, 0x8B0000FAF0868B49ULL},
+    {0x3292B9, 0x8B0000F8B0868B49ULL},
+    {0x32951B, 0x8B0000FA98868B49ULL},
+    {0x329816, 0x8B0000FA18868B49ULL},
+    {0x329AB5, 0x8B0000FA20868B49ULL},
+    {0x329EDB, 0x8B0000F908868B49ULL},
+    {0x32A1A8, 0x8B0000F968868B49ULL},
+    {0x32A3C3, 0x8B0000FA40868B49ULL},
+    {0x32A62E, 0x8B0000FA30868B49ULL},
+    {0x32A873, 0x8B0000F9C0868B49ULL},
+    {0x32AA63, 0x8B0000F9C0868B49ULL},
+};
+constexpr size_t IndirectCallSize = 6;
+std::array<uintptr_t, std::size(CursorDrawCalls)> cursorDrawReturns{};
+size_t cursorDrawReturnCount = 0;
+
 using BeginFn = void (*)(void*, const char*, bool);
 using EndFn = void (*)(void*);
 using DrawFn = void (*)(void*, float, float, float, float, float, bool);
@@ -61,6 +108,7 @@ std::atomic<bool> winterWireframeMode{false};
 struct UiRect { float left=0,top=0,right=0,bottom=0; };
 std::array<UiRect,MaxNativeUiRects> nativeUiRects{};
 size_t nativeUiRectCount=0;
+unsigned cursorDrawsIgnored=0;
 std::shared_mutex nativeUiMutex;
 std::atomic<bool> nativeUiCaptureActive{false},nativeUiCaptureInstalled{false};
 thread_local bool drawingEarthworksUnderlay=false;
@@ -368,10 +416,34 @@ void RecordNativeUiRect(void* panel)
     if(nativeUiRectCount<MaxNativeUiRects)nativeUiRects[nativeUiRectCount++]=rect;
 }
 
+void VerifyCursorDrawCalls(const TsmHost& hookHost)
+{
+    cursorDrawReturnCount = 0;
+    for (const auto& call : CursorDrawCalls) {
+        const size_t returnRva = call.rva + IndirectCallSize;
+        if (returnRva + sizeof(call.followingBytes) > hookHost.exeSize) continue;
+        const auto* instruction = hookHost.exeBase + call.rva;
+        const auto* returnAddress = hookHost.exeBase + returnRva;
+        if (instruction[0] != 0xFF || instruction[1] != 0x15 ||
+            std::memcmp(returnAddress, &call.followingBytes, sizeof(call.followingBytes)) != 0) continue;
+        int32_t displacement = 0;
+        std::memcpy(&displacement, instruction + 2, sizeof(displacement));
+        if (displacement != static_cast<int32_t>(PanelDrawIat - returnRva)) continue;
+        cursorDrawReturns[cursorDrawReturnCount++] = reinterpret_cast<uintptr_t>(returnAddress);
+    }
+}
+
 void HookedPanelDraw(void* panel,float u0,float v0,float u1,float v1,float rotation,bool flag)
 {
-    if(nativeUiCaptureActive.load(std::memory_order_relaxed)&&!drawingEarthworksUnderlay)
-        RecordNativeUiRect(panel);
+    if (nativeUiCaptureActive.load(std::memory_order_acquire) && !drawingEarthworksUnderlay) {
+        const auto caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
+        if (std::binary_search(cursorDrawReturns.begin(), cursorDrawReturns.begin() + cursorDrawReturnCount, caller)) {
+            std::unique_lock lock(nativeUiMutex);
+            ++cursorDrawsIgnored;
+        } else {
+            RecordNativeUiRect(panel);
+        }
+    }
     if(originalPanelDraw)originalPanelDraw(panel,u0,v0,u1,v1,rotation,flag);
 }
 
@@ -379,6 +451,7 @@ void BeginNativeUiCapture()
 {
     std::unique_lock lock(nativeUiMutex);
     nativeUiRectCount=0;
+    cursorDrawsIgnored=0;
     nativeUiCaptureActive.store(nativeUiCaptureInstalled.load(std::memory_order_acquire),std::memory_order_release);
 }
 
@@ -432,6 +505,7 @@ bool InstallGameUnderlay(const TsmHost* hookHost)
 {
     if(!hookHost||!hookHost->exeBase||hookHost->exeSize<UiRoutineRva+UiRoutineStolen||!hookHost->installInlineHook) return false;
     boundHost=hookHost;
+    VerifyCursorDrawCalls(*hookHost);
     auto* drawSlot=reinterpret_cast<void**>(hookHost->exeBase+PanelDrawIat);
     HMODULE graphics=GetModuleHandleW(L"C3DDLL64.dll");
     std::string drawSymbol;
@@ -449,6 +523,10 @@ bool InstallGameUnderlay(const TsmHost* hookHost)
     }
     hookHost->log("earthworks  native UI click occlusion %s%s",nativeUiCaptureInstalled.load()?"installed":"unavailable",
         drawSymbol.empty()?"":" via C3D_PANEL draw capture");
+    if (nativeUiCaptureInstalled.load()) {
+        hookHost->log("earthworks  native cursor draw signatures matched %u/%u",
+            static_cast<unsigned>(cursorDrawReturnCount), static_cast<unsigned>(std::size(CursorDrawCalls)));
+    }
     return true;
 }
 
@@ -463,21 +541,12 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
         return x<=65.0f||y<=85.0f||x>=width-300.0f||y>=height-150.0f;
     }
     std::shared_lock lock(nativeUiMutex);
-    if(info)info->rectCount=static_cast<unsigned>(nativeUiRectCount);
+    if (info) {
+        info->rectCount = static_cast<unsigned>(nativeUiRectCount);
+        info->cursorDrawsIgnored = cursorDrawsIgnored;
+    }
     for(size_t i=0;i<nativeUiRectCount;++i) {
         const auto& rect=nativeUiRects[i];
-        // The game's in-game cursor is drawn through the same panel routine
-        // as ordinary UI sprites. Its 32x32 rectangle follows the pointer
-        // (top-left within ~2 px), so treating it as UI makes nearly every
-        // world click appear occluded. Ignore only that cursor-sized hit;
-        // other native rectangles still block map input.
-        const float rectWidth=rect.right-rect.left,rectHeight=rect.bottom-rect.top;
-        const bool cursorSprite=std::abs(rectWidth-32.0f)<=1.0f&&std::abs(rectHeight-32.0f)<=1.0f
-            &&std::abs(rect.left-x)<=2.0f&&std::abs(rect.top-y)<=2.0f;
-        if(cursorSprite) {
-            if(info)info->cursorRectIgnored=true;
-            continue;
-        }
         if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom) {
             if(info) {
                 info->hitIndex=static_cast<int>(i);info->left=rect.left;info->top=rect.top;
@@ -489,7 +558,7 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
     return false;
 }
 
-bool NativeUiAreaOccludes(float x,float y,float width,float height,float cursorX,float cursorY)
+bool NativeUiAreaOccludes(float x,float y,float width,float height)
 {
     if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(width)||!std::isfinite(height)
         ||width<=0.0f||height<=0.0f)return true;
@@ -503,10 +572,6 @@ bool NativeUiAreaOccludes(float x,float y,float width,float height,float cursorX
     std::shared_lock lock(nativeUiMutex);
     for(size_t i=0;i<nativeUiRectCount;++i) {
         const auto& rect=nativeUiRects[i];
-        const float rectWidth=rect.right-rect.left,rectHeight=rect.bottom-rect.top;
-        const bool cursorSprite=std::abs(rectWidth-32.0f)<=1.0f&&std::abs(rectHeight-32.0f)<=1.0f
-            &&std::abs(rect.left-cursorX)<=2.0f&&std::abs(rect.top-cursorY)<=2.0f;
-        if(cursorSprite)continue;
         if(x<rect.right&&right>rect.left&&y<rect.bottom&&bottom>rect.top)return true;
     }
     return false;

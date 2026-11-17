@@ -909,3 +909,10 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Copied the item config and preview into `assets/workshop`. The release builder reads this metadata and adds the three facility declarations.
 - Rebuilt the candidate package with item ID `3839682596`. It contains 49 files; the ZIP is 2,860,796 bytes. The metadata has all three facilities, the description, and preview. No Workshop upload or game test was performed.
 - The release command now stages game files directly into the existing Workshop item folder. It preserves the current item metadata, replaces generated building declarations, and does not create a ZIP or upload the item. The command can be repeated for the same version.
+
+### Launcher cursor exclusion — 18 November 2026
+
+- The user reported that the Earthworks button disappeared when a road placement cursor moved over it. D164 keeps the launcher hidden when vanilla UI overlaps it and excludes verified cursor and tool-indicator draws.
+- Build `0.16.65-cursor-occlusion` checks the native draw call before it excludes a rectangle. When vanilla UI hides the button, Earthworks also clears its click target.
+- The player and Developer UI builds passed the x64 and Tesmio export checks. A static check matched all 30 cursor draw signatures to the installed `1.1.1.13` executable. The player DLL is in `build/windows-x64/bin`.
+- In-game verification is pending. Use the [launcher checklist](LAUNCHER_TESTING.md) in a disposable save.

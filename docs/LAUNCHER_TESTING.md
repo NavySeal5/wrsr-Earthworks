@@ -1,10 +1,8 @@
-# Earthworks launcher position and overlap check
+# Earthworks launcher cursor and overlap checks
 
-Build `0.16.60-fixed-launcher-under-native-ui` and launch the game with the prototype launcher.
+Close the game and TesmioLoader. Install build `0.16.65-cursor-occlusion` with `scripts\Install-TesmioPlugin.ps1` from the source checkout. Open the game through TesmioLoader and load a disposable save. In `tesmioloader.log`, check for `native cursor draw signatures matched 30/30`.
 
-1. Open a world. Confirm the Earthworks button stays at the lower-left position, to the right of the game menu and above the bottom toolbar.
-2. Open or move a vanilla panel over the button. Confirm the vanilla panel appears in front and covers the overlapping part of the button. Confirm the button does not move.
-3. Click the covered area. Confirm the vanilla panel receives the click. Close the vanilla panel and confirm the Earthworks button is visible in its original position.
-4. Click the visible Earthworks button. Confirm it opens and closes the Earthworks panel. Confirm the in-game cursor remains visible over the button.
-
-The button is drawn before the native interface, so vanilla panels cover it by draw order. The game was not launched for this check by the developer.
+1. With the normal pointer, move over the Earthworks button. The button stays visible at the lower-left. Click it to open and close the Earthworks panel.
+2. Select a road tool and move over the Earthworks button. Repeat with a rail, power-line, or pipe tool. The button stays visible. Click the button and confirm that it opens Earthworks without placing infrastructure.
+3. Where available, repeat the hover check with the free-move pointer, radiation meter, and a vehicle stop tool.
+4. Move a vanilla panel so that it overlaps only one edge of the button. The full button disappears. Click a control on the overlapping panel. The control responds, and Earthworks stays closed. Move the panel away. The button returns to its original position.
