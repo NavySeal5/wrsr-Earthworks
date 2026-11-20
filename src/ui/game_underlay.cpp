@@ -558,25 +558,6 @@ bool NativeUiOccludes(float x,float y,NativeUiOcclusionInfo* info)
     return false;
 }
 
-bool NativeUiAreaOccludes(float x,float y,float width,float height)
-{
-    if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(width)||!std::isfinite(height)
-        ||width<=0.0f||height<=0.0f)return true;
-    if(!nativeUiCaptureInstalled.load(std::memory_order_acquire)) {
-        if(!boundHost||!boundHost->exeBase)return false;
-        const float screenWidth=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenWidthRva));
-        const float screenHeight=static_cast<float>(*reinterpret_cast<const int*>(boundHost->exeBase+ScreenHeightRva));
-        return x<65.0f||y<85.0f||x+width>screenWidth-300.0f||y+height>screenHeight-150.0f;
-    }
-    const float right=x+width,bottom=y+height;
-    std::shared_lock lock(nativeUiMutex);
-    for(size_t i=0;i<nativeUiRectCount;++i) {
-        const auto& rect=nativeUiRects[i];
-        if(x<rect.right&&right>rect.left&&y<rect.bottom&&bottom>rect.top)return true;
-    }
-    return false;
-}
-
 void SetInteractiveSitePreview(uint64_t siteId,const Plan* plan)
 {
     std::lock_guard<std::mutex> lock(interactivePreviewMutex);

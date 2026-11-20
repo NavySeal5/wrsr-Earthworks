@@ -59,7 +59,7 @@ ImGuiContext* gui = nullptr;
 HWND gameWindow = nullptr;
 WNDPROC originalWndProc = nullptr;
 std::recursive_mutex guiMutex;
-RECT buttonRect{}, panelRect{}, settingsRect{}, popupRect{}, assignmentWarningRect{};
+RECT launcherRect{}, panelRect{}, settingsRect{}, popupRect{}, assignmentWarningRect{};
 RECT editorRect{};
 RECT siteTableRect{}, facilityTableRect{};
 bool siteTableRectValid=false, facilityTableRectValid=false;
@@ -74,6 +74,7 @@ float expandedPanelHeight = 517.5f;
 std::atomic<bool> editorWasDragged{false};
 bool escapeKeyDown = false;
 bool escapeOwned = false;
+bool panelShortcutOwned = false;
 bool pickCancelledByEscape = false;
 bool targetHeightEditing = false;
 bool nameTextEditing = false;
@@ -251,9 +252,7 @@ void RememberTableRect(RECT* rect,bool* valid,ImVec2 min,ImVec2 size)
 }
 bool CursorOverEarthworksUi(LPARAM point)
 {
-    const bool launcherHit=Hit(buttonRect,point)
-        &&!NativeUiOccludes(static_cast<float>(GET_X_LPARAM(point)),static_cast<float>(GET_Y_LPARAM(point)));
-    return launcherHit
+    return Hit(launcherRect,point)
         ||(panelOpen&&panelRectValid&&Hit(panelRect,point))
         ||(panelOpen&&settingsRectValid&&Hit(settingsRect,point))
         ||(panelOpen&&popupRectValid&&Hit(popupRect,point))
@@ -290,6 +289,28 @@ void RememberRect(RECT* rect)
 LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam)
 {
     std::lock_guard<std::recursive_mutex> lock(guiMutex);
+    if (message == WM_KILLFOCUS) panelShortcutOwned = false;
+    if (message == WM_KEYDOWN && wParam == VK_OEM_COMMA) {
+        if (panelShortcutOwned) return TRUE;
+        const bool firstPress = (lParam & (1L << 30)) == 0;
+        const bool ctrlOnly = (GetKeyState(VK_CONTROL) & 0x8000) &&
+            !(GetKeyState(VK_SHIFT) & 0x8000) && !(GetKeyState(VK_MENU) & 0x8000) &&
+            !(GetKeyState(VK_LWIN) & 0x8000) && !(GetKeyState(VK_RWIN) & 0x8000);
+        if (firstPress && ctrlOnly && GetForegroundWindow() == window && ReadSnapshot().ready) {
+            panelShortcutOwned = true;
+            if (panelMinimized) {
+                panelMinimized = false;
+                restorePanelSize = true;
+            }
+            if (!panelOpen.exchange(true)) host->log("earthworks  planning panel opened with Ctrl+comma");
+            return TRUE;
+        }
+    }
+    if (panelShortcutOwned && wParam == VK_OEM_COMMA && (message == WM_KEYUP || message == WM_SYSKEYUP)) {
+        panelShortcutOwned = false;
+        return TRUE;
+    }
+    if (panelShortcutOwned && message == WM_CHAR && wParam == L',') return TRUE;
     auto* previous = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(gui);
     ImGui_ImplWin32_WndProcHandler(window,message,wParam,lParam);
@@ -301,6 +322,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     NativeUiOcclusionInfo nativeUiInfo{};
     const bool nativeUiOccluded=mousePositionMessage
         &&NativeUiOccludes(static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&nativeUiInfo);
+    const bool launcherHit = mousePositionMessage && Hit(launcherRect, lParam);
     const auto& inputSnapshot=ReadSnapshot();
     const bool drawingNewSite=inputSnapshot.creatingSite&&inputSnapshot.mode==PickMode::DrawSite;
     const bool wheelMessage=message==WM_MOUSEWHEEL||message==WM_MOUSEHWHEEL;
@@ -329,7 +351,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     // While Free draw is armed, nearby draft vertices are not selection
     // targets: every map click must reach Action::Pick so it can append the
     // cursor's (possibly grid-snapped) point or close at the first vertex.
-    if(!nativeUiOccluded&&!drawingNewSite) {
+    if(!launcherHit&&!nativeUiOccluded&&!drawingNewSite) {
         const float mouseX=static_cast<float>(GET_X_LPARAM(lParam)),mouseY=static_cast<float>(GET_Y_LPARAM(lParam));
         float nearestDistanceSquared=SitePointHitRadiusPixels*SitePointHitRadiusPixels;
         for(unsigned i=0;i<siteHandleRectCount;++i)if(Hit(siteHandleRects[i],lParam)) {
@@ -344,7 +366,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
     const bool shiftDown=(GetKeyState(VK_SHIFT)&0x8000)!=0;
     bool edgeInsertHandled=false,clickedSiteEdge=false;
     SiteEdgePreview clickedEdge{};
-    if(message==WM_LBUTTONDOWN&&!nativeUiOccluded&&!drawingNewSite&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
+    if(message==WM_LBUTTONDOWN&&!launcherHit&&!nativeUiOccluded&&!drawingNewSite&&handleIndex>=MaxSitePoints&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=inputSnapshot;
         clickedSiteEdge=FindSiteEdgeAtScreen(snapshot,static_cast<float>(GET_X_LPARAM(lParam)),static_cast<float>(GET_Y_LPARAM(lParam)),&clickedEdge);
         if(clickedSiteEdge&&!shiftDown) {
@@ -358,7 +380,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
         const auto& snapshot=inputSnapshot;
         const bool editable=snapshot.siteEditorOpen&&snapshot.mode==PickMode::None&&snapshot.editorPlan.complete
             &&(snapshot.creatingSite||(CursorSiteVisible(snapshot,snapshot.editingSiteId)&&snapshot.projectStatus!=ProjectStatus::Completed));
-        const bool uiHit=Hit(buttonRect,lParam)||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
+        const bool uiHit=launcherHit||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))
             ||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam));
         if(editable&&!uiHit&&WorldHit(lParam)&&snapshot.cursorValid
             &&(snapshot.editorPlan.Contains(snapshot.cursor.x,snapshot.cursor.z)||clickedSiteEdge)) {
@@ -367,7 +389,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             dragWholeSiteCursor=snapshot.cursor;dragWholeSiteDelta={};startedWholeSiteDrag=true;
         }
     }
-    bool over=(Hit(buttonRect,lParam)&&!nativeUiOccluded)||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled||draggingWholeSiteButtonHeld||startedWholeSiteDrag;
+    bool over=launcherHit||(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam))||(assignmentWarningRectValid&&Hit(assignmentWarningRect,lParam))||(editorRectValid&&Hit(editorRect,lParam))||handleIndex<MaxSitePoints||edgeInsertHandled||draggingWholeSiteButtonHeld||startedWholeSiteDrag;
     if (message == WM_KILLFOCUS) { mouseCapture=false; keyboardCapture=false; leftRelease=false; draggingWholeSiteButtonHeld=false;draggingWholeSiteMoved=false;dragWholeSiteCommitPending=false;escapeKeyDown=false; escapeOwned=false; escapeCapture=false; if(systemCursorHiddenForPanel&&cursorToRestore)SetCursor(cursorToRestore);systemCursorHiddenForPanel=false;cursorToRestore=nullptr; }
     bool escapeMessage=false;
     if(message==WM_KEYDOWN && wParam==VK_ESCAPE) {
@@ -459,7 +481,7 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wParam,LPARAM lParam
             dragSitePointArmedAt=0;dragSitePointCommitPending=false;
         }
     }
-    if(message==WM_LBUTTONDOWN&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
+    if(message==WM_LBUTTONDOWN&&!launcherHit&&panelOpen&&editorRectValid&&!editorWasDragged.load()&&GetForegroundWindow()==gameWindow) {
         const auto& snapshot=ReadSnapshot();
         if(snapshot.siteEditorOpen&&!snapshot.creatingSite&&snapshot.mode==PickMode::None) {
             const bool insidePanel=(panelRectValid&&Hit(panelRect,lParam))||(settingsRectValid&&Hit(settingsRect,lParam))||(popupRectValid&&Hit(popupRect,lParam));
@@ -852,6 +874,104 @@ void DrawSettingsPanel(ImVec2 display)
     ImGui::End();
     if(!open)settingsOpen=false;
 }
+void DrawLauncher(const Snapshot& snapshot, ImVec2 display)
+{
+    static ImVec2 dragOrigin{};
+    static bool gripHeld = false;
+    static bool positionChanged = false;
+    launcherRect = {};
+    if (!snapshot.ready || display.x < 1.0f || display.y < 1.0f) {
+        if (positionChanged) SaveGlobalSettings();
+        gripHeld = positionChanged = false;
+        return;
+    }
+
+    const float height = std::min(42.0f, display.y);
+    const float gripWidth = std::min(26.0f, display.x * 0.5f);
+    const float buttonWidth = std::min(150.0f, display.x - gripWidth);
+    const ImVec2 size{buttonWidth + gripWidth, height};
+    const ImVec2 maxPosition{display.x - size.x, display.y - size.y};
+    const LauncherPosition saved = GetLauncherPosition();
+    ImVec2 position{
+        std::clamp(saved.x >= 0 ? static_cast<float>(saved.x) : 70.0f, 0.0f, maxPosition.x),
+        std::clamp(saved.y >= 0 ? static_cast<float>(saved.y) : display.y - 132.0f, 0.0f, maxPosition.y)
+    };
+    if (gripHeld && (ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Left))) {
+        const ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+        const ImVec2 moved{
+            std::round(std::clamp(dragOrigin.x + delta.x, 0.0f, maxPosition.x)),
+            std::round(std::clamp(dragOrigin.y + delta.y, 0.0f, maxPosition.y))
+        };
+        if (moved.x != position.x || moved.y != position.y) {
+            position = moved;
+            SetLauncherPosition({static_cast<int>(position.x), static_cast<int>(position.y)});
+            positionChanged = true;
+        }
+    }
+
+    constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground;
+    ImGui::SetNextWindowPos(position, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {0, 0});
+    ImGui::Begin("##EarthworksLauncher", nullptr, flags);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+    const ImVec2 pos = ImGui::GetWindowPos();
+    launcherRect = {static_cast<LONG>(pos.x), static_cast<LONG>(pos.y),
+        static_cast<LONG>(pos.x + size.x), static_cast<LONG>(pos.y + size.y)};
+
+    ImGui::PushStyleColor(ImGuiCol_Text, {0.20f, 0.14f, 0.09f, 1.0f});
+    ImGui::SetCursorPos({0, 0});
+    if (ImGui::InvisibleButton("Earthworks", {buttonWidth, height}, ImGuiButtonFlags_EnableNav)) {
+        panelOpen = !panelOpen.load();
+        leftRelease = true;
+        host->log("earthworks  planning panel %s", panelOpen ? "opened" : "closed");
+    }
+    const auto buttonMin = ImGui::GetItemRectMin();
+    const auto buttonMax = ImGui::GetItemRectMax();
+    const auto& style = ImGui::GetStyle();
+    auto* draw = ImGui::GetWindowDrawList();
+    const bool buttonHovered = ImGui::IsItemHovered();
+    const auto buttonColor = buttonHovered && ImGui::IsItemActive() ? ImGuiCol_ButtonActive :
+        buttonHovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button;
+    draw->AddRectFilled(buttonMin, buttonMax, ImGui::GetColorU32(buttonColor),
+        style.FrameRounding, ImDrawFlags_RoundCornersLeft);
+    if (style.FrameBorderSize > 0.0f) {
+        draw->AddRect(buttonMin, buttonMax, ImGui::GetColorU32(ImGuiCol_Border),
+            style.FrameRounding, ImDrawFlags_RoundCornersLeft, style.FrameBorderSize);
+    }
+    ImGui::RenderTextClipped(buttonMin, buttonMax, "Earthworks", nullptr, nullptr, style.ButtonTextAlign);
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine(0, 0);
+    ImGui::InvisibleButton("##MoveEarthworksLauncher", {gripWidth, height});
+    if (ImGui::IsItemActivated()) dragOrigin = pos;
+    gripHeld = ImGui::IsItemActive();
+    if (!gripHeld && positionChanged) {
+        SaveGlobalSettings();
+        positionChanged = false;
+    }
+
+    const bool hovered = ImGui::IsItemHovered();
+    const auto gripMin = ImGui::GetItemRectMin();
+    const auto gripMax = ImGui::GetItemRectMax();
+    const auto gripColor = gripHeld ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button;
+    draw->AddRectFilled(gripMin, gripMax, ImGui::GetColorU32(gripColor),
+        style.FrameRounding, ImDrawFlags_RoundCornersRight);
+    const ImVec2 center{(gripMin.x + gripMax.x) * 0.5f, (gripMin.y + gripMax.y) * 0.5f};
+    for (int row = -1; row <= 1; ++row) {
+        const float y = center.y + row * 5.0f;
+        draw->AddCircleFilled({center.x - 2.5f, y}, 1.35f, IM_COL32(75, 54, 39, 255));
+        draw->AddCircleFilled({center.x + 2.5f, y}, 1.35f, IM_COL32(75, 54, 39, 255));
+    }
+    if (hovered && !gripHeld) ImGui::SetItemTooltip("Drag to move Earthworks");
+    ImGui::End();
+    ImGui::PopStyleVar(3);
+}
+
 void DrawInterface(const Snapshot& s)
 {
     targetHeightEditing = false;
@@ -872,33 +992,6 @@ void DrawInterface(const Snapshot& s)
         Line(s,{p.x,p.y,p.z},{p.x,p.y+12,p.z},colour,3);
     }
     const auto display=ImGui::GetIO().DisplaySize;
-    buttonRect={};
-    if(s.ready&&s.cameraValid) {
-        const ImVec2 buttonPos{70.0f,display.y-132.0f};
-        constexpr ImVec2 buttonSize{150.0f,42.0f};
-        const bool coveredByNativeUi=NativeUiAreaOccludes(buttonPos.x,buttonPos.y,buttonSize.x,buttonSize.y);
-        constexpr ImGuiWindowFlags launcherFlags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
-            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|
-            ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoBackground;
-        if(!coveredByNativeUi) {
-            buttonRect={static_cast<LONG>(buttonPos.x),static_cast<LONG>(buttonPos.y),
-                static_cast<LONG>(buttonPos.x+buttonSize.x),static_cast<LONG>(buttonPos.y+buttonSize.y)};
-            ImGui::SetNextWindowPos(buttonPos,ImGuiCond_Always);
-            ImGui::SetNextWindowSize(buttonSize,ImGuiCond_Always);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0.0f);
-            ImGui::Begin("##EarthworksLauncher",nullptr,launcherFlags);
-            ImGui::PushStyleColor(ImGuiCol_Text,{0.20f,0.14f,0.09f,1.0f});
-            ImGui::SetCursorPos({0,0});
-            if(ImGui::Button("Earthworks",buttonSize)) {
-                panelOpen=!panelOpen.load();leftRelease=true;
-                host->log("earthworks  planning panel %s",panelOpen?"opened":"closed");
-            }
-            ImGui::PopStyleColor();
-            ImGui::End();
-            ImGui::PopStyleVar(2);
-        }
-    }
     if (!s.ready) {panelRectValid=false;settingsRectValid=false;popupRectValid=false;editorRectValid=false;return;}
     if (!panelOpen) {panelRectValid=false;settingsRectValid=false;settingsOpen=false;popupRectValid=false;editorRectValid=false;DrawFacilityAssignmentWarning(s,display);return;}
     const float panelWidth=std::min(580.0f,std::max(480.0f,display.x-20.0f));
@@ -1957,6 +2050,7 @@ void Render(IDXGISwapChain* swap)
     previewLinesUnderlay=false;
     ImGui::GetBackgroundDrawList()->PopClipRect();
     DrawInterface(snapshot);
+    DrawLauncher(snapshot, io.DisplaySize);
     DrawGameCursorArt();
     if(snapshot.mode==PickMode::None) pickCancelledByEscape=false;
     const bool sitePick=!snapshot.siteEditorOpen&&CursorOnVisibleSite(snapshot);

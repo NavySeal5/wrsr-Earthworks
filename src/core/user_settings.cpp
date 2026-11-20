@@ -16,6 +16,7 @@ std::atomic<bool> distanceBasedContribution{false};
 std::atomic<int> closeDistanceMeters{3500};
 std::atomic<int> mediumDistanceMeters{5000};
 std::atomic<int> farDistanceMeters{10000};
+LauncherPosition launcherPosition;
 
 std::wstring SettingsPath()
 {
@@ -33,6 +34,8 @@ void LoadGlobalSettings()
 {
     const auto path=SettingsPath();
     if(path.empty())return;
+    launcherPosition.x = static_cast<int>(GetPrivateProfileIntW(L"earthworks", L"launcher_x", -1, path.c_str()));
+    launcherPosition.y = static_cast<int>(GetPrivateProfileIntW(L"earthworks", L"launcher_y", -1, path.c_str()));
     const int loadedSpeed=static_cast<int>(GetPrivateProfileIntW(L"earthworks",L"construction_speed_percent",100,path.c_str()));
     speedPercent.store(std::clamp(loadedSpeed,10,1000),std::memory_order_relaxed);
     const int loadedContrast=static_cast<int>(GetPrivateProfileIntW(L"earthworks",L"high_contrast_colors",0,path.c_str()));
@@ -64,8 +67,13 @@ void SaveGlobalSettings()
     WritePrivateProfileStringW(L"earthworks",L"facility_close_distance_m",std::to_wstring(CloseFacilityDistanceMeters()).c_str(),path.c_str());
     WritePrivateProfileStringW(L"earthworks",L"facility_medium_distance_m",std::to_wstring(MediumFacilityDistanceMeters()).c_str(),path.c_str());
     WritePrivateProfileStringW(L"earthworks",L"facility_far_distance_m",std::to_wstring(FarFacilityDistanceMeters()).c_str(),path.c_str());
+    WritePrivateProfileStringW(L"earthworks",L"launcher_x",std::to_wstring(launcherPosition.x).c_str(),path.c_str());
+    WritePrivateProfileStringW(L"earthworks",L"launcher_y",std::to_wstring(launcherPosition.y).c_str(),path.c_str());
     WritePrivateProfileStringW(nullptr,nullptr,nullptr,path.c_str());
 }
+
+LauncherPosition GetLauncherPosition() noexcept { return launcherPosition; }
+void SetLauncherPosition(LauncherPosition position) noexcept { launcherPosition = position; }
 
 float ConstructionSpeedMultiplier() noexcept
 {

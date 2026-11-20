@@ -916,3 +916,13 @@ The user accepted the facility UI. Facility assignment UI work is accepted for t
 - Build `0.16.65-cursor-occlusion` checks the native draw call before it excludes a rectangle. When vanilla UI hides the button, Earthworks also clears its click target.
 - The player and Developer UI builds passed the x64 and Tesmio export checks. A static check matched all 30 cursor draw signatures to the installed `1.1.1.13` executable. The player DLL is in `build/windows-x64/bin`.
 - In-game verification is pending. Use the [launcher checklist](LAUNCHER_TESTING.md) in a disposable save.
+
+### Movable launcher — 20 November 2026
+
+- Build `0.16.66-movable-launcher` draws the launcher above game UI during play. The six-dot grip moves it. Earthworks saves the position in the global settings and keeps the launcher within the game window.
+- The player and Developer UI builds passed the x64 and Tesmio export checks. In-game verification is pending. Use the [launcher checklist](LAUNCHER_TESTING.md) in a disposable save.
+
+### Keyboard shortcut for the main panel
+
+- Build `0.16.67-panel-shortcut` opens or expands the Earthworks panel when the player presses Ctrl+comma in a loaded republic.
+- The player and Developer UI builds passed the x64 and Tesmio export checks. The [launcher checklist](LAUNCHER_TESTING.md) includes the pending in-game key checks.

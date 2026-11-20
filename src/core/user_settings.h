@@ -4,6 +4,9 @@ namespace ew {
 
 void LoadGlobalSettings();
 void SaveGlobalSettings();
+struct LauncherPosition { int x = -1, y = -1; };
+LauncherPosition GetLauncherPosition() noexcept;
+void SetLauncherPosition(LauncherPosition position) noexcept;
 float ConstructionSpeedMultiplier() noexcept;
 void SetConstructionSpeedMultiplier(float value) noexcept;
 bool HighContrastColors() noexcept;
